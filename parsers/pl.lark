@@ -1,0 +1,30 @@
+start: pl_formula
+
+?pl_formula: pl_equivalence
+?pl_equivalence: pl_implication (EQUIVALENCE pl_implication)*
+?pl_implication: pl_or (IMPLY pl_or)*
+?pl_or: pl_and (OR pl_and)*
+?pl_and: pl_not (AND pl_not)*
+?pl_not: NOT* pl_wrapped
+?pl_wrapped: pl_atom
+            | LSEPARATOR pl_formula RSEPARATOR
+?pl_atom: atom
+	     | pl_true
+	     | pl_false
+
+atom: /[a-z][a-z 0-9_]*/
+pl_true: TRUE
+pl_false: FALSE
+
+LSEPARATOR: "("
+RSEPARATOR: ")"
+EQUIVALENCE: "<->" | "<=>"
+IMPLY: "->" | "=>"
+OR: "||" | "|"
+AND: "&&" | "&"
+NOT: "!" | "~"
+SYMBOL_NAME: /[a-z][a-z 0-9_]*/
+TRUE.2: /(?i:true)/
+FALSE.2: /(?i:false)/
+
+%ignore /\s+/
