@@ -12,7 +12,7 @@ start: pl_formula
 	     | pl_true
 	     | pl_false
 
-atom: /[a-z][a-z 0-9_]*/
+atom: /[a-z][a-z0-9_]*/
 pl_true: TRUE
 pl_false: FALSE
 

@@ -72,3 +72,9 @@ def test_parsers_pl_evaluate():
 
     c = a.substitute({"a": True, "b": False})
     assert c == PLFormula("false")
+
+
+def test_parsers_pl_translate():
+    p = PLFormula("p & !q")
+    aut = p.translate()
+    print(aut)

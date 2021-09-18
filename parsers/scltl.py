@@ -13,9 +13,11 @@ import networkx as nx
 
 from pathlib import Path
 from lark import Lark, Transformer, Visitor
+from lark.exceptions import UnexpectedCharacters, UnexpectedToken, UnexpectedInput, UnexpectedEOF
 from parsers.formula import BaseFormula, ParsingError, PARSERS_DIR
 from parsers.pl import PLFormula
 from parsers.automata import Dfa
+from parsers.utils import powerset
 
 try:
     import spot
@@ -247,14 +249,19 @@ ATOMGLOB_ScLTL = ScLTLAtomGlobber()
 class ScLTLFormula(BaseFormula):
     def __init__(self, f_str, alphabet=None):
         super(ScLTLFormula, self).__init__(f_str, alphabet)
-        self.parse_tree = PARSE_ScLTL(f_str)
+        try:
+            self.parse_tree = PARSE_ScLTL(f_str)
+        except (UnexpectedCharacters, UnexpectedToken, UnexpectedInput, UnexpectedEOF) as err:
+            msg = f"Given formula {f_str} is not a valid ScLTL formula.\n{err}"
+            logging.error(msg)
+            raise ParsingError(msg)
 
     def __hash__(self):
         return hash(str(spot.formula(self.f_str)))
 
     def __eq__(self, other):
         if isinstance(other, BaseFormula):
-            return spot.formula(self.f_str) == spot.formula(other)
+            return spot.formula(self.f_str) == spot.formula(other.f_str)
         elif isinstance(other, str):
             return spot.formula(self.f_str) == spot.formula(other)
         raise AssertionError(f"PLFormula.__eq__: type(other)={type(other)}.")
@@ -281,7 +288,11 @@ class ScLTLFormula(BaseFormula):
                 elif f_lbl_str == '0':
                     f_lbl_str = "false"
                 f_lbl = PLFormula(f_lbl_str)
-                graph.add_edge(int(edge.src), int(edge.dst), formula=f_lbl)
+                for sigma in powerset(self.alphabet):
+                    eval_map = {sym: True for sym in self.alphabet if sym in sigma}
+                    eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
+                    if f_lbl.evaluate(eval_map):
+                        graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
 
                 # Final state is the source of accepting edge.
                 #   See: `G(p1 | p2 | F!p0)` in spot app by toggling `force transition-based` option.

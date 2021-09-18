@@ -28,10 +28,10 @@ scltl_true: pl_true
 scltl_false: pl_false
 
 // Operators must not be part of a word
-UNTIL.2: /U(?=[^a-z]|$)/
-ALWAYS.2: /G(?=[^a-z]|$)/
-EVENTUALLY.2: /F(?=[^a-z]|$)/
-NEXT.2: /X(?=[^a-z]|$)/
+UNTIL.2: "U"
+ALWAYS.2: "G"
+EVENTUALLY.2: "F"
+NEXT.2: "X"
 
 // Symbols cannot contain uppercase letters, because these are reserved
 SYMBOL_NAME: /[a-z][a-z0-9_]*/

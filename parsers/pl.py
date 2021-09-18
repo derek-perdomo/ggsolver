@@ -9,9 +9,10 @@ import logging
 import networkx as nx
 from pathlib import Path
 from lark import Lark, Transformer, Visitor
-from lark.exceptions import UnexpectedCharacters
+from lark.exceptions import UnexpectedCharacters, UnexpectedToken, UnexpectedInput, UnexpectedEOF
 from parsers.formula import BaseFormula, ParsingError, PARSERS_DIR
 from parsers.automata import Dfa
+from parsers.utils import powerset
 
 try:
     import spot
@@ -281,7 +282,7 @@ class PLFormula(BaseFormula):
         super(PLFormula, self).__init__(f_str, alphabet)
         try:
             self.parse_tree = PARSE_PL(f_str)
-        except UnexpectedCharacters as err:
+        except UnexpectedCharacters or UnexpectedToken or UnexpectedInput or UnexpectedEOF as err:
             msg = f"Given formula {f_str} is not a valid PL formula.\n{err}"
             logging.error(msg)
             raise ParsingError(msg)
@@ -332,7 +333,11 @@ class PLFormula(BaseFormula):
                 elif f_lbl_str == '0':
                     f_lbl_str = "false"
                 f_lbl = PLFormula(f_lbl_str)
-                graph.add_edge(int(edge.src), int(edge.dst), formula=f_lbl)
+                for sigma in powerset(self.alphabet):
+                    eval_map = {sym: True for sym in self.alphabet if sym in sigma}
+                    eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
+                    if f_lbl.evaluate(eval_map):
+                        graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
 
                 # Final state is the source of accepting edge.
                 #   See: `G(p1 | p2 | F!p0)` in spot app by toggling `force transition-based` option.
@@ -356,6 +361,11 @@ class PLFormula(BaseFormula):
         return PLFormula(SUBSTITUTE_PL(self.parse_tree, subs_map))
 
     def evaluate(self, eval_map):
+        if spot is None:
+            msg = f"PL.evaluate() requires spot, which is not available."
+            logging.error(msg)
+            ImportError(msg)
+
         return EVALUATE_PL(self.parse_tree, self.f_str, eval_map)
 
     @property
