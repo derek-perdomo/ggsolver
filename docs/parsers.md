@@ -1,7 +1,5 @@
 ## Parsers
 
-
-
 ### Propositional logic (`pl.lark, pl.py`)
 
 $$
@@ -43,9 +41,10 @@ $$
 In addition to PL, ScLTL has the following new operators:
 
 * Next. `X`
-* Until. `U`
-* Always. `G`
+* 9Always. `G`
 * Eventually. `F`
+
+
 
 
 
