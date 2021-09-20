@@ -122,7 +122,9 @@ class MdpGame(BaseGame):
             return 0.0
 
     def get_transition_matrix(self):
-        raise NotImplementedError("MDP.get_transition_matrix is not implemented. TODO.")
+        err_msg = f"Get transition matrix function is not implemented. TODO."
+        logging.warning(err_msg)
+        raise NotImplementedError(err_msg)
 
     def pred(self, v):
         # Check if game is constructed.
