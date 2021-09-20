@@ -164,7 +164,6 @@ class MdpGame(BaseGame):
         """
         assert isinstance(graph, (nx.MultiDiGraph, nx.DiGraph)), \
             f"graph must be a nx.MultiDiGraph or nx.DiGraph object."
-        assert all("turn" in data for _, data in graph.nodes(data=True)), f"Each graph node must have 'turn' attribute."
         assert all("action" in data for _, _, data in graph.edges(data=True)), \
             f"Each graph edge must have 'action' attribute."
 
