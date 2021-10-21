@@ -31,3 +31,4 @@ RUN apt-get update && \
 RUN pip3 install numpy matplotlib pyzmq pydot networkx pygraphviz pytest
 RUN pip3 install scipy pygame pyyaml lark
 RUN pip3 install sortedcontainers
+RUN pip3 install jupyterlab
