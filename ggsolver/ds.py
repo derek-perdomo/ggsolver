@@ -1,5 +1,8 @@
 import logging
+import inspect
 from abc import ABC, abstractmethod
+
+logging.getLogger(__name__)
 
 
 class BaseGame(ABC):
@@ -29,19 +32,69 @@ class BaseGame(ABC):
         self._succ = None
         self._init_st = None
         self._atoms = set()
-        self._labeling_function = None
+        self._label = None
         self._properties = dict()
         self._is_constructed = False
         self._mode = None
+        self._pkl_encode_func = ["_pred", "_succ", "_delta", "_label"]
 
     def __repr__(self):
-        return f"{self.__class__.__name__} object."
+        return f'<{self.__class__.__name__} "{self._name}">'
 
     def __str__(self):
         return repr(self)
 
-    def __extend__(self):
-        pass
+    def __getstate__(self):
+        # Encode object state. We specialized function encoding.
+        state = dict()
+        for param_name, param_value in self.__dict__.items():
+            # If parameter stores a method/function and it has been registered with class to pickle,
+            # get the source code of function and pickle as string.
+            if inspect.ismethod(param_value) or inspect.isfunction(param_value):
+                if param_name in self._func_params:
+                    func_name = param_value.__name__
+                    source_code = inspect.getsource(param_value)
+                    state[param_name] = (func_name, source_code)
+                else:
+                    state[param_name] = None
+                    logging.warning(f"{repr(self)}.__reduce__: Parameter {param_name} has a function value that is "
+                                    f"not registered with self._func_params. This function will not be unpickled.")
+
+            else:
+                state[param_name] = param_value
+
+        # Return object state
+        return state
+
+    def __setstate__(self, state):
+        def pickle_parse_fail_placeholder(*args, **kwargs):
+            raise NotImplementedError(f"This function is called when unpickling of game object raises Exception."
+                                      f"Check logs, and update the function.")
+
+        # Decode function parameters.
+        func_params = state["_func_params"]
+        for param_name in func_params:
+            func_name, func_str = state[param_name]
+            if isinstance(func_str, str):
+                try:
+                    tmp_globals = dict()
+                    exec(func_str, tmp_globals)
+                    state[param_name] = tmp_globals[func_name]
+
+                except SyntaxError:
+                    logging.error(f"{state['_name']}.{param_name} is registered as function parameter. Encoded syntax"
+                                  f"could not be parsed while unpickling. Setting function to dummy function.",
+                                  exc_info=True)
+                    state[param_name] = pickle_parse_fail_placeholder
+
+                except KeyError:
+                    logging.error(f"{state['_name']}.{param_name} is registered as function parameter. "
+                                  f"It seems the name of function 'def <name>(...):' in {func_str} is not "
+                                  f"the same as {func_name}. Or, it is a lambda expression, which is not supported.",
+                                  exc_info=True)
+                    state[param_name] = pickle_parse_fail_placeholder
+
+        self.__dict__.update(state)
 
     def construct_explicit(self, graph, **kwargs):
         err_msg = f"{repr(self)}.construct_explicit method is not implemented by user."
@@ -77,10 +130,10 @@ class BaseGame(ABC):
         raise NotImplementedError(err_msg)
 
     def make_labeled(self, atoms, labeling_func):
-        if len(self._atoms) != 0 or self._labeling_function is not None:
+        if len(self._atoms) != 0 or self._label is not None:
             logging.warning(f"{repr(self)}.make_labeled is overwrites atoms or labeling function.")
         self._atoms = set(atoms)
-        self._labeling_function = labeling_func
+        self._label = labeling_func
 
     def set_init_st(self, init_st):
         if self._init_st is not None:
