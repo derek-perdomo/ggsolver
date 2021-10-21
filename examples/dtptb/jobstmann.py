@@ -39,7 +39,7 @@ def test_jobstmann_example():
 
     final_nodes = [3, 4]
 
-    game = DtptbGame()
+    game = DtptbGame(name="jobstmann example")
     game.construct_explicit(graph)
 
     swin1 = SWinReach(game=game, final=final_nodes, player=1)
