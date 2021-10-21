@@ -37,3 +37,5 @@ ggsolver_nx/__pycache__/
 **/logs/
 
 parsers/__pycache__/
+
+ggsolver/__pycache__/
