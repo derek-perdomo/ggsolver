@@ -20,7 +20,8 @@ class BaseGame(ABC):
     EXPLICIT = "explicit"
     SYMBOLIC = "symbolic"
 
-    def __init__(self):
+    def __init__(self, name):
+        self._name = name
         self._graph = None
         self._actions = set()
         self._delta = None
@@ -38,6 +39,9 @@ class BaseGame(ABC):
 
     def __str__(self):
         return repr(self)
+
+    def __extend__(self):
+        pass
 
     def construct_explicit(self, graph, **kwargs):
         err_msg = f"{repr(self)}.construct_explicit method is not implemented by user."

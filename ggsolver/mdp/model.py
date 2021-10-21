@@ -4,8 +4,8 @@ from ggsolver.ds import BaseGame
 
 
 class MdpGame(BaseGame):
-    def __init__(self):
-        super(MdpGame, self).__init__()
+    def __init__(self, name):
+        super(MdpGame, self).__init__(name)
         self._is_qualitative = False
 
     def construct_explicit(self, graph, is_qualitative=False, **kwargs):
