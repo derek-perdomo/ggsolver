@@ -20,7 +20,7 @@ It is developed and maintained by Abhishek N. Kulkarni, University of Florida (h
     * `dtptb/` - Deterministic two-player turn-based game.
     * `stptb/` - Stochastic two-player turn-based game.
     * `mdp/` - Game on MDP. 
-    * `actdeception/` - Action deception [IJCAI'20]
+    * `actiondeception/` - Action deception [IJCAI'20]
     * `sensorattack/` - Sensor attacks [CDC'21]
     * `staticpref/` - Synthesis with preference logic
     * `ds.py` - Common data structures used in ggsolver.
