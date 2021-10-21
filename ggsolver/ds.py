@@ -51,7 +51,7 @@ class BaseGame(ABC):
             # If parameter stores a method/function and it has been registered with class to pickle,
             # get the source code of function and pickle as string.
             if inspect.ismethod(param_value) or inspect.isfunction(param_value):
-                if param_name in self._func_params:
+                if param_name in self._pkl_encode_func:
                     func_name = param_value.__name__
                     source_code = inspect.getsource(param_value)
                     state[param_name] = (func_name, source_code)
@@ -211,3 +211,7 @@ class BaseGame(ABC):
     @property
     def is_constructed(self):
         return self._is_constructed
+
+    @property
+    def name(self):
+        return self._name
