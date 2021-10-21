@@ -1,5 +1,6 @@
 import logging
 import inspect
+import random
 from abc import ABC, abstractmethod
 
 logging.getLogger(__name__)
@@ -215,3 +216,35 @@ class BaseGame(ABC):
     @property
     def name(self):
         return self._name
+
+
+class Strategy(dict):
+    """
+    Strategy is a map <state: List of actions>.
+    """
+    @abstractmethod
+    def __call__(self, v):
+        pass
+
+
+class DeterministicStrategy(Strategy):
+    def __call__(self, v):
+        try:
+            return self[v][0]
+        except KeyError:
+            logging.exception(f"Strategy is not defined at state {v}.")
+            raise
+        except IndexError:
+            logging.exception(f"Strategy at state {v} is empty.")
+
+
+class RandomizedStrategy(Strategy):
+    def __call__(self, v):
+        try:
+            return random.choice(self[v])
+        except KeyError:
+            logging.exception(f"Strategy is not defined at state {v}.")
+            raise
+        except IndexError:
+            logging.exception(f"Strategy at state {v} is empty.")
+
