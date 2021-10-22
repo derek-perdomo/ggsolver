@@ -298,8 +298,8 @@ class Dfa(BaseAutomaton):
 
         def _delta(state, true_atoms):
             next_states = set()
-            for _, q, data_q in self._graph.out_edges(state, data=True):
-                if set(data_q["symbol"]) == true_atoms:
+            for _, q, data_q in graph.out_edges(state, data=True):
+                if set(data_q["symbol"]) == set(true_atoms):
                     next_states.add(q)
 
             if len(next_states) > 1:
@@ -430,9 +430,13 @@ def pretty_print_automaton(aut):
     Transition function:"""
     for src in aut.states():
         for sigma in powerset(aut.alphabet):
-            dst = aut.delta(src, sigma)
-            output += "\n\t\t" + f"{src} -- {set(sigma)} --> {dst}" if len(sigma) > 0 else \
-                "\n\t\t" + f"{src} -- {{}} --> {dst}"
+            try:
+                dst = aut.delta(src, sigma)
+                output += "\n\t\t" + f"{src} -- {set(sigma)} --> {dst}" if len(sigma) > 0 else \
+                    "\n\t\t" + f"{src} -- {{}} --> {dst}"
+            except AssertionError as err:
+                logger.exception(str(err), exc_info=True)
+                raise
     return output
 
 
