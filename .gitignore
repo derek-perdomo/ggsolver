@@ -39,3 +39,7 @@ ggsolver_nx/__pycache__/
 parsers/__pycache__/
 
 ggsolver/__pycache__/
+
+examples/.ipynb_checkpoints/
+
+ggsolver/dtptb/__pycache__/
