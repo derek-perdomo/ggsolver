@@ -74,7 +74,6 @@ class BaseGame(ABC):
 
     def __setstate__(self, state):
         logger.debug(f"{repr(self.__class__)}.__setstate__(): input state -> {state}")
-        print(f"{state['_pred']}")
 
         def pickle_parse_fail_placeholder(*args, **kwargs):
             raise NotImplementedError(f"This function is called when unpickling of game object raises Exception."
