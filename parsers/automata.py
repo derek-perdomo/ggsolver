@@ -8,6 +8,9 @@ from abc import ABC, abstractmethod
 from parsers.utils import powerset
 
 
+logger = logging.getLogger(__name__)
+
+
 # GLOBALS. Acceptance conditions
 ACC_REACHABILITY = "Reachability"
 ACC_BUCHI = "Buchi"
@@ -40,16 +43,16 @@ class BaseAutomaton(ABC):
 
     def validate_graph(self, *args, **kwargs):
         err_msg = f"{repr(self)}.validate_graph method is not implemented by user."
-        logging.warning(err_msg)
+        logger.warning(err_msg)
 
     def construct_explicit(self, graph, init_st, final, acc, *args, **kwargs):
         err_msg = f"{repr(self)}.construct_explicit method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def construct_symbolic(self, states, alphabet, delta, pred, succ, init_st, final, acc, *args, **kwargs):
         err_msg = f"{repr(self)}.construct_symbolic method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def load_from_file(self, metadata_file):
@@ -79,7 +82,7 @@ class BaseAutomaton(ABC):
 
         else:
             err_msg = f"Extension '.{graph_format}' is not supported to save {repr(self)} object to file."
-            logging.error(err_msg)
+            logger.error(err_msg)
             ValueError(err_msg)
 
         # Construct automaton object explicitly
@@ -93,7 +96,7 @@ class BaseAutomaton(ABC):
 
     def make_explicit(self, *args, **kwargs):
         err_msg = f"{repr(self)}.make_explicit method is not implemented by user."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise NotImplementedError(err_msg)
 
     def states(self, data=False):
@@ -101,7 +104,7 @@ class BaseAutomaton(ABC):
             return self._graph.nodes(data=data)
 
         err_msg = f"Cannot access {repr(self)}.states(). Automaton is not constructed."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     def save_to_file(self, file_name, path=None, graph_format="pkl"):
@@ -120,7 +123,7 @@ class BaseAutomaton(ABC):
         # Cannot save automaton if it is not constructed.
         if not self.is_constructed:
             err_msg = f"Cannot save {repr(self)} to file. Automaton is not constructed."
-            logging.error(err_msg)
+            logger.error(err_msg)
             ValueError(err_msg)
 
         # If automaton is defined symbolically, make it explicit.
@@ -149,7 +152,7 @@ class BaseAutomaton(ABC):
 
         else:
             err_msg = f"Extension '.{graph_format}' is not supported to save {repr(self)} object to file."
-            logging.error(err_msg)
+            logger.error(err_msg)
             ValueError(err_msg)
 
         # Serialize automaton
@@ -170,19 +173,19 @@ class BaseAutomaton(ABC):
     @abstractmethod
     def delta(self, u, f):
         err_msg = f"{repr(self)}.delta method is not defined."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @abstractmethod
     def pred(self, v):
         err_msg = f"{repr(self)}.pred method is not defined."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @abstractmethod
     def succ(self, u):
         err_msg = f"{repr(self)}.succ method is not defined."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @property
@@ -191,7 +194,7 @@ class BaseAutomaton(ABC):
             return self._acc
 
         err_msg = f"Cannot access {repr(self)}.acc. Automaton is not constructed."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     @property
@@ -200,7 +203,7 @@ class BaseAutomaton(ABC):
             return self._alphabet
 
         err_msg = f"Cannot access {repr(self)}.alphabet. Automaton is not constructed."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     @property
@@ -209,7 +212,7 @@ class BaseAutomaton(ABC):
             return self._final
 
         err_msg = f"Cannot access {repr(self)}.final. Automaton is not constructed."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     @property
@@ -219,7 +222,7 @@ class BaseAutomaton(ABC):
 
         err_msg = f"Cannot access {repr(self)}.graph. Constraints: is_constructed={self._is_constructed} which " \
                   f"expected is True, mode={self._mode} expected is {self.EXPLICIT}"
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     @property
@@ -228,7 +231,7 @@ class BaseAutomaton(ABC):
             return self._init_st
 
         err_msg = f"Cannot access {repr(self)}.init_st. Automaton is not constructed."
-        logging.error(err_msg)
+        logger.error(err_msg)
         raise ValueError(err_msg)
 
     @property
@@ -305,7 +308,7 @@ class Dfa(BaseAutomaton):
             if len(next_states) > 1:
                 err_msg = f"Dfa transition function is ill-formed or corrupted. Function call" \
                           f"{repr(self)}.delta({state}, {true_atoms}) resulted in {next_states}."
-                logging.critical(err_msg)
+                logger.critical(err_msg)
                 ValueError(err_msg)
 
             elif len(next_states) == 1:
@@ -314,14 +317,14 @@ class Dfa(BaseAutomaton):
             else:
                 err_msg = f"Dfa transition function is incomplete. Function call" \
                           f"{repr(self)}.delta({state}, {true_atoms}) resulted in {next_states}."
-                logging.warning(err_msg)
-                return set()
+                logger.warning(err_msg)
+                return None
 
         def _pred(state):
-            return {(e[0], frozenset(e[2]["symbol"])) for e in self.graph.in_edges(state, data=True)}
+            return {(e[0], frozenset(e[2]["symbol"])) for e in graph.in_edges(state, data=True)}
 
         def _succ(state):
-            return {(e[1], frozenset(e[2]["symbol"])) for e in self.graph.out_edges(state, data=True)}
+            return {(e[1], frozenset(e[2]["symbol"])) for e in graph.out_edges(state, data=True)}
 
         assert isinstance(final, set), f"Dfa final states must be a set. Input type(final): {type(final)}"
         if kwargs["skip_validation"]:
@@ -350,7 +353,7 @@ class Dfa(BaseAutomaton):
         """
         if not self.is_constructed:
             err_msg = f"Cannot make {repr(self)} explicit. Dfa is not yet constructed."
-            logging.error(err_msg)
+            logger.error(err_msg)
             raise ValueError(err_msg)
 
         if self.mode == self.EXPLICIT:
@@ -373,7 +376,7 @@ class Dfa(BaseAutomaton):
         # Check if delta is well-defined
         if not self._is_constructed:
             err_msg = f"{repr(self)}.delta method cannot be accessed. Dfa is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise ValueError(err_msg)
         assert set(true_atoms).issubset(self.alphabet), f"true_atoms must be subset of alphabet."
         assert u in self.states(), f"Input state {u} is not in {repr(self)}."
@@ -383,8 +386,9 @@ class Dfa(BaseAutomaton):
 
         # Validate output of delta function
         err_msg = f"Output: {repr(self)}.delta({u}, {true_atoms}) -> {v} is not in Dfa states."
-        logging.critical(err_msg)
-        assert v in self.states(), err_msg
+        if v not in self.states():
+            logger.warning(err_msg)
+            assert v is None, err_msg
 
         # Return output
         return v
@@ -393,7 +397,7 @@ class Dfa(BaseAutomaton):
         # Check if pred is well-defined
         if not self._is_constructed:
             err_msg = f"{repr(self)}.pred method cannot be accessed. Dfa is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise ValueError(err_msg)
         assert v in self.states(), f"Input state {v} is not in {repr(self)}."
 
@@ -406,7 +410,7 @@ class Dfa(BaseAutomaton):
         # Check if succ is well-defined
         if not self._is_constructed:
             err_msg = f"{repr(self)}.succ method cannot be accessed. Dfa is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise ValueError(err_msg)
         assert u in self.states(), f"Input state {u} is not in {repr(self)}."
 
@@ -483,7 +487,7 @@ def cross_product_dfa_dfa(dfa1, dfa2):
 
         return pre_states
 
-    prod_dfa = Dfa()
+    prod_dfa = Dfa(name=f"cross_product({repr(dfa1)}, {repr(dfa2)})")
     prod_dfa.construct_symbolic(states=states, alphabet=alphabet,
                                 delta=delta, pred=pred, succ=succ,
                                 init_st=init_st, final=final)
