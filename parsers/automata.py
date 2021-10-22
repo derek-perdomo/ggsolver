@@ -18,7 +18,8 @@ class BaseAutomaton(ABC):
     EXPLICIT = "explicit"
     SYMBOLIC = "symbolic"
 
-    def __init__(self):
+    def __init__(self, name):
+        self._name = name
         self._graph = None
         self._alphabet = set()
         self._delta = None
@@ -32,7 +33,7 @@ class BaseAutomaton(ABC):
         self.properties = dict()
 
     def __repr__(self):
-        return f"{self.__class__.__name__} object."
+        return f'<{self.__class__.__name__} "{self._name}">'
 
     def __str__(self):
         return pretty_print_automaton(self)
@@ -240,8 +241,8 @@ class BaseAutomaton(ABC):
 
 
 class Dfa(BaseAutomaton):
-    def __init__(self):
-        super(Dfa, self).__init__()
+    def __init__(self, name):
+        super(Dfa, self).__init__(name)
         self._final = set()
         self._acc = ACC_REACHABILITY
 
