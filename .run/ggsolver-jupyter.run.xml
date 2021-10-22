@@ -1,0 +1,29 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="ggsolver-jupyter" type="docker-deploy" factoryName="docker-image" server-name="ggsolver-docker">
+    <deployment type="docker-image">
+      <settings>
+        <option name="imageTag" value="abhibp1993/ggsolver:latest" />
+        <option name="command" value="" />
+        <option name="containerName" value="ggsolver-jupyter" />
+        <option name="portBindings">
+          <list>
+            <DockerPortBindingImpl>
+              <option name="containerPort" value="8888" />
+              <option name="hostPort" value="8888" />
+            </DockerPortBindingImpl>
+          </list>
+        </option>
+        <option name="showCommandPreview" value="true" />
+        <option name="volumeBindings">
+          <list>
+            <DockerVolumeBindingImpl>
+              <option name="containerPath" value="/home/ggsolver" />
+              <option name="hostPath" value="D:\MyWorld\GitHub-Projects\ggsolver" />
+            </DockerVolumeBindingImpl>
+          </list>
+        </option>
+      </settings>
+    </deployment>
+    <method v="2" />
+  </configuration>
+</component>
