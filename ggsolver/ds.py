@@ -54,7 +54,11 @@ class BaseGame(ABC):
             if inspect.ismethod(param_value) or inspect.isfunction(param_value):
                 if param_name in self._pkl_encode_func:
                     func_name = param_value.__name__
-                    source_code = inspect.getsource(param_value)
+                    source_lines = inspect.getsourcelines(param_value)
+                    assert f"def {func_name}" in source_lines[0][0]
+                    indent = len(source_lines[0][0]) - len(source_lines[0][0].lstrip())
+                    source_lines = map(lambda x: x[indent:], source_lines[0])
+                    source_code = "".join(source_lines)
                     state[param_name] = (func_name, source_code)
                 else:
                     state[param_name] = None
@@ -73,8 +77,10 @@ class BaseGame(ABC):
                                       f"Check logs, and update the function.")
 
         # Decode function parameters.
-        func_params = state["_func_params"]
+        func_params = state["_pkl_encode_func"]
         for param_name in func_params:
+            if state[param_name] is None:
+                continue
             func_name, func_str = state[param_name]
             if isinstance(func_str, str):
                 try:
