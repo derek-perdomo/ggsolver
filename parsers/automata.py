@@ -266,6 +266,9 @@ class Dfa(BaseAutomaton):
         assert init_st in graph.nodes(), "Dfa initial state states must be a member of Dfa states."
 
     def construct_symbolic(self, states, alphabet, delta, pred, succ, init_st, final, *args, **kwargs):
+        if "skip_validation" not in kwargs:
+            kwargs["skip_validation"] = False
+
         if self._is_constructed:
             raise RuntimeError("Cannot initialize an already initialized game.")
 
@@ -281,8 +284,10 @@ class Dfa(BaseAutomaton):
         self._final = final
         self._mode = self.SYMBOLIC
         self._is_constructed = True
-
-        self.validate_graph(graph=self._graph, final=self._final, init_st=self._init_st)
+        if kwargs["skip_validation"]:
+            logger.warning(f"Skipping validation for {repr(self)} during construct_explicit.")
+        else:
+            self.validate_graph(graph=self._graph, final=self._final, init_st=self._init_st)
 
     def construct_explicit(self, graph, init_st, final, *args, **kwargs):
         if "skip_validation" not in kwargs:
@@ -319,7 +324,9 @@ class Dfa(BaseAutomaton):
             return {(e[1], frozenset(e[2]["symbol"])) for e in self.graph.out_edges(state, data=True)}
 
         assert isinstance(final, set), f"Dfa final states must be a set. Input type(final): {type(final)}"
-        if not kwargs["skip_validation"]:
+        if kwargs["skip_validation"]:
+            logger.warning(f"Skipping validation for {repr(self)} during construct_explicit.")
+        else:
             self.validate_graph(graph, final, init_st)
 
         alphabet = set()
