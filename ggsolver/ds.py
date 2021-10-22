@@ -3,7 +3,7 @@ import inspect
 import random
 from abc import ABC, abstractmethod
 
-logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 class BaseGame(ABC):
@@ -62,16 +62,20 @@ class BaseGame(ABC):
                     state[param_name] = (func_name, source_code)
                 else:
                     state[param_name] = None
-                    logging.warning(f"{repr(self)}.__reduce__: Parameter {param_name} has a function value that is "
-                                    f"not registered with self._func_params. This function will not be unpickled.")
+                    logger.warning(f"{repr(self)}.__reduce__: Parameter {param_name} has a function value that is " 
+                                   f"not registered with self._pkl_encode_func. This function will not be unpickled.")
 
             else:
                 state[param_name] = param_value
 
         # Return object state
+        logger.debug(f"{repr(self)}.__getstate__() -> {state}")
         return state
 
     def __setstate__(self, state):
+        logger.debug(f"{repr(self.__class__)}.__setstate__(): input state -> {state}")
+        print(f"{state['_pred']}")
+
         def pickle_parse_fail_placeholder(*args, **kwargs):
             raise NotImplementedError(f"This function is called when unpickling of game object raises Exception."
                                       f"Check logs, and update the function.")
@@ -89,28 +93,29 @@ class BaseGame(ABC):
                     state[param_name] = tmp_globals[func_name]
 
                 except SyntaxError:
-                    logging.error(f"{state['_name']}.{param_name} is registered as function parameter. Encoded syntax"
+                    logger.error(f"{state['_name']}.{param_name} is registered as function parameter. Encoded syntax"
                                   f"could not be parsed while unpickling. Setting function to dummy function.",
                                   exc_info=True)
                     state[param_name] = pickle_parse_fail_placeholder
 
                 except KeyError:
-                    logging.error(f"{state['_name']}.{param_name} is registered as function parameter. "
+                    logger.error(f"{state['_name']}.{param_name} is registered as function parameter. "
                                   f"It seems the name of function 'def <name>(...):' in {func_str} is not "
                                   f"the same as {func_name}. Or, it is a lambda expression, which is not supported.",
                                   exc_info=True)
                     state[param_name] = pickle_parse_fail_placeholder
 
         self.__dict__.update(state)
+        logger.debug(f"{repr(self)}.__setstate__(): new_state -> {state}")
 
     def construct_explicit(self, graph, **kwargs):
         err_msg = f"{repr(self)}.construct_explicit method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def construct_symbolic(self, states, actions, delta, pred, succ, **kwargs):
         err_msg = f"{repr(self)}.construct_symbolic method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def get_state_property(self, v, prop_name):
@@ -118,9 +123,9 @@ class BaseGame(ABC):
             return self._graph.nodes[v][prop_name]
         except KeyError as err:
             if v not in self._graph.nodes:
-                logging.critical(f"State {v} is not in {repr(self)}.")
+                logger.critical(f"State {v} is not in {repr(self)}.")
             if prop_name not in self._graph.nodes[v]:
-                logging.critical(f"State {v} in {repr(self)} does not have property {prop_name}.")
+                logger.critical(f"State {v} in {repr(self)} does not have property {prop_name}.")
             raise err
 
     def label(self, v):
@@ -128,61 +133,61 @@ class BaseGame(ABC):
 
     def make_explicit(self):
         err_msg = f"{repr(self)}.make_explicit method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def make_complete(self):
         err_msg = f"Not yet implemented. TODO."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     def make_labeled(self, atoms, labeling_func):
         if len(self._atoms) != 0 or self._label is not None:
-            logging.warning(f"{repr(self)}.make_labeled is overwrites atoms or labeling function.")
+            logger.warning(f"{repr(self)}.make_labeled is overwrites atoms or labeling function.")
         self._atoms = set(atoms)
         self._label = labeling_func
 
     def set_init_st(self, init_st):
         if self._init_st is not None:
-            logging.warning(f"{repr(self)}.init_st is updated from {self._init_st} to {init_st}.")
+            logger.warning(f"{repr(self)}.init_st is updated from {self._init_st} to {init_st}.")
         self._init_st = init_st
 
     def states(self, data=False):
         if not self.is_constructed:
             err_msg = f"Cannot access {repr(self)}.states. Game is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise NotImplementedError(err_msg)
 
         return self._graph.nodes(data=data)
 
     def validate_graph(self, graph, **kwargs):
         err_msg = f"{repr(self)}.validate_graph method is not implemented by user. Returning True."
-        logging.warning(err_msg)
+        logger.warning(err_msg)
         return True
 
     @abstractmethod
     def delta(self, u, a):
         err_msg = f"{repr(self)}.delta method is not defined."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @abstractmethod
     def pred(self, v):
         err_msg = f"{repr(self)}.pred method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @abstractmethod
     def succ(self, u):
         err_msg = f"{repr(self)}.succ method is not implemented by user."
-        logging.critical(err_msg)
+        logger.critical(err_msg)
         raise NotImplementedError(err_msg)
 
     @property
     def actions(self):
         if not self.is_constructed:
             err_msg = f"Cannot access {repr(self)}.actions. Game is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise NotImplementedError(err_msg)
 
         return self._actions
@@ -191,7 +196,7 @@ class BaseGame(ABC):
     def graph(self):
         if not self.is_constructed:
             err_msg = f"Cannot access {repr(self)}.states. Game is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise NotImplementedError(err_msg)
 
         if self._mode == self.EXPLICIT:
@@ -203,7 +208,7 @@ class BaseGame(ABC):
     def init_st(self):
         if not self.is_constructed:
             err_msg = f"Cannot access {repr(self)}.init_st. Game is not constructed."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise NotImplementedError(err_msg)
 
         return self._init_st
@@ -212,7 +217,7 @@ class BaseGame(ABC):
     def is_complete(self):
         if not self.is_constructed:
             err_msg = f"{repr(self)}.is_complete is not implemented. TODO."
-            logging.critical(err_msg)
+            logger.critical(err_msg)
             raise NotImplementedError(err_msg)
 
     @property
@@ -238,10 +243,10 @@ class DeterministicStrategy(Strategy):
         try:
             return self[v][0]
         except KeyError:
-            logging.exception(f"Strategy is not defined at state {v}.")
+            logger.exception(f"Strategy is not defined at state {v}.")
             raise
         except IndexError:
-            logging.exception(f"Strategy at state {v} is empty.")
+            logger.exception(f"Strategy at state {v} is empty.")
 
 
 class RandomizedStrategy(Strategy):
@@ -249,8 +254,8 @@ class RandomizedStrategy(Strategy):
         try:
             return random.choice(self[v])
         except KeyError:
-            logging.exception(f"Strategy is not defined at state {v}.")
+            logger.exception(f"Strategy is not defined at state {v}.")
             raise
         except IndexError:
-            logging.exception(f"Strategy at state {v} is empty.")
+            logger.exception(f"Strategy at state {v} is empty.")
 
