@@ -35,15 +35,12 @@ It is developed and maintained by Abhishek N. Kulkarni, University of Florida (h
 
 1. Pull the latest version of `ggsolver` from `https://github.com/abhibp1993/ggsolver.git`.
 
-2. Pull the latest version of `cirl-assignments` from `https://github.com/abhibp1993/cirl-assignments.git`.
+2. Pull the latest version of docker image `abhibp1993/ggsolver` using `docker pull abhibp1993/ggsolver`.
 
-3. Pull the latest version of docker image `abhibp1993/ggsolver` using `docker pull abhibp1993/ggsolver`.
+3. Run `docker run -it -p 8888:8888 -v <path to ggsolver>:/home/ggsolver abhibp1993/ggsolver`
 
-4. Run `docker run -it -p 8888:8888 -v <path to ggsolver>:/home/ggsolver
-   -v <path to cirl-assignments>:/home/cirl-assignments abhibp1993/ggsolver`
+4. Run `cd /home/ggsolver/`
 
-5. Run `cd /home/cirl-assignments/`
-
-6. Run `jupyter notebook --allow-root --ip 0.0.0.0`
+5. Run `jupyter notebook --allow-root --ip 0.0.0.0`
 
 7. Use the link with `127.0.0.1/...` to open jupyter notebook on browser.
