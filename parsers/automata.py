@@ -268,21 +268,36 @@ class Dfa(BaseAutomaton):
         assert set.issubset(set(final), set(graph.nodes())), "Dfa final states must be a subset of Dfa states."
         assert init_st in graph.nodes(), "Dfa initial state states must be a member of Dfa states."
 
-    def construct_symbolic(self, states, alphabet, delta, pred, succ, init_st, final, *args, **kwargs):
+    def construct_symbolic(self, states, alphabet, delta, init_st, final, pred=None, succ=None, *args, **kwargs):
         if "skip_validation" not in kwargs:
             kwargs["skip_validation"] = False
 
         if self._is_constructed:
             raise RuntimeError("Cannot initialize an already initialized game.")
 
-        assert isinstance(final, set)
+        assert isinstance(final, set), f"Final states must be a set."
+
+        def _pred(v):
+            pred_states = set()
+            for u in states:
+                for true_atoms in powerset(alphabet):
+                    if v == delta(u, true_atoms):
+                        pred_states.add((u, frozenset(true_atoms)))
+            return pred_states
+
+        def _succ(u):
+            succ_states = set()
+            for true_atoms in powerset(alphabet):
+                v = delta(u, true_atoms)
+                succ_states.add((v, frozenset(true_atoms)))
+            return succ_states
 
         self._graph = nx.MultiDiGraph()
         self._graph.add_nodes_from(states)
         self._alphabet = alphabet
         self._delta = delta
-        self._pred = pred
-        self._succ = succ
+        self._pred = pred if pred is not None else _pred
+        self._succ = succ if succ is not None else _succ
         self._init_st = init_st
         self._final = final
         self._mode = self.SYMBOLIC
@@ -364,7 +379,8 @@ class Dfa(BaseAutomaton):
         for src in self.states():
             for sigma in powerset(self.alphabet):
                 dst = self.delta(src, sigma)
-                graph.add_edge(src, dst, symbol=sigma)
+                if dst is not None:
+                    graph.add_edge(src, dst, symbol=sigma)
 
         # Reconstruct graph explicitly
         init_st = self.init_st
