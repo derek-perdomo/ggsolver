@@ -1,6 +1,8 @@
 import logging
 import networkx as nx
 from ggsolver.ds import BaseGame
+from ggsolver.logic import Dfa
+from ggsolver.utils import product_tsys_dfa
 
 
 class OnePlayerGame(BaseGame):
@@ -145,3 +147,7 @@ class OnePlayerGame(BaseGame):
         self._properties = dict()
         self._mode = self.SYMBOLIC
         self._is_constructed = True
+
+
+def prod_game_dfa(game: OnePlayerGame, dfa: Dfa, name=None):
+    return product_tsys_dfa(game, dfa, name)

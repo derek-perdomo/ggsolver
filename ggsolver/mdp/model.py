@@ -1,6 +1,8 @@
 import logging
 import networkx as nx
 from ggsolver.ds import BaseGame
+from ggsolver.logic import Dfa
+from ggsolver.utils import product_tsys_dfa
 
 
 class MdpGame(BaseGame):
@@ -189,3 +191,7 @@ class MdpGame(BaseGame):
                                   f"Expected 1.0."
                         logging.error(err_msg)
                         raise AssertionError(err_msg)
+
+
+def prod_game_dfa(game: MdpGame, dfa: Dfa, name=None):
+    return product_tsys_dfa(game, dfa, name)
