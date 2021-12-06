@@ -5,7 +5,7 @@ import logging
 import networkx as nx
 import os
 from abc import ABC, abstractmethod
-from parsers.utils import powerset
+from ggsolver.logic.utils import powerset
 
 
 logger = logging.getLogger(__name__)
@@ -242,6 +242,10 @@ class BaseAutomaton(ABC):
     def mode(self):
         return self._mode
 
+    @property
+    def name(self):
+        return self._name
+
 
 class Dfa(BaseAutomaton):
     def __init__(self, name):
@@ -434,6 +438,11 @@ class Dfa(BaseAutomaton):
         succ = self._succ(u)
         assert isinstance(succ, set), f"{repr(self)}.pred({u}) is expected to return a set. It returned {type(succ)}."
         return succ
+
+
+class PrefDfa(Dfa):
+    def construct_from_dfa(self, dfa, init_st, final):
+        pass
 
 
 def pretty_print_automaton(aut):

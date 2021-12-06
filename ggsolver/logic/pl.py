@@ -10,9 +10,9 @@ import networkx as nx
 from pathlib import Path
 from lark import Lark, Transformer, Visitor
 from lark.exceptions import UnexpectedCharacters, UnexpectedToken, UnexpectedInput, UnexpectedEOF
-from parsers.formula import BaseFormula, ParsingError, PARSERS_DIR
-from parsers.automata import Dfa
-from parsers.utils import powerset
+from ggsolver.logic.formula import BaseFormula, ParsingError, PARSERS_DIR
+from ggsolver.logic.automata import Dfa
+from ggsolver.logic.utils import powerset
 
 try:
     import spot
@@ -345,7 +345,7 @@ class PLFormula(BaseFormula):
                 if edge.acc.count() > 0:
                     final.add(int(edge.src))
 
-        dfa = Dfa()
+        dfa = Dfa(name=f"{self.f_str}")
         dfa.construct_explicit(graph=graph, init_st=init_st, final=final)
         return dfa
 

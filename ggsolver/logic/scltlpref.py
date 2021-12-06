@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 """Implementation of the ScLTL parser."""
 import itertools
-import copy
 import networkx as nx
 import spot
 
 from pathlib import Path
 from lark import Lark, Transformer, Tree, Visitor
-from ggsolver_nx.parsers.formula import BaseFormula, CUR_DIR
-from ggsolver_nx.parsers import ScLTLFormula
-from ggsolver_nx.automata import PrefDfa, cross_product
+from ggsolver.logic.formula import BaseFormula, PARSERS_DIR
+from ggsolver.logic import ScLTLFormula
+from ggsolver.logic.automata import PrefDfa, cross_product
 
 
 class ScLTLPrefParser:
@@ -17,7 +16,7 @@ class ScLTLPrefParser:
 
     def __init__(self):
         """Initialize."""
-        self._parser = Lark(open(str(Path(CUR_DIR, "scltlpref.lark"))), parser="lalr")
+        self._parser = Lark(open(str(Path(PARSERS_DIR, "scltlpref.lark"))), parser="lalr")
 
     def __call__(self, text):
         """Call."""
@@ -50,7 +49,7 @@ class PrefOr:
         pref_product_graph = or_product_pref_graph(pref_dfa1.final, pref_dfa2.final)
 
         # Construct preference DFA
-        pref_dfa = PrefDfa()
+        pref_dfa = PrefDfa(name=self.__str__())
         pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=product_dfa.init_st, final=pref_product_graph)
 
         return pref_dfa
@@ -85,7 +84,7 @@ class PrefAnd:
         pref_product_graph = and_product_pref_graph(pref_dfa1.final, pref_dfa2.final)
 
         # Construct preference DFA
-        pref_dfa = PrefDfa()
+        pref_dfa = PrefDfa(name=self.__str__())
         pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=product_dfa.init_st, final=pref_product_graph)
 
         return pref_dfa
@@ -132,7 +131,7 @@ class StrictPreference:
         ])
 
         # Construct preference DFA
-        pref_dfa = PrefDfa()
+        pref_dfa = PrefDfa(name=self.__str__())
         pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
 
         return pref_dfa
@@ -179,7 +178,7 @@ class WeakPreference:
         ])
 
         # Construct preference DFA
-        pref_dfa = PrefDfa()
+        pref_dfa = PrefDfa(name=self.__str__())
         pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
 
         return pref_dfa
