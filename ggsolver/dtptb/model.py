@@ -122,7 +122,7 @@ class DtptbGame(BaseGame):
         self._pred = _pred
         self._succ = _succ
         self._atoms = set()
-        self._labeling_function = None
+        self._label = None
         self._properties = dict()
         self._mode = self.EXPLICIT
         self._is_constructed = True
@@ -143,7 +143,7 @@ class DtptbGame(BaseGame):
         self._pred = pred
         self._succ = succ
         self._atoms = set()
-        self._labeling_function = None
+        self._label = None
         self._properties = dict()
         self._mode = self.SYMBOLIC
         self._is_constructed = True
