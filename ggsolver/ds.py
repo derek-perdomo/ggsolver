@@ -28,9 +28,9 @@ class BaseGame(ABC):
         self._name = name
         self._graph = None
         self._actions = set()
-        self._delta = None
-        self._pred = None
-        self._succ = None
+        # self._delta = None
+        # self._pred = None
+        # self._succ = None
         self._init_st = None
         self._atoms = set()
         self._label = None
@@ -128,7 +128,10 @@ class BaseGame(ABC):
             raise err
 
     def label(self, v):
-        pass
+        if not self.is_constructed:
+            err_msg = f"{repr(self)}.label method is not implemented. It must be overridden by user."
+            logging.critical(err_msg, exc_info=True)
+            raise NotImplementedError(err_msg)
 
     def make_explicit(self):
         err_msg = f"{repr(self)}.make_explicit method is not implemented by user."

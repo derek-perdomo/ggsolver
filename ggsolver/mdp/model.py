@@ -17,9 +17,6 @@ class MdpGame(BaseGame):
         :param graph: networkx.DiGraph or networkx.MultiDiGraph object.
         :param is_qualitative: Denotes whether MDP game is qualitative (probability values will be ignored) or not.
         :param kwargs: Accepts following parameters.
-            - `delta`: Overrides default definition of delta function.
-            - `pred`: Overrides default definition of pred function.
-            - `succ`: Overrides default definition of succ function.
             - `validate_graph`: Set to False to bypass graph validation.
         """
         # Avoid repeated construction of game structure
@@ -28,35 +25,8 @@ class MdpGame(BaseGame):
             logging.critical(err_msg)
             raise NotImplementedError(err_msg)
 
-        # Default implementation of transition, predecessor and successor functions
-        def _delta(state, act):
-            if self._is_qualitative:
-                next_states = {(v, None) for _, v, d in self.graph.out_edges(state, data=True) if d["action"] == act}
-            else:
-                next_states = {(v, d["prob"]) for _, v, d in self.graph.out_edges(state, data=True)
-                               if d["action"] == act}
-
-            return next_states
-
-        def _pred(state):
-            if self._is_qualitative:
-                pred_states = {(v, d["action"], None) for v, _, d in self.graph.in_edges(state, data=True)}
-            else:
-                pred_states = {(v, d["action"], d["prob"]) for v, _, d in self.graph.in_edges(state, data=True)}
-            return pred_states
-
-        def _succ(state):
-            if self._is_qualitative:
-                succ_states = {(v, d["action"], None) for _, v, d in self.graph.out_edges(state, data=True)}
-            else:
-                succ_states = {(v, d["action"], d["prob"]) for _, v, d in self.graph.out_edges(state, data=True)}
-            return succ_states
-
         # Process input parameters
         validate_graph = True if "validate_graph" not in kwargs else kwargs["validate_graph"]
-        _delta = _delta if "delta" not in kwargs else kwargs["delta"]
-        _pred = _pred if "pred" not in kwargs else kwargs["pred"]
-        _succ = _succ if "succ" not in kwargs else kwargs["succ"]
 
         # Run validations on input graph structure
         if validate_graph:
@@ -70,9 +40,6 @@ class MdpGame(BaseGame):
         # Construct game structure
         self._graph = graph
         self._actions = actions
-        self._delta = _delta
-        self._pred = _pred
-        self._succ = _succ
         self._atoms = set()
         self._label = None
         self._properties = dict()
@@ -80,7 +47,7 @@ class MdpGame(BaseGame):
         self._is_constructed = True
         self._is_qualitative = is_qualitative
 
-    def construct_symbolic(self, states, actions, delta, pred, succ, is_qualitative=False, **kwargs):
+    def construct_symbolic(self, states, actions, is_qualitative=False, **kwargs):
         """
         Constructs deterministic two-player turn-based game symbolically.
         """
@@ -92,9 +59,6 @@ class MdpGame(BaseGame):
         self._graph = nx.MultiDiGraph()
         self._graph.add_nodes_from(states)
         self._actions = actions
-        self._delta = delta
-        self._pred = pred
-        self._succ = succ
         self._atoms = set()
         self._label = None
         self._properties = dict()
@@ -103,17 +67,26 @@ class MdpGame(BaseGame):
         self._is_qualitative = is_qualitative
 
     def delta(self, u, a):
-        # Check if game is constructed.
-        if not self.is_constructed:
-            err_msg = f"Cannot access {repr(self)}.delta. Game is not constructed."
-            logging.critical(err_msg)
-            raise NotImplementedError(err_msg)
+        if self._is_qualitative:
+            next_states = {(v, None) for _, v, d in self.graph.out_edges(u, data=True) if d["action"] == a}
+        else:
+            next_states = {(v, d["prob"]) for _, v, d in self.graph.out_edges(u, data=True) if d["action"] == a}
 
-        # Get next state
-        succ_a = self._delta(u, a)
+        return next_states
 
-        # Return next states
-        return succ_a
+    def pred(self, v):
+        if self._is_qualitative:
+            pred_states = {(u, d["action"], None) for u, _, d in self.graph.in_edges(v, data=True)}
+        else:
+            pred_states = {(u, d["action"], d["prob"]) for u, _, d in self.graph.in_edges(v, data=True)}
+        return pred_states
+
+    def succ(self, u):
+        if self._is_qualitative:
+            succ_states = {(v, d["action"], None) for _, v, d in self.graph.out_edges(u, data=True)}
+        else:
+            succ_states = {(v, d["action"], d["prob"]) for _, v, d in self.graph.out_edges(u, data=True)}
+        return succ_states
 
     def get_prob(self, u, a, v):
         if self.is_constructed and not self._is_qualitative:
@@ -127,32 +100,6 @@ class MdpGame(BaseGame):
         err_msg = f"Get transition matrix function is not implemented. TODO."
         logging.warning(err_msg)
         raise NotImplementedError(err_msg)
-
-    def pred(self, v):
-        # Check if game is constructed.
-        if not self.is_constructed:
-            err_msg = f"Cannot access {repr(self)}.pred. Game is not constructed."
-            logging.critical(err_msg)
-            raise NotImplementedError(err_msg)
-
-        # Get predecessor state
-        pred_states = self._pred(v)
-
-        # Return predecessor states
-        return pred_states
-
-    def succ(self, u):
-        # Check if game is constructed.
-        if not self.is_constructed:
-            err_msg = f"Cannot access {repr(self)}.succ. Game is not constructed."
-            logging.critical(err_msg)
-            raise NotImplementedError(err_msg)
-
-        # Get successor state
-        succ_states = self._succ(u)
-
-        # Return successor states
-        return succ_states
 
     def validate_graph(self, graph, is_qualitative=False, **kwargs):
         """
