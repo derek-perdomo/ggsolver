@@ -24,33 +24,92 @@ class ScLTLPrefParser:
         return parse_tree
 
 
-class PrefOr:
-    def __init__(self, lformula, rformula) -> None:
+class StrictPreference:
+    def __init__(self, lformula, rformula):
         self.lformula = lformula
         self.rformula = rformula
 
     def __str__(self) -> str:
-        return f"({self.lformula}) | ({self.rformula})"
+        return f"{self.lformula} > {self.rformula}"
 
     def translate(self):
         # Construct component DFAs
-        pref_dfa1 = self.lformula.translate()
-        pref_dfa2 = self.rformula.translate()
+        dfa1 = self.lformula.translate()
+        dfa2 = self.rformula.translate()
 
         # Force alphabet to be equal in order to ensure DFA product is well-defined.
         alphabet = set.union(self.lformula.alphabet, self.rformula.alphabet)
-        pref_dfa1._alphabet = alphabet
-        pref_dfa2._alphabet = alphabet
+        dfa1._alphabet = alphabet
+        dfa2._alphabet = alphabet
 
         # Construct product DFA
-        product_dfa = cross_product(pref_dfa1, pref_dfa2)
+        product_dfa = cross_product(dfa1, dfa2)
 
         # Construct preference graph
-        pref_product_graph = or_product_pref_graph(pref_dfa1.final, pref_dfa2.final)
+        pref_graph = nx.MultiDiGraph()
+        x1_states = set(itertools.product(dfa1.final, set(dfa2.states()) - set(dfa2.final)))
+        x2_states = set(itertools.product(set(dfa1.states()) - set(dfa1.final), dfa2.final))
+        # x3_states = set(product_dfa.states()) - set.union(x1_states, x2_states)
+
+        pref_graph.add_nodes_from([
+            ("X1", {"states": x1_states}),
+            ("X2", {"states": x2_states}),
+            # ("X3", {"states": x3_states})
+        ])
+        pref_graph.add_edges_from([
+            ("X2", "X1")
+        ])
 
         # Construct preference DFA
         pref_dfa = PrefDfa(name=self.__str__())
-        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=product_dfa.init_st, final=pref_product_graph)
+        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
+
+        return pref_dfa
+
+    @property
+    def alphabet(self):
+        return set.union(self.lformula.alphabet, self.rformula.alphabet)
+
+
+class WeakPreference:
+    def __init__(self, lformula, rformula):
+        self.lformula = lformula
+        self.rformula = rformula
+
+    def __str__(self) -> str:
+        return f"{self.lformula} >= {self.rformula}"
+
+    def translate(self):
+        # Construct component DFAs
+        dfa1 = self.lformula.translate()
+        dfa2 = self.rformula.translate()
+
+        # Force alphabet to be equal in order to ensure DFA product is well-defined.
+        alphabet = set.union(self.lformula.alphabet, self.rformula.alphabet)
+        dfa1._alphabet = alphabet
+        dfa2._alphabet = alphabet
+
+        # Construct product DFA
+        product_dfa = cross_product(dfa1, dfa2)
+
+        # Construct preference graph
+        pref_graph = nx.MultiDiGraph()
+        x1_states = set(itertools.product(dfa1.final, dfa2.states()))
+        x2_states = set(itertools.product(set(dfa1.states()) - set(dfa1.final), dfa2.final))
+        # x3_states = set(product_dfa.states()) - set.union(x1_states, x2_states)
+
+        pref_graph.add_nodes_from([
+            ("X1", {"states": x1_states}),
+            ("X2", {"states": x2_states}),
+            # ("X3", {"states": x3_states})
+        ])
+        pref_graph.add_edges_from([
+            ("X2", "X1")
+        ])
+
+        # Construct preference DFA
+        pref_dfa = PrefDfa(name=self.__str__())
+        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
 
         return pref_dfa
 
@@ -94,92 +153,33 @@ class PrefAnd:
         return set.union(self.lformula.alphabet, self.rformula.alphabet)
 
 
-class StrictPreference:
-    def __init__(self, lformula, rformula):
+class PrefOr:
+    def __init__(self, lformula, rformula) -> None:
         self.lformula = lformula
         self.rformula = rformula
 
     def __str__(self) -> str:
-        return f"{self.lformula} > {self.rformula}"
+        return f"({self.lformula}) | ({self.rformula})"
 
     def translate(self):
         # Construct component DFAs
-        dfa1 = self.lformula.translate()
-        dfa2 = self.rformula.translate()
+        pref_dfa1 = self.lformula.translate()
+        pref_dfa2 = self.rformula.translate()
 
         # Force alphabet to be equal in order to ensure DFA product is well-defined.
         alphabet = set.union(self.lformula.alphabet, self.rformula.alphabet)
-        dfa1._alphabet = alphabet
-        dfa2._alphabet = alphabet
+        pref_dfa1._alphabet = alphabet
+        pref_dfa2._alphabet = alphabet
 
         # Construct product DFA
-        product_dfa = cross_product(dfa1, dfa2)
+        product_dfa = cross_product(pref_dfa1, pref_dfa2)
 
         # Construct preference graph
-        pref_graph = nx.MultiDiGraph()
-        x1_states = set(itertools.product(dfa1.final, set(dfa2.states) - set(dfa2.final)))
-        x2_states = set(itertools.product(set(dfa1.states) - set(dfa1.final), dfa2.final))
-        x3_states = set(product_dfa.states) - set.union(x1_states, x2_states)
-
-        pref_graph.add_nodes_from([
-            ("X1", {"states": x1_states}),
-            ("X2", {"states": x2_states}),
-            ("X3", {"states": x3_states})
-        ])
-        pref_graph.add_edges_from([
-            ("X1", "X2")
-        ])
+        pref_product_graph = or_product_pref_graph(pref_dfa1.final, pref_dfa2.final)
 
         # Construct preference DFA
         pref_dfa = PrefDfa(name=self.__str__())
-        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
-
-        return pref_dfa
-
-    @property
-    def alphabet(self):
-        return set.union(self.lformula.alphabet, self.rformula.alphabet)
-
-
-class WeakPreference:
-    def __init__(self, lformula, rformula):
-        self.lformula = lformula
-        self.rformula = rformula
-
-    def __str__(self) -> str:
-        return f"{self.lformula} >= {self.rformula}"
-
-    def translate(self):
-        # Construct component DFAs
-        dfa1 = self.lformula.translate()
-        dfa2 = self.rformula.translate()
-
-        # Force alphabet to be equal in order to ensure DFA product is well-defined.
-        alphabet = set.union(self.lformula.alphabet, self.rformula.alphabet)
-        dfa1._alphabet = alphabet
-        dfa2._alphabet = alphabet
-
-        # Construct product DFA
-        product_dfa = cross_product(dfa1, dfa2)
-
-        # Construct preference graph
-        pref_graph = nx.MultiDiGraph()
-        x1_states = set(itertools.product(dfa1.final, dfa2.states))
-        x2_states = set(itertools.product(set(dfa1.states) - set(dfa1.final), dfa2.final))
-        x3_states = set(product_dfa.states) - set.union(x1_states, x2_states)
-
-        pref_graph.add_nodes_from([
-            ("X1", {"states": x1_states}),
-            ("X2", {"states": x2_states}),
-            ("X3", {"states": x3_states})
-        ])
-        pref_graph.add_edges_from([
-            ("X1", "X2")
-        ])
-
-        # Construct preference DFA
-        pref_dfa = PrefDfa(name=self.__str__())
-        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=(dfa1.init_st, dfa2.init_st), final=pref_graph)
+        pref_dfa.construct_from_dfa(dfa=product_dfa, init_st=product_dfa.init_st, final=pref_product_graph)
 
         return pref_dfa
 
@@ -578,10 +578,12 @@ def and_product_pref_graph(pref_graph1, pref_graph2):
     states = set(itertools.product(pref_graph1.nodes(), pref_graph2.nodes()))
     edges = set()
     for (x1, x2), (y1, y2) in itertools.product(states, states):
-        if (pref_graph1.has_edge(x1, y1) and pref_graph2.has_edge(x2, y2)) or \
-                (pref_graph1.has_edge(x1, y1) and x2 == y2) or \
-                (x1 == y1 and pref_graph2.has_edge(x2, y2)):
+        if pref_graph1.has_edge(x1, y1) and pref_graph2.has_edge(x2, y2):
             edges.add(((x1, x2), (y1, y2)))
+        # if (pref_graph1.has_edge(x1, y1) and pref_graph2.has_edge(x2, y2)) or \
+        #         (pref_graph1.has_edge(x1, y1) and x2 == y2) or \
+        #         (x1 == y1 and pref_graph2.has_edge(x2, y2)):
+        #     edges.add(((x1, x2), (y1, y2)))
 
     prod_graph = nx.MultiDiGraph()
     prod_graph.add_nodes_from(states)
@@ -593,9 +595,7 @@ def or_product_pref_graph(pref_graph1, pref_graph2):
     states = set(itertools.product(pref_graph1.nodes(), pref_graph2.nodes()))
     edges = set()
     for (x1, x2), (y1, y2) in itertools.product(states, states):
-        if (pref_graph1.has_edge(x1, y1) or pref_graph2.has_edge(x2, y2)) and \
-                (x1 not in nx.algorithms.dag.descendants(pref_graph1, y1)) and \
-                (x2 not in nx.algorithms.dag.descendants(pref_graph1, y2)):
+        if pref_graph1.has_edge(x1, y1) or pref_graph2.has_edge(x2, y2):
             edges.add(((x1, x2), (y1, y2)))
 
     prod_graph = nx.MultiDiGraph()

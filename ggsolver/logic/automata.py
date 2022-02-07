@@ -441,8 +441,40 @@ class Dfa(BaseAutomaton):
 
 
 class PrefDfa(Dfa):
-    def construct_from_dfa(self, dfa, init_st, final):
-        pass
+    def validate_graph(self, graph, final, init_st, *args, **kwargs):
+        """
+        Validates if the Dfa structure is well-defined.
+
+        Checks whether
+        (1) all edges, if exist, must have `symbol` attribute associated with them.
+        (1) the accepting-state set is a subset of the state set.
+        (2) the start-state is a member of the state set.
+
+        :raises AssertionError: if either of the above conditions is not satisfied.
+        """
+        assert all("symbol" in data for _, _, data in graph.edges(data=True)), \
+            "Dfa edges must have a `symbol` attribute associated with them."
+        assert init_st in graph.nodes(), "Dfa initial state states must be a member of Dfa states."
+
+    def construct_from_dfa(self, dfa, init_st, final, **kwargs):
+        self._graph = dfa._graph
+        self._graph.add_nodes_from(dfa.states())
+        self._alphabet = dfa.alphabet
+        self._delta = dfa.delta
+        self._pred = dfa.pred
+        self._succ = dfa.succ
+        self._init_st = init_st
+        self._final = final
+        self._mode = self.SYMBOLIC
+        self._is_constructed = True
+
+        if "skip_validation" not in kwargs:
+            kwargs["skip_validation"] = False
+
+        if kwargs["skip_validation"]:
+            logger.warning(f"Skipping validation for {repr(self)} during construct_from_dfa.")
+        else:
+            self.validate_graph(graph=self._graph, final=self._final, init_st=self._init_st)
 
 
 def pretty_print_automaton(aut):
