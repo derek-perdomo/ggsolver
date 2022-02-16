@@ -321,7 +321,10 @@ class Dfa(BaseAutomaton):
         def _delta(state, true_atoms):
             next_states = set()
             for _, q, data_q in graph.out_edges(state, data=True):
-                if set(data_q["symbol"]) == set(true_atoms):
+                # if set(data_q["symbol"]) == set(true_atoms):
+                eval_map = {p: True for p in true_atoms}
+                eval_map.update({p: False for p in self.alphabet - set(true_atoms)})
+                if data_q["symbol"].evaluate(eval_map=eval_map):
                     next_states.add(q)
 
             if len(next_states) > 1:
@@ -353,7 +356,8 @@ class Dfa(BaseAutomaton):
 
         alphabet = set()
         for _, _, data in graph.edges(data=True):
-            alphabet.update(set(data["symbol"]))
+            # alphabet.update(set(data["symbol"]))
+            alphabet.update(data["symbol"].alphabet)
 
         self._graph = graph
         self._alphabet = alphabet
