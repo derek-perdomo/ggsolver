@@ -560,10 +560,14 @@ class ScLTLPrefFormula(BaseFormula):
     def translate(self):
         return self.formula.translate()
 
-    def substitute(self, subs_map):
+    def substitute(self, subs_map=None):
+        if subs_map is None:
+            subs_map = dict()
         return ScLTLPrefFormula(SUBSTITUTE_ScLTLPref(self.parse_tree, subs_map))
 
-    def evaluate(self, eval_map):
+    def evaluate(self, eval_map=None):
+        if eval_map is None:
+            eval_map = dict()
         return EVALUATE_ScLTLPref(self.parse_tree, self.f_str, eval_map)
 
     @property
