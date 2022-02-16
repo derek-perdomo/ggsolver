@@ -385,11 +385,12 @@ class ScLTLFormula(BaseFormula):
                 elif f_lbl_str == '0':
                     f_lbl_str = "false"
                 f_lbl = PLFormula(f_lbl_str)
-                for sigma in powerset(self.alphabet):
-                    eval_map = {sym: True for sym in self.alphabet if sym in sigma}
-                    eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
-                    if f_lbl.evaluate(eval_map):
-                        graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
+                graph.add_edge(int(edge.src), int(edge.dst), symbol=f_lbl)
+                # for sigma in powerset(self.alphabet):
+                #     eval_map = {sym: True for sym in self.alphabet if sym in sigma}
+                #     eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
+                #     if f_lbl.evaluate(eval_map):
+                #         graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
 
                 # Final state is the source of accepting edge.
                 #   See: `G(p1 | p2 | F!p0)` in spot app by toggling `force transition-based` option.
