@@ -8,11 +8,11 @@ start: pl_formula
 ?pl_not: NOT* pl_wrapped
 ?pl_wrapped: pl_atom
             | LSEPARATOR pl_formula RSEPARATOR
-?pl_atom: atom
+?pl_literal: pl_atom
 	     | pl_true
 	     | pl_false
 
-atom: /[a-z][a-z0-9_]*/
+pl_atom: /[a-z][a-z0-9_]*/
 pl_true: TRUE
 pl_false: FALSE
 

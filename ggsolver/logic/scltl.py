@@ -203,6 +203,18 @@ class ScLTLSubstitutor(Transformer):
         except KeyError:
             return token
 
+    # noinspection PyMethodMayBeStatic
+    def scltl_true(self, args):
+        """Parse Propositional True."""
+        assert len(args) == 1
+        return "true"
+
+    # noinspection PyMethodMayBeStatic
+    def scltl_false(self, args):
+        """Parse Propositional False."""
+        assert len(args) == 1
+        return "false"
+
 
 class ScLTLEvaluator(Transformer):
     def __call__(self, tree, f_str, eval_map):
@@ -240,10 +252,94 @@ class ScLTLAtomGlobber(Visitor):
         self.add_alphabet(args.children[0].value)
 
 
+class ScLTLToStringVisitor(Visitor):
+    def __init__(self):
+        self.f_str = ""
+
+    def __call__(self, tree):
+        self.f_str = ""
+        self.visit(tree)
+        return self.f_str
+
+    def scltl_equivalence(self, tree):
+        """Parse ScLTL Equivalence."""
+        left_visitor = ScLTLToStringVisitor()
+        right_visitor = ScLTLToStringVisitor()
+        left_visitor.visit(tree.children[0])
+        right_visitor.visit(tree.children[2])
+        self.f_str = f"({left_visitor.f_str}) <-> ({right_visitor.f_str})"
+        return tree.children[1]
+
+    def scltl_implication(self, tree):
+        left_visitor = ScLTLToStringVisitor()
+        right_visitor = ScLTLToStringVisitor()
+        left_visitor.visit(tree.children[0])
+        right_visitor.visit(tree.children[2])
+        self.f_str = f"({left_visitor.f_str}) -> ({right_visitor.f_str})"
+        return tree.children[1]
+
+    def scltl_or(self, tree):
+        left_visitor = ScLTLToStringVisitor()
+        right_visitor = ScLTLToStringVisitor()
+        left_visitor.visit(tree.children[0])
+        right_visitor.visit(tree.children[2])
+        self.f_str = f"({left_visitor.f_str}) | ({right_visitor.f_str})"
+        return tree.children[1]
+
+    def scltl_and(self, tree):
+        left_visitor = ScLTLToStringVisitor()
+        right_visitor = ScLTLToStringVisitor()
+        left_visitor.visit(tree.children[0])
+        right_visitor.visit(tree.children[2])
+        self.f_str = f"({left_visitor.f_str}) & ({right_visitor.f_str})"
+        return tree.children[1]
+
+    def scltl_until(self, tree):
+        left_visitor = ScLTLToStringVisitor()
+        right_visitor = ScLTLToStringVisitor()
+        left_visitor.visit(tree.children[0])
+        right_visitor.visit(tree.children[2])
+        self.f_str = f"({left_visitor.f_str}) U ({right_visitor.f_str})"
+        return tree.children[1]
+
+    def scltl_always(self, tree):
+        self.f_str = f"G({self.f_str})"
+        return tree.children[0]
+
+    def scltl_eventually(self, tree):
+        self.f_str = f"F({self.f_str})"
+        return tree.children[0]
+
+    def scltl_next(self, tree):
+        self.f_str = f"X({self.f_str})"
+        return tree.children[0]
+
+    def scltl_not(self, tree):
+        self.f_str = f"!({self.f_str})"
+        return tree.children[0]
+
+    def scltl_atom(self, tree):
+        self.f_str += str(tree.children[0])
+        return tree.children[0]
+
+    def scltl_symbol(self, tree):
+        self.f_str += str(tree.children[0])
+        return tree.children[0]
+
+    def scltl_true(self, tree):
+        self.f_str += "true"
+        return tree.children[0]
+
+    def scltl_false(self, tree):
+        self.f_str += "false"
+        return tree.children[0]
+
+
 PARSE_ScLTL = ScLTLParser()
 SUBSTITUTE_ScLTL = ScLTLSubstitutor()
 EVALUATE_ScLTL = ScLTLEvaluator()
 ATOMGLOB_ScLTL = ScLTLAtomGlobber()
+TOSTRING_ScLTL = ScLTLToStringVisitor()
 
 
 class ScLTLFormula(BaseFormula):
@@ -267,7 +363,8 @@ class ScLTLFormula(BaseFormula):
         raise AssertionError(f"PLFormula.__eq__: type(other)={type(other)}.")
 
     def __str__(self):
-        return str(spot.formula(self.f_str))
+        return TOSTRING_ScLTL(self.parse_tree)
+        # return str(spot.formula(self.f_str))
 
     def translate(self):
         # Generate spot automaton
@@ -288,11 +385,12 @@ class ScLTLFormula(BaseFormula):
                 elif f_lbl_str == '0':
                     f_lbl_str = "false"
                 f_lbl = PLFormula(f_lbl_str)
-                for sigma in powerset(self.alphabet):
-                    eval_map = {sym: True for sym in self.alphabet if sym in sigma}
-                    eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
-                    if f_lbl.evaluate(eval_map):
-                        graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
+                graph.add_edge(int(edge.src), int(edge.dst), symbol=f_lbl)
+                # for sigma in powerset(self.alphabet):
+                #     eval_map = {sym: True for sym in self.alphabet if sym in sigma}
+                #     eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
+                #     if f_lbl.evaluate(eval_map):
+                #         graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
 
                 # Final state is the source of accepting edge.
                 #   See: `G(p1 | p2 | F!p0)` in spot app by toggling `force transition-based` option.
@@ -307,11 +405,16 @@ class ScLTLFormula(BaseFormula):
     def mp_class(self, verbose=False):
         return spot.mp_class(spot.formula(self.f_str), "v" if verbose else "")
 
-    def substitute(self, subs_map):
+    def substitute(self, subs_map=None):
+        if subs_map is None:
+            subs_map = dict()
+
         subs_str = SUBSTITUTE_ScLTL(self.parse_tree, subs_map)
         return ScLTLFormula(subs_str)
 
-    def evaluate(self, eval_map):
+    def evaluate(self, eval_map=None):
+        if eval_map is None:
+            eval_map = dict()
         return EVALUATE_ScLTL(self.parse_tree, self.f_str, eval_map)
 
     @property

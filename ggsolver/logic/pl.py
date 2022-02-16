@@ -12,7 +12,6 @@ from lark import Lark, Transformer, Visitor
 from lark.exceptions import UnexpectedCharacters, UnexpectedToken, UnexpectedInput, UnexpectedEOF
 from ggsolver.logic.formula import BaseFormula, ParsingError, PARSERS_DIR
 from ggsolver.logic.automata import Dfa
-from ggsolver.logic.utils import powerset
 
 try:
     import spot
@@ -141,7 +140,10 @@ class PLSubstitutor(Transformer):
     def pl_atom(self, args):
         """Parse Propositional Atom."""
         assert len(args) == 1
-        return str(args[0])
+        try:
+            return str(self.eval_map[args[0]])
+        except KeyError:
+            return args[0]
 
     # noinspection PyMethodMayBeStatic
     def pl_true(self, args):
@@ -154,14 +156,6 @@ class PLSubstitutor(Transformer):
         """Parse Propositional False."""
         assert len(args) == 1
         return "false"
-
-    def atom(self, args):
-        """Parse Atom."""
-        assert len(args) == 1
-        try:
-            return str(self.eval_map[args[0]])
-        except KeyError:
-            return args[0]
 
 
 class PLEvaluator(Transformer):
@@ -196,9 +190,10 @@ class PLAtomGlobber(Visitor):
     def add_alphabet(self, sym):
         self._alphabet.add(sym)
 
-    def atom(self, args):
+    def pl_atom(self, args):
         """ Glob Atom."""
-        self.add_alphabet(args.children[0].value)
+        if args.children[0].value not in ["true", "false"]:
+            self.add_alphabet(args.children[0].value)
 
 
 class PLToStringVisitor(Visitor):
@@ -254,6 +249,10 @@ class PLToStringVisitor(Visitor):
         self.f_str += str(tree.children[0])
         return tree.children[0]
 
+    def atom(self, tree):
+        self.f_str += str(tree.children[0])
+        return tree.children[0]
+
     def pl_true(self, tree):
         """Parse Propositional True."""
         self.f_str = "true"
@@ -305,6 +304,9 @@ class PLFormula(BaseFormula):
         logging.error(msg)
         raise AssertionError(msg)
 
+    def __str__(self):
+        return TOSTRING_PL(self.parse_tree)
+
     def translate(self):
         """
         Constructs a DFA accepting language defined by PL formula.
@@ -333,11 +335,7 @@ class PLFormula(BaseFormula):
                 elif f_lbl_str == '0':
                     f_lbl_str = "false"
                 f_lbl = PLFormula(f_lbl_str)
-                for sigma in powerset(self.alphabet):
-                    eval_map = {sym: True for sym in self.alphabet if sym in sigma}
-                    eval_map.update({sym: False for sym in self.alphabet if sym not in sigma})
-                    if f_lbl.evaluate(eval_map):
-                        graph.add_edge(int(edge.src), int(edge.dst), symbol=sigma)
+                graph.add_edge(int(edge.src), int(edge.dst), symbol=f_lbl)
 
                 # Final state is the source of accepting edge.
                 #   See: `G(p1 | p2 | F!p0)` in spot app by toggling `force transition-based` option.
@@ -357,10 +355,15 @@ class PLFormula(BaseFormula):
 
         return spot.mp_class(spot.formula(self.f_str), "v" if verbose else "")
 
-    def substitute(self, subs_map):
+    def substitute(self, subs_map=None):
+        if subs_map is None:
+            subs_map = dict()
         return PLFormula(SUBSTITUTE_PL(self.parse_tree, subs_map))
 
-    def evaluate(self, eval_map):
+    def evaluate(self, eval_map=None):
+        if eval_map is None:
+            eval_map = dict()
+
         if spot is None:
             msg = f"PL.evaluate() requires spot, which is not available."
             logging.error(msg)

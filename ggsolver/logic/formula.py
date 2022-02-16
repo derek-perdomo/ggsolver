@@ -25,11 +25,11 @@ class BaseFormula(ABC):
         pass
 
     @abstractmethod
-    def substitute(self, subs_map):
+    def substitute(self, subs_map=None):
         pass
 
     @abstractmethod
-    def evaluate(self, eval_map):
+    def evaluate(self, eval_map=None):
         pass
 
     @abstractmethod
