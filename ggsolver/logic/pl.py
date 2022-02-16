@@ -192,7 +192,8 @@ class PLAtomGlobber(Visitor):
 
     def pl_atom(self, args):
         """ Glob Atom."""
-        self.add_alphabet(args.children[0].value)
+        if args.children[0].value not in ["true", "false"]:
+            self.add_alphabet(args.children[0].value)
 
 
 class PLToStringVisitor(Visitor):
