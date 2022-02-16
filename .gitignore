@@ -49,3 +49,5 @@ ggsolver/dtptb/__pycache__/
 ggsolver/logic/__pycache__/
 
 examples/logic/.ipynb_checkpoints/
+
+.run/
