@@ -17,12 +17,15 @@ namespace ggsolver {
 
 
     class TEntity {
-    protected:
+    private:
         PAttrMap m_AttrMap;
 
     public:
         TEntity() {
             m_AttrMap = std::make_shared<TAttrMap>();
+        }
+        TEntity(PAttrMap attrMap) {
+            m_AttrMap = std::move(attrMap);
         }
         bool HasAttr(const std::string& key);
         void SetAttr(const std::string& key, const json& value);

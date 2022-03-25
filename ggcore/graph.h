@@ -34,9 +34,7 @@ namespace ggsolver {
 
     public:
         explicit TNode(unsigned long id) : m_SnapId(id) {}
-        TNode(unsigned long id, PAttrMap attrMap) : m_SnapId(id) {
-            m_AttrMap = std::move(attrMap);
-        }
+        TNode(unsigned long id, PAttrMap attrMap) : TEntity(attrMap), m_SnapId(id) {}
         unsigned long GetNId();
     };
 
