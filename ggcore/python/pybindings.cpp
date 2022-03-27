@@ -50,4 +50,18 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("get_vid", &TEdge::get_vid)
             ;
 
+    py::class_<TGraph, std::shared_ptr<TGraph>>(m, "TGraph")
+            .def(py::init<>())
+            .def("add_node", py::overload_cast<>(&TGraph::add_node))
+            .def("add_node", py::overload_cast<const json&>(&TGraph::add_node))
+            .def("add_nodes_from", py::overload_cast<const unsigned long&>(&TGraph::add_nodes_from))
+            .def("add_nodes_from", py::overload_cast<const std::vector<json>&>(&TGraph::add_nodes_from))
+            .def("has_node", py::overload_cast<const PNode&>(&TGraph::has_node))
+            .def("has_node", py::overload_cast<const unsigned long&>(&TGraph::has_node))
+            .def("has_attr", &TGraph::has_attr)
+            .def("get_attr_type", &TGraph::get_attr_type)
+            .def("get_attr", &TGraph::get_attr<json>)
+            .def("set_attr", &TGraph::set_attr<json>)
+            ;
+
 }

@@ -100,70 +100,112 @@ namespace ggsolver {
     };
 
 
-//    class TGraph : public TEntity {
-//    private:    // Representation
-//        PNEGraph m_Graph;
-//        std::unordered_map<unsigned long, PNode> m_Nodes;
-//        std::unordered_map<unsigned long, PEdge> m_Edges;
+    class TGraph : public TEntity {
+    private:    // Representation
+        PNEGraph m_graph;
+        std::unordered_map<unsigned long, PNode> m_nodes;
+        std::unordered_map<unsigned long, PEdge> m_edges;
+
+    public:
+        TGraph() {
+            m_graph = TNEGraph::New();
+        }
+
+        /// Nodes are identified by their IDs. For an application, if node is identified by some other object,
+        ///  user is expected to maintain the map {id: object} separately.
+        PNode add_node() {
+            // Add node to snap graph
+            auto nid = m_graph->AddNode();
+            // Create a new node
+            auto node = std::make_shared<TNode>();
+            // Set its node id
+            node->set_node_id(nid);
+            // Update nodes id:object map
+            m_nodes[nid] = node;
+            // Return node object
+            return node;
+        }
+        PNode add_node(const json& attr_map) {
+            // Add node to snap graph
+            auto nid = m_graph->AddNode();
+            // Create a new node
+            auto node = std::make_shared<TNode>(attr_map);
+            // Set its node id
+            node->set_node_id(nid);
+            // Update nodes id:object map
+            m_nodes[nid] = node;
+            // Return node object
+            return node;
+        }
+
+        std::vector<PNode> add_nodes_from(const unsigned long& k) {
+            std::vector<PNode> nodes;
+            for(int i = 0; i < k; i++) {
+                nodes.push_back(add_node());
+            }
+            return nodes;
+        }
+        std::vector<PNode> add_nodes_from(const std::vector<json>& attr_maps) {
+            std::vector<PNode> nodes;
+            for(const auto& item : attr_maps) {
+                nodes.push_back(add_node(item));
+            }
+            return nodes;
+        }
+
+//        PEdge add_edge(const unsigned long& uid, const unsigned long& v) {}
+//        PEdge add_edge(const unsigned long& u, const unsigned long& v, const json& attr_map) {}
+//        PEdge add_edge(const PNode& u, const PNode& v) {}
+//        PEdge add_edge(const PNode& u, const PNode& v, const json& attr_map) {}
 //
-//    public:
-//        TGraph() {
-//            m_Graph = TNEGraph::New();
-//        }
+//        std::vector<PEdge> add_edges_from(std::vector<std::pair<unsigned long, unsigned long>> edges) {}
+//        std::vector<PEdge> add_edges_from(std::vector<std::pair<PNode, PNode>> edges) {}
+//        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, json>> edges) {}
+//        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, json>> edges) {}
 //
-//        PNode AddNode() {}
-//        PNode AddNode(const PAttrMap& attrMap) {}
+//        void rem_node(const unsigned long& id) {}
+//        void rem_node(const PNode& node) {}
+//        void rem_nodes_from(std::vector<unsigned long> nodes) {}
+//        void rem_nodes_from(std::vector<PNode> nodes) {}
 //
-//        std::vector<PNode> AddNodesFrom(unsigned long k) {}
-//        std::vector<PNode> AddNodesFrom(const std::vector<PAttrMap>& attrMaps) {}
-//        std::vector<PNode> AddNodesFrom(const std::pair<json, PAttrMap>& nodes) {}
+//        void rem_edge(const unsigned long& eid) {}
+//        void rem_edge(const PEdge& edge) {}
+//        void rem_edges_from(std::vector<unsigned long> edges) {}
+//        void rem_edges_from(std::vector<PEdge> edges) {}
 //
-//        PEdge AddEdge(const unsigned long& uid, const unsigned long& v) {}
-//        PEdge AddEdge(const unsigned long& u, const unsigned long& v, const PAttrMap& attrMap) {}
-//        PEdge AddEdge(const PNode& u, const PNode& v) {}
-//        PEdge AddEdge(const PNode& u, const PNode& v, const PAttrMap& attrMap) {}
+        bool has_node(const unsigned long& nid) {
+            if (m_nodes.find(nid) != m_nodes.end()){
+                return true;
+            }
+            return false;
+        }
+        bool has_node(const PNode& node) {
+            return has_node(node->get_node_id());
+        }
+//        bool has_edge(const unsigned long& eid) {}
+//        bool has_edge(const PEdge& edge) {}
 //
-//        std::vector<PEdge> AddEdgesFrom(std::vector<std::pair<unsigned long, unsigned long>> edges) {}
-//        std::vector<PEdge> AddEdgesFrom(std::vector<std::pair<PNode, PNode>> edges) {}
-//        std::vector<PEdge> AddEdgesFrom(std::vector<TEdgeIdTriple> edges) {}
-//        std::vector<PEdge> AddEdgesFrom(std::vector<TEdgeNodeTriple> edges) {}
-//
-//        void RemNode(const unsigned long& id) {}
-//        void RemNode(const PNode& node) {}
-//        void RemNodesFrom(std::vector<unsigned long> nodes) {}
-//        void RemNodesFrom(std::vector<PNode> nodes) {}
-//
-//        void RemEdge(const unsigned long& eid) {}
-//        void RemEdge(const PEdge& edge) {}
-//        void RemEdgesFrom(std::vector<unsigned long> edges) {}
-//        void RemEdgesFrom(std::vector<PEdge> edges) {}
-//
-//        bool HasNode(const unsigned long& nid) {}
-//        bool HasNode(const PNode& node) {}
-//        bool HasEdge(const unsigned long& eid) {}
-//        bool HasEdge(const PEdge& edge) {}
-//
-//        void Clear() {}
-//        void Reserve(unsigned long num_nodes) {}
-//        void Reserve(unsigned long num_nodes, unsigned long num_edges) {}
+//        void clear() {}
+//        void reserve(unsigned long num_nodes) {}
+//        void reserve(unsigned long num_nodes, unsigned long num_edges) {}
 //
 //
-//        std::vector<PEdge> Edges() {}
-//        std::vector<PEdge> InEdges(const unsigned long& vid) {}
-//        std::vector<PEdge> InEdges(const PNode& v) {}
-//        std::vector<PEdge> OutEdges(const unsigned long& uid) {}
-//        std::vector<PEdge> OutEdges(const PNode& u) {}
+//        std::vector<PEdge> edges() {}
+//        std::vector<PEdge> in_edges(const unsigned long& vid) {}
+//        std::vector<PEdge> in_edges(const PNode& v) {}
+//        std::vector<PEdge> out_edges(const unsigned long& uid) {}
+//        std::vector<PEdge> out_edges(const PNode& u) {}
 //
-//        std::vector<PNode> Successors(const unsigned long& u) {}
-//        std::vector<PNode> Successors(const PNode& u) {}
-//        std::vector<PNode> Predecessors(const unsigned long& u) {}
-//        std::vector<PNode> Predecessors(const PNode& u) {}
+//        std::vector<PNode> successors(const unsigned long& u) {}
+//        std::vector<PNode> successors(const PNode& u) {}
+//        std::vector<PNode> predecessors(const unsigned long& u) {}
+//        std::vector<PNode> predecessors(const PNode& u) {}
 //
-//        unsigned long NumberOfNodes() {}
-//        unsigned long NumberOfEdges() {}
-//        unsigned long Size() {}
-//
-//    };
+//        unsigned long number_of_nodes() {}
+//        unsigned long number_of_edges() {}
+//        unsigned long size() {}
+
+    };
 
 }
 
