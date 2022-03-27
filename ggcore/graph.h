@@ -79,10 +79,8 @@ namespace ggsolver {
         unsigned long m_vid;
 
     public:
-        TEdge(unsigned long eid, unsigned long uid, unsigned long vid) : m_snap_id(eid), m_uid(uid), m_vid(vid) {}
-        TEdge(unsigned long eid, unsigned long uid, unsigned long vid, json attr_map) : TEntity(attr_map),
-            m_snap_id(eid), m_uid(uid), m_vid(vid)  {}
-        unsigned long get_eid() {
+        TEdge() : m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+        unsigned long get_edge_id() {
             return m_snap_id;
         }
         unsigned long get_uid() {
@@ -100,6 +98,7 @@ namespace ggsolver {
             m_vid = vid;
         }
     };
+
 
 //    class TGraph : public TEntity {
 //    private:    // Representation
