@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <utility>
+#include <tuple>
 #include <Snap.h>
 #include "entity.h"
 #include "types.h"
@@ -35,7 +36,7 @@ namespace ggsolver {
 
     public:
         explicit TNode() : m_snap_id(-1) {}    // default (-1) will store the maximum value of long due to `unsigned`.
-        TNode(json attrMap) : TEntity(attrMap), m_snap_id(-1) {}
+        TNode(json attr_map) : TEntity(attr_map), m_snap_id(-1) {}
         unsigned long get_node_id() {
             return m_snap_id;
         }
@@ -80,6 +81,7 @@ namespace ggsolver {
 
     public:
         TEdge() : m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+        TEdge(const json& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
         unsigned long get_edge_id() {
             return m_snap_id;
         }
@@ -98,7 +100,6 @@ namespace ggsolver {
             m_vid = vid;
         }
     };
-
 
     class TGraph : public TEntity {
     private:    // Representation
@@ -153,16 +154,72 @@ namespace ggsolver {
             return nodes;
         }
 
-//        PEdge add_edge(const unsigned long& uid, const unsigned long& v) {}
-//        PEdge add_edge(const unsigned long& u, const unsigned long& v, const json& attr_map) {}
-//        PEdge add_edge(const PNode& u, const PNode& v) {}
-//        PEdge add_edge(const PNode& u, const PNode& v, const json& attr_map) {}
-//
-//        std::vector<PEdge> add_edges_from(std::vector<std::pair<unsigned long, unsigned long>> edges) {}
-//        std::vector<PEdge> add_edges_from(std::vector<std::pair<PNode, PNode>> edges) {}
-//        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, json>> edges) {}
-//        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, json>> edges) {}
-//
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid) {
+            if (has_node(uid) && has_node(vid)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(uid, vid);
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>();
+                // Set its edge id
+                edge->set_edge_id(eid, uid, vid);
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
+        }
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const json& attr_map) {
+            if (has_node(uid) && has_node(vid)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(uid, vid);
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>(attr_map);
+                // Set its edge id
+                edge->set_edge_id(eid, uid, vid);
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
+        }
+        PEdge add_edge(const PNode& u, const PNode& v) {
+            return add_edge(u->get_node_id(), v->get_node_id());
+        }
+        PEdge add_edge(const PNode& u, const PNode& v, const json& attr_map) {
+            return add_edge(u->get_node_id(), v->get_node_id(), attr_map);
+        }
+
+        std::vector<PEdge> add_edges_from(std::vector<std::pair<unsigned long, unsigned long>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(item.first, item.second));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::pair<PNode, PNode>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(item.first, item.second));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, json>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, json>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+
 //        void rem_node(const unsigned long& id) {}
 //        void rem_node(const PNode& node) {}
 //        void rem_nodes_from(std::vector<unsigned long> nodes) {}

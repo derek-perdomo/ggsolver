@@ -20,7 +20,7 @@ namespace ggsolver {
     class TEntity {
     protected:
         json m_attr_map;
-        const std::vector<std::string> m_special_attr_names {"name"};
+        const std::vector<std::string> m_special_attr_names {};
 
     public:
         TEntity() {};
