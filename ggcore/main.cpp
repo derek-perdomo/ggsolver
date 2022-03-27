@@ -5,7 +5,7 @@
 #include "types.h"
 #include "version.h"
 #include "entity.h"
-//#include "graph.h"
+#include "graph.h"
 //#include "game.h"
 //#include "oneplayer.h"
 //#include "mdp.h"
@@ -23,8 +23,17 @@ void test_entity() {
     ent0.set_attr<json>("json", {{"ele1", 10}, {"ele2", "string"}});
 }
 
+
+void test_node() {
+    TNode n1;
+    n1.set_attr<>("name", std::string("test"));
+    std::cout << n1.get_attr<std::string>("name") << std::endl;
+}
+
+
 int main(){
 
     test_entity();
+    test_node();
     return 0;
 }

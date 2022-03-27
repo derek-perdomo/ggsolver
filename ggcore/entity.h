@@ -24,6 +24,11 @@ namespace ggsolver {
 
     public:
         TEntity() {};
+        TEntity(json attr_map) {
+            if (attr_map.is_object()){
+                m_attr_map.update(attr_map);
+            }
+        }
         bool is_special_attr(const std::string& key) {
             return std::find(m_special_attr_names.begin(), m_special_attr_names.end(), key) != m_special_attr_names.end();
         }
@@ -44,7 +49,6 @@ namespace ggsolver {
                 m_attr_map[key] = value;
             }
             else {
-//                std::cout << "TEntity.set_attr() type: " << typeid(T).name() << std::endl;
                 throw std::invalid_argument("TEntity.set_attr() expects a nlohmann::json supported `value` type." );
             }
         }
