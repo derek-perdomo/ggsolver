@@ -106,6 +106,7 @@ namespace ggsolver {
         PNEGraph m_graph;
         std::unordered_map<unsigned long, PNode> m_nodes;
         std::unordered_map<unsigned long, PEdge> m_edges;
+        const std::vector<std::string> m_special_attr_names {"nodes", "edges", "graph"};
 
     public:
         TGraph() {
@@ -220,16 +221,52 @@ namespace ggsolver {
             return edge_objects;
         }
 
-//        void rem_node(const unsigned long& id) {}
-//        void rem_node(const PNode& node) {}
-//        void rem_nodes_from(std::vector<unsigned long> nodes) {}
-//        void rem_nodes_from(std::vector<PNode> nodes) {}
-//
-//        void rem_edge(const unsigned long& eid) {}
-//        void rem_edge(const PEdge& edge) {}
-//        void rem_edges_from(std::vector<unsigned long> edges) {}
-//        void rem_edges_from(std::vector<PEdge> edges) {}
-//
+        void rem_node(const unsigned long& id) {
+            // Remove only if node exists
+            if (has_node(id)){
+                // remove from snap graph
+                m_graph->DelNode(id);
+                // remove from {id: node} map.
+                m_nodes.erase(id);
+            }
+        }
+        void rem_node(const PNode& node) {
+            rem_node(node->get_node_id());
+        }
+        void rem_nodes_from(std::vector<unsigned long> nodes) {
+            for (const auto& nid : nodes){
+                rem_node(nid);
+            }
+        }
+        void rem_nodes_from(std::vector<PNode> nodes) {
+            for (const auto& node : nodes){
+                rem_node(node);
+            }
+        }
+
+        void rem_edge(const unsigned long& eid) {
+            // Remove only if edge exists
+            if (has_edge(eid)){
+                // remove edge from snap graph
+                m_graph->DelEdge(eid);
+                // remove from {id: edge} map.
+                m_edges.erase(eid);
+            }
+        }
+        void rem_edge(const PEdge& edge) {
+            rem_edge(edge->get_edge_id());
+        }
+        void rem_edges_from(std::vector<unsigned long> edges) {
+            for (const auto& eid : edges){
+                rem_edge(eid);
+            }
+        }
+        void rem_edges_from(std::vector<PEdge> edges) {
+            for (const auto& edge : edges){
+                rem_edge(edge);
+            }
+        }
+
         bool has_node(const unsigned long& nid) {
             if (m_nodes.find(nid) != m_nodes.end()){
                 return true;
@@ -239,29 +276,120 @@ namespace ggsolver {
         bool has_node(const PNode& node) {
             return has_node(node->get_node_id());
         }
-//        bool has_edge(const unsigned long& eid) {}
-//        bool has_edge(const PEdge& edge) {}
-//
-//        void clear() {}
-//        void reserve(unsigned long num_nodes) {}
-//        void reserve(unsigned long num_nodes, unsigned long num_edges) {}
-//
-//
-//        std::vector<PEdge> edges() {}
-//        std::vector<PEdge> in_edges(const unsigned long& vid) {}
-//        std::vector<PEdge> in_edges(const PNode& v) {}
-//        std::vector<PEdge> out_edges(const unsigned long& uid) {}
-//        std::vector<PEdge> out_edges(const PNode& u) {}
-//
-//        std::vector<PNode> successors(const unsigned long& u) {}
-//        std::vector<PNode> successors(const PNode& u) {}
-//        std::vector<PNode> predecessors(const unsigned long& u) {}
-//        std::vector<PNode> predecessors(const PNode& u) {}
-//
-//        unsigned long number_of_nodes() {}
-//        unsigned long number_of_edges() {}
-//        unsigned long size() {}
+        bool has_edge(const unsigned long& eid) {
+            if (m_edges.find(eid) != m_edges.end()){
+                return true;
+            }
+            return false;
+        }
+        bool has_edge(const PEdge& edge) {
+            return has_edge(edge->get_edge_id());
+        }
 
+        void clear() {
+            m_graph->Clr();
+            m_nodes.clear();
+            m_edges.clear();
+        }
+        void reserve(unsigned long num_nodes, unsigned long num_edges) {
+            m_graph->Reserve(num_nodes, num_edges);
+            m_nodes.reserve(num_nodes);
+            m_edges.reserve(num_edges);
+        }
+
+
+        std::vector<PEdge> edges() {
+            std::vector<PEdge> ret_edges;
+            for (const auto& key : m_edges){
+                ret_edges.push_back(key.second);
+            }
+            return ret_edges;
+        }
+        std::vector<PEdge> in_edges(const unsigned long& vid) {
+            // Initialize empty in edges vector
+            std::vector<PEdge> ret_in_edges;
+
+            // Get in-degree of given node from SNAP's graph
+            auto in_degree = m_graph->GetNI(vid).GetInDeg();
+
+            // Iteratively query SNAP for in neighbors and extract corresponding iglpy node
+            int eid;
+            for (int i = 0; i < in_degree; i++) {
+                eid = m_graph->GetNI(vid).GetInEId(i);
+                ret_in_edges.push_back(m_edges[eid]);
+            }
+
+            // Return in edges
+            return ret_in_edges;
+        }
+        std::vector<PEdge> in_edges(const PNode& v) {
+            return in_edges(v->get_node_id());
+        }
+        std::vector<PEdge> out_edges(const unsigned long& uid) {
+            // Initialize empty in edges vector
+            std::vector<PEdge> ret_out_edges;
+
+            // Get out-degree of given node from SNAP's graph
+            auto out_degree = m_graph->GetNI(uid).GetOutDeg();
+
+            // Iteratively query SNAP for out edges
+            int eid;
+            for (int i = 0; i < out_degree; i++) {
+                eid = m_graph->GetNI(uid).GetOutEId(i);
+                ret_out_edges.push_back(m_edges[eid]);
+            }
+
+            // Return in edges
+            return ret_out_edges;
+        }
+        std::vector<PEdge> out_edges(const PNode& u) {
+            return out_edges(u->get_node_id());
+        }
+
+        std::vector<PNode> successors(const unsigned long& uid) {
+            auto ret_out_edges = out_edges(uid);
+            std::vector<PNode> ret_successors;
+            unsigned long vid;
+            for (const auto& edge : ret_out_edges) {
+                vid = edge->get_vid();
+                ret_successors.push_back(m_nodes[vid]);
+            }
+            return ret_successors;
+        }
+        std::vector<PNode> successors(const PNode& u) {
+            return successors(u->get_node_id());
+        }
+        std::vector<PNode> predecessors(const unsigned long& vid) {
+            auto ret_in_edges = in_edges(vid);
+            std::vector<PNode> ret_successors;
+            unsigned long uid;
+            for (const auto& edge : ret_in_edges) {
+                uid = edge->get_uid();
+                ret_successors.push_back(m_nodes[uid]);
+            }
+            return ret_successors;
+        }
+        std::vector<PNode> predecessors(const PNode& u) {
+            return predecessors(u->get_node_id());
+        }
+
+        unsigned long number_of_nodes() {
+            return m_graph->GetNodes();
+        }
+        unsigned long number_of_edges() {
+            return m_graph->GetEdges();
+        }
+        unsigned long size() {
+            // FIXME: Will this have overflow issue?
+            return number_of_nodes() + number_of_edges();
+        }
+
+        inline std::unordered_map<unsigned long, PNode> get_nodes_factory(){
+            return m_nodes;
+        }
+        inline std::unordered_map<unsigned long, PEdge> get_edges_factory(){
+            return m_edges;
+        }
     };
 
 }
