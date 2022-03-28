@@ -1,0 +1,14 @@
+"C:\MySoftware\CLion 2020.3.2\bin\cmake\win\bin\cmake.exe" -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" E:\Github-Repositories\ggsolver
+PythonLibs TRUE with version 3.8.5
+C:/MySoftware/Python385/include
+-- pybind11 v2.6.1 
+CMake Error at thirdparty/pybind11-2.6.1/tools/FindPythonLibsNew.cmake:161 (message):
+  Python config failure: Python is 64-bit, chosen compiler is 32-bit
+Call Stack (most recent call first):
+  thirdparty/pybind11-2.6.1/tools/pybind11Tools.cmake:38 (find_package)
+  thirdparty/pybind11-2.6.1/tools/pybind11Common.cmake:201 (include)
+  thirdparty/pybind11-2.6.1/CMakeLists.txt:169 (include)
+
+
+-- Configuring incomplete, errors occurred!
+See also "E:/Github-Repositories/ggsolver/cmake-build-debug/CMakeFiles/CMakeOutput.log".
