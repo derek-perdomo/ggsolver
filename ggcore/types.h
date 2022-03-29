@@ -6,6 +6,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <variant>
 #include <memory>
 #include <cstdint>
 #include <stdexcept>
@@ -22,9 +23,127 @@ namespace py = pybind11;
 
 namespace ggsolver {
 
+    class TValue;
     class TAttrMap;
+    typedef std::shared_ptr<TValue> PValue;
     typedef std::shared_ptr<TAttrMap> PAttrMap;
 
+
+    class TValue {
+    public:
+        enum class Type {
+            py_none,
+            py_bool,
+            py_int,
+            py_float,
+            py_str,
+            py_tuple,
+            py_list,
+            py_set,
+            py_dict,
+            py_object
+        };
+
+        typedef std::variant<
+            std::nullptr_t,
+            bool,
+            unsigned long,
+            double,
+            std::string,
+            std::vector<PValue>,
+            std::unordered_map<std::string, PValue>
+            > Value;
+
+    private:
+        Type m_type;
+        Value m_value;
+
+    public:
+        TValue() : m_type(Type::py_none), m_value(nullptr) {}
+        explicit TValue(const bool& val) : m_type(Type::py_bool), m_value(val) {}
+        explicit TValue(const unsigned long& val) : m_type(Type::py_int), m_value(val) {}
+        explicit TValue(const double& val) : m_type(Type::py_float), m_value(val) {}
+        explicit TValue(const std::string& val) : m_type(Type::py_float), m_value(val) {}
+        explicit TValue(const std::vector<PValue>& val) : m_type(Type::py_float), m_value(val) {}
+        explicit TValue(const std::unordered_map<std::string, PValue>& val) : m_type(Type::py_float), m_value(val) {}
+        explicit TValue(const py::object& val) {
+            set_object(val);
+        }
+
+        void set_none() {
+            m_type = Type::py_none;
+            m_value = nullptr;
+        }
+        void set_bool(const bool& val) {
+            m_type = Type::py_bool;
+            m_value = val;
+        }
+        void set_int(const unsigned long& val) {
+            m_type = Type::py_int;
+            m_value = val;
+        }
+        void set_double(const double& val) {
+            m_type = Type::py_float;
+            m_value = val;
+        }
+        void set_string(const std::string& val) {
+            m_type = Type::py_str;
+            m_value = val;
+        }
+        void set_vector(const std::vector<PValue>& val, Type type=Type::py_list) {
+            m_type = type;
+            m_value = val;
+        }
+        void set_map(const std::unordered_map<std::string, PValue>& val) {
+            m_type = Type::py_dict;
+            m_value = val;
+        }
+        void set_object(const std::unordered_map<std::string, PValue>& val) {
+
+        }
+        void set_object(const py::object& val) {
+
+        }
+
+        std::nullptr_t get_none() {
+            if (m_type == Type::py_none)
+                return nullptr;
+            throw "value is not none.";
+        }
+        bool get_bool() {
+            if (m_type == Type::py_bool)
+                return std::get<bool>(m_value);
+            throw "value is not bool.";
+        }
+        unsigned long get_int() {
+            if (m_type == Type::py_int)
+                return std::get<unsigned long>(m_value);
+            throw "value is not integer.";
+        }
+        double get_double() {
+            if (m_type == Type::py_float)
+                return std::get<double>(m_value);
+            throw "value is not double.";
+        }
+        std::string get_string() {
+            if(m_type == Type::py_str)
+                return std::get<std::string>(m_value);
+            throw "value is not string.";
+        }
+        std::vector<PValue> get_vector() {
+            if (m_type == Type::py_tuple || m_type == Type::py_list || m_type == Type::py_set)
+                return std::get<std::vector<PValue>>(m_value);
+            throw "value is not vector.";
+        }
+        std::unordered_map<std::string, PValue> get_map() {
+            if (m_type == Type::py_dict)
+                return std::get<std::unordered_map<std::string, PValue>>(m_value);
+            throw "value is not dict.";
+        }
+        std::unordered_map<std::string, PValue> get_object() {
+
+        }
+    };
 
     class TAttrMap {
     private:    // representation
