@@ -19,9 +19,11 @@ class Graph(TGraph):
         pass
 
     def __setattr__(self, key, value):
-        print(super(Graph, self).__getstate__())
+        if key in dir(self):
+            raise AttributeError(f"Cannot overwrite C++ bound functions.")
         if key in ("nodes", "edges", "graph"):       # Needs to be synced with `m_special_attr_names` in graph.h
             raise AttributeError(f"Cannot set values of specialized attributes of {repr(self)}.")
+        # TODO If value type is Entity, serialize it.
         super(Graph, self).set_attr(key, value)
 
     def __getattr__(self, item):
@@ -32,6 +34,7 @@ class Graph(TGraph):
         elif item == "graph":
             raise AttributeError(f"Cannot access `graph` attribute in {repr(self)} because it is not bound.")
         else:
+            # TODO If value type is Entity, deserialize it.
             return super(Graph, self).get_attr(item)
 
     def add_node(self, n):
