@@ -18,7 +18,7 @@ PYBIND11_MODULE(ggsolver, m) {
 	// Public methods
 	m.def("Version", &Version);
 
-    // TValue
+    // TValue::Type (Enum class)
     py::enum_<TValue::Type>(m, "Type")
             .value("py_none", TValue::Type::py_none)
             .value("py_bool", TValue::Type::py_bool)
@@ -34,6 +34,7 @@ PYBIND11_MODULE(ggsolver, m) {
             .value("gg_entity", TValue::Type::gg_entity)
             .export_values();
 
+    // TValue class
     py::class_<TValue, std::shared_ptr<TValue>>(m, "TValue")
             .def(py::init<const bool&>())
             .def(py::init<const unsigned long&>())
@@ -53,14 +54,24 @@ PYBIND11_MODULE(ggsolver, m) {
             ;
 
     // Attribute Map
-//    py::class_<TEntity, std::shared_ptr<TEntity>>(m, "TEntity")
-//            .def(py::init<>())
-//            .def("is_special_attr", &TEntity::is_special_attr)
-//            .def("has_attr", &TEntity::has_attr)
-//            .def("get_attr_type", &TEntity::get_attr_type)
-//            .def("get_attr", &TEntity::get_attr<json>)
-//            .def("set_attr", &TEntity::set_attr<json>)
-//            ;
+    py::class_<TAttrMap, std::shared_ptr<TAttrMap>>(m, "TAttrMap")
+            .def(py::init<>())
+            .def(py::init<const std::unordered_map<std::string, PValue>&>())
+            .def(py::init<const py::handle&>())
+            .def("get_attr", &TAttrMap::get_attr)
+            .def("set_attr", &TAttrMap::set_attr<py::handle>)
+            ;
+
+    // Entity class
+    py::class_<TEntity, std::shared_ptr<TEntity>>(m, "TEntity")
+            .def(py::init<>())
+            .def("is_special_attr", &TEntity::is_special_attr)
+            .def("has_attr", &TEntity::has_attr)
+            .def("get_attr_type", &TEntity::get_attr_type)
+            .def("get_attr", &TEntity::get_attr<json>)
+            .def("set_attr", &TEntity::set_attr<json>)
+            ;
+
 
     py::class_<TNode, std::shared_ptr<TNode>>(m, "TNode")
             .def(py::init<>())
