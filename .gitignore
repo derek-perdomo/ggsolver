@@ -8,3 +8,5 @@ cmake-build-debug/
 cmake-build-debug-wsl/
 
 ggsolver/ggsolver.cpython-38-x86_64-linux-gnu.so
+
+ggsolver/__pycache__/
