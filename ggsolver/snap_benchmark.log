@@ -1,0 +1,80 @@
+2022-03-07 22:23:11,167 DEBUG root ---------------------------------
+
+
+2022-03-07 22:23:11,401 DEBUG root snap: 100000 node addition: 233.7525 ms.
+2022-03-07 22:23:24,747 DEBUG root snap: 1000000 edge addition: 8353.9452 ms.
+2022-03-07 22:23:27,388 DEBUG root snap: 1000000 succcessor queries: 2640.2075 ms.
+2022-03-07 22:23:30,320 DEBUG root snap: 1000000 predecessor queries: 2932.1412 ms.
+2022-03-07 22:23:30,321 DEBUG root Peak was 607.785485 MB
+2022-03-07 22:23:30,650 DEBUG root ---------------------------------
+
+
+2022-03-07 22:23:31,034 DEBUG root snap: 100000 node addition: 259.5721 ms.
+2022-03-07 22:23:43,646 DEBUG root snap: 1000000 edge addition: 7422.6641 ms.
+2022-03-07 22:23:46,172 DEBUG root snap: 1000000 succcessor queries: 2525.1128 ms.
+2022-03-07 22:23:48,776 DEBUG root snap: 1000000 predecessor queries: 2604.1521 ms.
+2022-03-07 22:23:48,777 DEBUG root Peak was 611.994971 MB
+2022-03-07 22:23:49,347 DEBUG root ---------------------------------
+
+
+2022-03-07 22:23:49,651 DEBUG root snap: 100000 node addition: 302.7801 ms.
+2022-03-07 22:24:02,228 DEBUG root snap: 1000000 edge addition: 7650.7154 ms.
+2022-03-07 22:24:05,006 DEBUG root snap: 1000000 succcessor queries: 2772.9517 ms.
+2022-03-07 22:24:07,470 DEBUG root snap: 1000000 predecessor queries: 2464.8626999999997 ms.
+2022-03-07 22:24:07,471 DEBUG root Peak was 695.875708 MB
+2022-03-07 22:24:08,053 DEBUG root ---------------------------------
+
+
+2022-03-07 22:24:08,239 DEBUG root snap: 100000 node addition: 185.15519999999998 ms.
+2022-03-07 22:24:22,684 DEBUG root snap: 1000000 edge addition: 9674.9466 ms.
+2022-03-07 22:24:25,314 DEBUG root snap: 1000000 succcessor queries: 2628.2257999999997 ms.
+2022-03-07 22:24:27,878 DEBUG root snap: 1000000 predecessor queries: 2564.2502 ms.
+2022-03-07 22:24:27,879 DEBUG root Peak was 528.107455 MB
+2022-03-07 22:24:28,583 DEBUG root ---------------------------------
+
+
+2022-03-07 22:24:28,804 DEBUG root snap: 100000 node addition: 219.76919999999998 ms.
+2022-03-07 22:24:42,565 DEBUG root snap: 1000000 edge addition: 8472.396999999999 ms.
+2022-03-07 22:24:44,960 DEBUG root snap: 1000000 succcessor queries: 2393.997 ms.
+2022-03-07 22:24:47,448 DEBUG root snap: 1000000 predecessor queries: 2488.2777 ms.
+2022-03-07 22:24:47,449 DEBUG root Peak was 528.104627 MB
+2022-03-07 22:24:48,199 DEBUG root ---------------------------------
+
+
+2022-03-07 22:24:48,626 DEBUG root snap: 100000 node addition: 424.96889999999996 ms.
+2022-03-07 22:25:01,419 DEBUG root snap: 1000000 edge addition: 7419.831899999999 ms.
+2022-03-07 22:25:03,945 DEBUG root snap: 1000000 succcessor queries: 2525.3107999999997 ms.
+2022-03-07 22:25:06,245 DEBUG root snap: 1000000 predecessor queries: 2299.9022999999997 ms.
+2022-03-07 22:25:06,246 DEBUG root Peak was 863.647872 MB
+2022-03-07 22:25:06,637 DEBUG root ---------------------------------
+
+
+2022-03-07 22:25:07,136 DEBUG root snap: 100000 node addition: 206.65259999999998 ms.
+2022-03-07 22:25:20,452 DEBUG root snap: 1000000 edge addition: 6770.1011 ms.
+2022-03-07 22:25:22,775 DEBUG root snap: 1000000 succcessor queries: 2321.5384 ms.
+2022-03-07 22:25:25,094 DEBUG root snap: 1000000 predecessor queries: 2319.3947 ms.
+2022-03-07 22:25:25,095 DEBUG root Peak was 528.105955 MB
+2022-03-07 22:25:25,622 DEBUG root ---------------------------------
+
+
+2022-03-07 22:25:25,819 DEBUG root snap: 100000 node addition: 195.7311 ms.
+2022-03-07 22:25:38,772 DEBUG root snap: 1000000 edge addition: 8021.1491 ms.
+2022-03-07 22:25:41,225 DEBUG root snap: 1000000 succcessor queries: 2452.8736 ms.
+2022-03-07 22:25:43,847 DEBUG root snap: 1000000 predecessor queries: 2621.6265 ms.
+2022-03-07 22:25:43,848 DEBUG root Peak was 528.105299 MB
+2022-03-07 22:25:44,375 DEBUG root ---------------------------------
+
+
+2022-03-07 22:25:44,563 DEBUG root snap: 100000 node addition: 184.5265 ms.
+2022-03-07 22:25:56,356 DEBUG root snap: 1000000 edge addition: 6825.984399999999 ms.
+2022-03-07 22:25:58,539 DEBUG root snap: 1000000 succcessor queries: 2181.7535 ms.
+2022-03-07 22:26:00,781 DEBUG root snap: 1000000 predecessor queries: 2242.0045999999998 ms.
+2022-03-07 22:26:00,787 DEBUG root Peak was 528.103024 MB
+2022-03-07 22:26:01,150 DEBUG root ---------------------------------
+
+
+2022-03-07 22:26:01,568 DEBUG root snap: 100000 node addition: 209.2051 ms.
+2022-03-07 22:26:16,133 DEBUG root snap: 1000000 edge addition: 9051.7724 ms.
+2022-03-07 22:26:18,746 DEBUG root snap: 1000000 succcessor queries: 2612.3856 ms.
+2022-03-07 22:26:21,037 DEBUG root snap: 1000000 predecessor queries: 2291.708 ms.
+2022-03-07 22:26:21,038 DEBUG root Peak was 528.105382 MB

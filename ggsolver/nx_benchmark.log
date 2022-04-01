@@ -1,0 +1,81 @@
+2022-03-07 22:11:40,830 DEBUG root ---------------------------------
+
+
+2022-03-07 22:11:41,092 DEBUG root nx: 100000 node addition: 261.85589999999996 ms.
+2022-03-07 22:11:58,845 DEBUG root nx: 1000000 edge addition: 12838.632599999999 ms.
+2022-03-07 22:12:02,445 DEBUG root nx: 1000000 succcessor queries: 3599.5892 ms.
+2022-03-07 22:12:05,992 DEBUG root nx: 1000000 predecessor queries: 3546.4075 ms.
+2022-03-07 22:12:05,992 DEBUG root Peak was 753.536839 MB
+2022-03-07 22:12:06,467 DEBUG root ---------------------------------
+
+
+2022-03-07 22:12:06,732 DEBUG root nx: 100000 node addition: 48.4238 ms.
+2022-03-07 22:12:22,971 DEBUG root nx: 1000000 edge addition: 11343.001 ms.
+2022-03-07 22:12:25,829 DEBUG root nx: 1000000 succcessor queries: 2857.2409 ms.
+2022-03-07 22:12:28,591 DEBUG root nx: 1000000 predecessor queries: 2762.1692 ms.
+2022-03-07 22:12:28,592 DEBUG root Peak was 750.710184 MB
+2022-03-07 22:12:29,308 DEBUG root ---------------------------------
+
+
+2022-03-07 22:12:29,360 DEBUG root nx: 100000 node addition: 47.3061 ms.
+2022-03-07 22:12:47,213 DEBUG root nx: 1000000 edge addition: 13218.8578 ms.
+2022-03-07 22:12:50,471 DEBUG root nx: 1000000 succcessor queries: 3256.5937999999996 ms.
+2022-03-07 22:12:53,622 DEBUG root nx: 1000000 predecessor queries: 3151.3224 ms.
+2022-03-07 22:12:53,623 DEBUG root Peak was 756.465996 MB
+2022-03-07 22:12:54,164 DEBUG root ---------------------------------
+
+
+2022-03-07 22:12:54,602 DEBUG root nx: 100000 node addition: 56.924099999999996 ms.
+2022-03-07 22:13:10,054 DEBUG root nx: 1000000 edge addition: 10607.8761 ms.
+2022-03-07 22:13:13,246 DEBUG root nx: 1000000 succcessor queries: 3191.5402999999997 ms.
+2022-03-07 22:13:16,474 DEBUG root nx: 1000000 predecessor queries: 3228.5388 ms.
+2022-03-07 22:13:16,475 DEBUG root Peak was 772.684224 MB
+2022-03-07 22:13:17,349 DEBUG root ---------------------------------
+
+
+2022-03-07 22:13:17,402 DEBUG root nx: 100000 node addition: 50.4801 ms.
+2022-03-07 22:13:37,464 DEBUG root nx: 1000000 edge addition: 15105.460299999999 ms.
+2022-03-07 22:13:40,852 DEBUG root nx: 1000000 succcessor queries: 3387.6816 ms.
+2022-03-07 22:13:44,051 DEBUG root nx: 1000000 predecessor queries: 3199.2956999999997 ms.
+2022-03-07 22:13:44,052 DEBUG root Peak was 846.425656 MB
+2022-03-07 22:13:44,563 DEBUG root ---------------------------------
+
+
+2022-03-07 22:13:44,997 DEBUG root nx: 100000 node addition: 69.4528 ms.
+2022-03-07 22:14:05,720 DEBUG root nx: 1000000 edge addition: 15125.911999999998 ms.
+2022-03-07 22:14:08,913 DEBUG root nx: 1000000 succcessor queries: 3192.2643 ms.
+2022-03-07 22:14:12,039 DEBUG root nx: 1000000 predecessor queries: 3126.4818 ms.
+2022-03-07 22:14:12,040 DEBUG root Peak was 678.71048 MB
+2022-03-07 22:14:12,729 DEBUG root ---------------------------------
+
+
+2022-03-07 22:14:12,785 DEBUG root nx: 100000 node addition: 53.9182 ms.
+2022-03-07 22:14:33,991 DEBUG root nx: 1000000 edge addition: 15571.909099999999 ms.
+2022-03-07 22:14:36,935 DEBUG root nx: 1000000 succcessor queries: 2943.2971 ms.
+2022-03-07 22:14:39,810 DEBUG root nx: 1000000 predecessor queries: 2874.7223999999997 ms.
+2022-03-07 22:14:39,811 DEBUG root Peak was 653.272412 MB
+2022-03-07 22:14:40,246 DEBUG root ---------------------------------
+
+
+2022-03-07 22:14:40,520 DEBUG root nx: 100000 node addition: 56.1461 ms.
+2022-03-07 22:15:19,702 DEBUG root nx: 1000000 edge addition: 33865.5694 ms.
+2022-03-07 22:15:22,742 DEBUG root nx: 1000000 succcessor queries: 3039.1589999999997 ms.
+2022-03-07 22:15:25,615 DEBUG root nx: 1000000 predecessor queries: 2873.3642999999997 ms.
+2022-03-07 22:15:25,616 DEBUG root Peak was 830.952016 MB
+2022-03-07 22:15:26,352 DEBUG root ---------------------------------
+
+
+2022-03-07 22:15:26,401 DEBUG root nx: 100000 node addition: 47.9781 ms.
+2022-03-07 22:15:47,954 DEBUG root nx: 1000000 edge addition: 16274.121 ms.
+2022-03-07 22:15:50,928 DEBUG root nx: 1000000 succcessor queries: 2973.3741 ms.
+2022-03-07 22:15:53,908 DEBUG root nx: 1000000 predecessor queries: 2979.5175 ms.
+2022-03-07 22:15:53,909 DEBUG root Peak was 999.195012 MB
+2022-03-07 22:15:54,714 DEBUG root ---------------------------------
+
+
+2022-03-07 22:15:54,765 DEBUG root nx: 100000 node addition: 48.8749 ms.
+2022-03-07 22:16:09,050 DEBUG root nx: 1000000 edge addition: 9341.1601 ms.
+2022-03-07 22:16:12,050 DEBUG root nx: 1000000 succcessor queries: 2998.4772 ms.
+2022-03-07 22:16:14,968 DEBUG root nx: 1000000 predecessor queries: 2918.6601 ms.
+2022-03-07 22:16:14,969 DEBUG root Peak was 850.942892 MB
+2022-03-09 22:38:55,362 DEBUG root ---------------------------------
