@@ -18,15 +18,49 @@ PYBIND11_MODULE(ggsolver, m) {
 	// Public methods
 	m.def("Version", &Version);
 
-    // Attribute Map
-    py::class_<TEntity, std::shared_ptr<TEntity>>(m, "TEntity")
-            .def(py::init<>())
-            .def("is_special_attr", &TEntity::is_special_attr)
-            .def("has_attr", &TEntity::has_attr)
-            .def("get_attr_type", &TEntity::get_attr_type)
-            .def("get_attr", &TEntity::get_attr<json>)
-            .def("set_attr", &TEntity::set_attr<json>)
+    // TValue
+    py::enum_<TValue::Type>(m, "Type")
+            .value("py_none", TValue::Type::py_none)
+            .value("py_bool", TValue::Type::py_bool)
+            .value("py_int", TValue::Type::py_int)
+            .value("py_float", TValue::Type::py_float)
+            .value("py_str", TValue::Type::py_str)
+            .value("py_function", TValue::Type::py_function)
+            .value("py_tuple", TValue::Type::py_tuple)
+            .value("py_list", TValue::Type::py_list)
+            .value("py_set", TValue::Type::py_set)
+            .value("py_dict", TValue::Type::py_dict)
+            .value("py_object", TValue::Type::py_object)
+            .value("gg_entity", TValue::Type::gg_entity)
+            .export_values();
+
+    py::class_<TValue, std::shared_ptr<TValue>>(m, "TValue")
+            .def(py::init<const bool&>())
+            .def(py::init<const unsigned long&>())
+            .def(py::init<const double&>())
+            .def(py::init<const std::string&>())
+            .def(py::init<const PEntity&>())
+            .def(py::init<const std::vector<PValue>&>())
+            .def(py::init<const std::unordered_set<PValue>&>())
+            .def(py::init<const std::unordered_map<std::string, PValue>&>())
+            .def(py::init<const py::handle&>())
+            .def("set_object", &TValue::set_object)
+            .def("set_entity", &TValue::set_entity)
+            .def("get_type", &TValue::get_type)
+            .def("get_object", &TValue::get_object)
+            .def("get_entity", &TValue::get_entity<TEntity>)
+            .def("get_function", &TValue::get_function<py::function>)
             ;
+
+    // Attribute Map
+//    py::class_<TEntity, std::shared_ptr<TEntity>>(m, "TEntity")
+//            .def(py::init<>())
+//            .def("is_special_attr", &TEntity::is_special_attr)
+//            .def("has_attr", &TEntity::has_attr)
+//            .def("get_attr_type", &TEntity::get_attr_type)
+//            .def("get_attr", &TEntity::get_attr<json>)
+//            .def("set_attr", &TEntity::set_attr<json>)
+//            ;
 
     py::class_<TNode, std::shared_ptr<TNode>>(m, "TNode")
             .def(py::init<>())
