@@ -18,5 +18,6 @@ target_include_directories(ggcore INTERFACE ${GGCORE_DIRS})
 add_subdirectory("python")
 message("Configured for python bindings.")
 
-add_executable(main "main.cpp")
+#add_executable(main "main.cpp")
+add_executable(main "test_types.cpp")
 target_link_libraries(main PUBLIC snapcore pybind11::embed pybind11::module pybind11::lto pybind11::windows_extras)
