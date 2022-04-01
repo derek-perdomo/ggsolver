@@ -359,6 +359,78 @@ namespace ggsolver {
             m_dict[key] = t_value;
         }
 
+        void update(const PAttrMap& dict) {
+
+        }
+
+        void update(const py::dict& dict) {
+
+        }
+
+        void update(const std::unordered_map<std::string, PValue>& dict) {
+
+        }
+
+        bool has_key(const std::string& key){
+            return m_dict.find(key) != m_dict.end();
+        }
+
+        TValue::Type get_type(const std::string& key) {
+            if (has_key(key)) {
+                return m_dict[key]->get_type();
+            }
+        }
+    };
+
+
+    class TEntity {
+    private:
+        PAttrMap m_attr_map;
+        const std::vector<std::string> m_special_attr_names {};
+
+    public:
+        TEntity() {};
+        TEntity(const PAttrMap& attr_map) {
+            m_attr_map->update(attr_map);
+        }
+        TEntity(const py::handle& attr_map) {
+            if (py::isinstance<py::dict>(attr_map)) {
+                m_attr_map->update(attr_map.cast<py::dict>());
+            }
+        }
+        TEntity(const std::unordered_map<std::string, PValue>& attr_map) {
+            m_attr_map->update(attr_map);
+        }
+
+        bool is_special_attr(const std::string& key) {
+            return std::find(m_special_attr_names.begin(), m_special_attr_names.end(), key) != m_special_attr_names.end();
+        }
+        bool has_attr(const std::string& key) {
+            return m_attr_map->has_key(key);
+        }
+        TValue::Type get_type(const std::string& key) {
+            return m_attr_map->get_type(key);
+        }
+
+        template <typename T = json>
+        void set_attr(const std::string& key, const T& value) {
+            // Update value only if it is not specialized attribute.
+            if (!is_special_attr(key)) {
+                m_attr_map->set_attr<T>(key, value);
+            }
+            else {
+                throw std::invalid_argument("TEntity.set_attr() expects a nlohmann::json supported `value` type." );
+            }
+        }
+
+        PValue get_attr(const std::string& key){
+            if (!is_special_attr(key)) {
+                return m_attr_map->get_attr(key);
+            }
+            else {
+                throw std::invalid_argument("Attr " + key + " is specialized. Use specialized getter function.");
+            }
+        }
     };
 
 

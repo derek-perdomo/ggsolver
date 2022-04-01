@@ -1,7 +1,7 @@
 #include "pybindings.h"
 #include "../version.h"
 #include "../types.h"
-#include "../entity.h"
+//#include "../entity.h"
 #include "../graph.h"
 
 #include <pybind11/pybind11.h>
@@ -67,9 +67,9 @@ PYBIND11_MODULE(ggsolver, m) {
             .def(py::init<>())
             .def("is_special_attr", &TEntity::is_special_attr)
             .def("has_attr", &TEntity::has_attr)
-            .def("get_attr_type", &TEntity::get_attr_type)
-            .def("get_attr", &TEntity::get_attr<json>)
-            .def("set_attr", &TEntity::set_attr<json>)
+            .def("get_type", &TEntity::get_type)
+            .def("get_attr", &TEntity::get_attr)
+            .def("set_attr", &TEntity::set_attr<py::handle>)
             ;
 
 
@@ -77,9 +77,9 @@ PYBIND11_MODULE(ggsolver, m) {
             .def(py::init<>())
             .def("is_special_attr", &TNode::is_special_attr)
             .def("has_attr", &TNode::has_attr)
-            .def("get_attr_type", &TNode::get_attr_type)
-            .def("get_attr", &TNode::get_attr<json>)
-            .def("set_attr", &TNode::set_attr<json>)
+            .def("get_type", &TNode::get_type)
+            .def("get_attr", &TNode::get_attr)
+            .def("set_attr", &TNode::set_attr<py::handle>)
             .def("get_node_id", &TNode::get_node_id)
             ;
 
@@ -87,9 +87,9 @@ PYBIND11_MODULE(ggsolver, m) {
             .def(py::init<>())
             .def("is_special_attr", &TEdge::is_special_attr)
             .def("has_attr", &TEdge::has_attr)
-            .def("get_attr_type", &TEdge::get_attr_type)
-            .def("get_attr", &TEdge::get_attr<json>)
-            .def("set_attr", &TEdge::set_attr<json>)
+            .def("get_type", &TEdge::get_type)
+            .def("get_attr", &TEdge::get_attr)
+            .def("set_attr", &TEdge::set_attr<py::handle>)
             .def("get_edge_id", &TEdge::get_edge_id)
             .def("get_uid", &TEdge::get_uid)
             .def("get_vid", &TEdge::get_vid)
@@ -98,17 +98,29 @@ PYBIND11_MODULE(ggsolver, m) {
     py::class_<TGraph, std::shared_ptr<TGraph>>(m, "TGraph")
             .def(py::init<>())
             .def("add_node", py::overload_cast<>(&TGraph::add_node))
-            .def("add_node", py::overload_cast<const json&>(&TGraph::add_node))
+            .def("add_node", py::overload_cast<const py::handle&>(&TGraph::add_node))
+            .def("add_node", py::overload_cast<const PAttrMap&>(&TGraph::add_node))
+            .def("add_node", py::overload_cast<const std::unordered_map<std::string, PValue>&>(&TGraph::add_node))
             .def("add_edge", py::overload_cast<const unsigned long&, const unsigned long&>(&TGraph::add_edge))
-            .def("add_edge", py::overload_cast<const unsigned long&, const unsigned long&, const json&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const unsigned long&, const unsigned long&, const PAttrMap&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const unsigned long&, const unsigned long&, const py::handle&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const unsigned long&, const unsigned long&, const std::unordered_map<std::string, PValue>&>(&TGraph::add_edge))
             .def("add_edge", py::overload_cast<const PNode&, const PNode&>(&TGraph::add_edge))
-            .def("add_edge", py::overload_cast<const PNode&, const PNode&, const json&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const PNode&, const PNode&, const PAttrMap&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const PNode&, const PNode&, const py::handle&>(&TGraph::add_edge))
+            .def("add_edge", py::overload_cast<const PNode&, const PNode&, const std::unordered_map<std::string, PValue>&>(&TGraph::add_edge))
             .def("add_nodes_from", py::overload_cast<const unsigned long&>(&TGraph::add_nodes_from))
-            .def("add_nodes_from", py::overload_cast<const std::vector<json>&>(&TGraph::add_nodes_from))
+            .def("add_nodes_from", py::overload_cast<const std::vector<py::handle>&>(&TGraph::add_nodes_from))
+            .def("add_nodes_from", py::overload_cast<const std::vector<PAttrMap>&>(&TGraph::add_nodes_from))
+            .def("add_nodes_from", py::overload_cast<const std::vector<std::unordered_map<std::string, PValue>>&>(&TGraph::add_nodes_from))
             .def("add_edges_from", py::overload_cast<std::vector<std::pair<unsigned long, unsigned long>>>(&TGraph::add_edges_from))
             .def("add_edges_from", py::overload_cast<std::vector<std::pair<PNode, PNode>>>(&TGraph::add_edges_from))
-            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<unsigned long, unsigned long, json>>>(&TGraph::add_edges_from))
-            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<PNode, PNode, json>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<unsigned long, unsigned long, PAttrMap>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<unsigned long, unsigned long, py::handle>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<unsigned long, unsigned long, std::unordered_map<std::string, PValue>>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<PNode, PNode, PAttrMap>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<PNode, PNode, py::handle>>>(&TGraph::add_edges_from))
+            .def("add_edges_from", py::overload_cast<std::vector<std::tuple<PNode, PNode, std::unordered_map<std::string, PValue>>>>(&TGraph::add_edges_from))
             .def("rem_node", py::overload_cast<const unsigned long&>(&TGraph::rem_node))
             .def("rem_node", py::overload_cast<const PNode&>(&TGraph::rem_node))
             .def("rem_nodes_from", py::overload_cast<std::vector<unsigned long>>(&TGraph::rem_nodes_from))
@@ -136,11 +148,11 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("clear", &TGraph::clear)
             .def("reserve", &TGraph::reserve)
             .def("has_attr", &TGraph::has_attr)
-            .def("get_attr_type", &TGraph::get_attr_type)
-            .def("get_attr", &TGraph::get_attr<json>)
-            .def("get_nodes_factory", &TGraph::get_nodes_factory)
-            .def("get_edges_factory", &TGraph::get_edges_factory)
-            .def("set_attr", &TGraph::set_attr<json>)
+            .def("get_type", &TGraph::get_type)
+            .def("get_attr", &TGraph::get_attr)
+            .def("get_nodes_dict", &TGraph::get_nodes_dict)
+            .def("get_edges_dict", &TGraph::get_edges_dict)
+            .def("set_attr", &TGraph::set_attr<py::handle>)
             ;
 
 }

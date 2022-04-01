@@ -36,32 +36,34 @@ namespace ggsolver {
 
     public:
         explicit TNode() : m_snap_id(-1) {}    // default (-1) will store the maximum value of long due to `unsigned`.
-        TNode(json attr_map) : TEntity(attr_map), m_snap_id(-1) {}
+        TNode(const PAttrMap& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
+        TNode(const py::handle& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
+        TNode(const std::unordered_map<std::string, PValue>& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
+
         unsigned long get_node_id() {
             return m_snap_id;
         }
-        template <typename T = json>
+        PValue get_attr(const std::string& key){
+            if (!is_special_attr(key)) {
+                return TEntity::get_attr(key);
+            }
+
+            if (key == "nid") {
+                return std::make_shared<TValue>(get_node_id());
+            }
+
+            throw "attribute " + key + " is not in Node.";
+        }
+
+        template <typename T>
         void set_attr(const std::string& key, const T& value) {
             // If key is not special attribute
             if (!is_special_attr(key)) {
-                // Update key and value in json attr_map. Use try-catch to protect un-jsonifiable values.
-                m_attr_map[key] = value;
+                TEntity::set_attr<T>(key, value);
             }
             else {
                 throw std::invalid_argument("Use specialized TNode.set_<attr> "
                                             "functions to update specialized attributes.");
-            }
-        }
-
-        template <typename T = json>
-        T get_attr(const std::string& key){
-            if (!is_special_attr(key)) {
-                return m_attr_map[key].get<T>();
-            }
-            else {
-                if (key == "nid") {
-                    return get_node_id();
-                }
             }
         }
 
@@ -81,7 +83,10 @@ namespace ggsolver {
 
     public:
         TEdge() : m_snap_id(-1), m_uid(-1), m_vid(-1) {}
-        TEdge(const json& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+        TEdge(const PAttrMap& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+        TEdge(const py::handle& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+        TEdge(const std::unordered_map<std::string, PValue>& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
+
         unsigned long get_edge_id() {
             return m_snap_id;
         }
@@ -90,6 +95,37 @@ namespace ggsolver {
         }
         unsigned long get_vid() {
             return m_vid;
+        }
+
+        PValue get_attr(const std::string& key){
+            if (!is_special_attr(key)) {
+                return TEntity::get_attr(key);
+            }
+
+            if (key == "eid") {
+                return std::make_shared<TValue>(get_edge_id());
+            }
+            else if (key == "uid") {
+                return std::make_shared<TValue>(get_uid());
+            }
+            else if (key == "vid") {
+                return std::make_shared<TValue>(get_vid());
+            }
+            else {
+                throw "attribute " + key + " is not in Node.";
+            }
+        }
+
+        template <typename T>
+        void set_attr(const std::string& key, const T& value) {
+            // If key is not special attribute
+            if (!is_special_attr(key)) {
+                TEntity::set_attr<T>(key, value);
+            }
+            else {
+                throw std::invalid_argument("Use specialized TNode.set_<attr> "
+                                            "functions to update specialized attributes.");
+            }
         }
 
     private:
@@ -127,7 +163,31 @@ namespace ggsolver {
             // Return node object
             return node;
         }
-        PNode add_node(const json& attr_map) {
+        PNode add_node(const PAttrMap& attr_map) {
+            // Add node to snap graph
+            auto nid = m_graph->AddNode();
+            // Create a new node
+            auto node = std::make_shared<TNode>(attr_map);
+            // Set its node id
+            node->set_node_id(nid);
+            // Update nodes id:object map
+            m_nodes[nid] = node;
+            // Return node object
+            return node;
+        }
+        PNode add_node(const py::handle& attr_map) {
+            // Add node to snap graph
+            auto nid = m_graph->AddNode();
+            // Create a new node
+            auto node = std::make_shared<TNode>(attr_map);
+            // Set its node id
+            node->set_node_id(nid);
+            // Update nodes id:object map
+            m_nodes[nid] = node;
+            // Return node object
+            return node;
+        }
+        PNode add_node(const std::unordered_map<std::string, PValue>& attr_map) {
             // Add node to snap graph
             auto nid = m_graph->AddNode();
             // Create a new node
@@ -140,6 +200,7 @@ namespace ggsolver {
             return node;
         }
 
+
         std::vector<PNode> add_nodes_from(const unsigned long& k) {
             std::vector<PNode> nodes;
             for(int i = 0; i < k; i++) {
@@ -147,7 +208,21 @@ namespace ggsolver {
             }
             return nodes;
         }
-        std::vector<PNode> add_nodes_from(const std::vector<json>& attr_maps) {
+        std::vector<PNode> add_nodes_from(const std::vector<PAttrMap>& attr_maps) {
+            std::vector<PNode> nodes;
+            for(const auto& item : attr_maps) {
+                nodes.push_back(add_node(item));
+            }
+            return nodes;
+        }
+        std::vector<PNode> add_nodes_from(const std::vector<py::handle>& attr_maps) {
+            std::vector<PNode> nodes;
+            for(const auto& item : attr_maps) {
+                nodes.push_back(add_node(item));
+            }
+            return nodes;
+        }
+        std::vector<PNode> add_nodes_from(const std::vector<std::unordered_map<std::string, PValue>>& attr_maps) {
             std::vector<PNode> nodes;
             for(const auto& item : attr_maps) {
                 nodes.push_back(add_node(item));
@@ -170,7 +245,37 @@ namespace ggsolver {
             }
             throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
         }
-        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const json& attr_map) {
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const PAttrMap& attr_map) {
+            if (has_node(uid) && has_node(vid)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(uid, vid);
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>(attr_map);
+                // Set its edge id
+                edge->set_edge_id(eid, uid, vid);
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
+        }
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const py::handle& attr_map) {
+            if (has_node(uid) && has_node(vid)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(uid, vid);
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>(attr_map);
+                // Set its edge id
+                edge->set_edge_id(eid, uid, vid);
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
+        }
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const std::unordered_map<std::string, PValue>& attr_map) {
             if (has_node(uid) && has_node(vid)) {
                 // Add edge to snap graph
                 auto eid = m_graph->AddEdge(uid, vid);
@@ -188,8 +293,38 @@ namespace ggsolver {
         PEdge add_edge(const PNode& u, const PNode& v) {
             return add_edge(u->get_node_id(), v->get_node_id());
         }
-        PEdge add_edge(const PNode& u, const PNode& v, const json& attr_map) {
+        PEdge add_edge(const PNode& u, const PNode& v, const PAttrMap& attr_map) {
             return add_edge(u->get_node_id(), v->get_node_id(), attr_map);
+        }
+        PEdge add_edge(const PNode& u, const PNode& v, const py::handle& attr_map) {
+            if (has_node(u) && has_node(v)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(u->get_node_id(), v->get_node_id());
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>(attr_map);
+                // Set its edge id
+                edge->set_edge_id(eid, u->get_node_id(), v->get_node_id());
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
+        }
+        PEdge add_edge(const PNode& u, const PNode& v, const std::unordered_map<std::string, PValue>& attr_map) {
+            if (has_node(u) && has_node(v)) {
+                // Add edge to snap graph
+                auto eid = m_graph->AddEdge(u->get_node_id(), v->get_node_id());
+                // Create a new edge
+                auto edge = std::make_shared<TEdge>(attr_map);
+                // Set its edge id
+                edge->set_edge_id(eid, u->get_node_id(), v->get_node_id());
+                // Update edges {id:object} map
+                m_edges[eid] = edge;
+                // Return edge object
+                return edge;
+            }
+            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
         }
 
         std::vector<PEdge> add_edges_from(std::vector<std::pair<unsigned long, unsigned long>> edges) {
@@ -206,14 +341,42 @@ namespace ggsolver {
             }
             return edge_objects;
         }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, json>> edges) {
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, PAttrMap>> edges) {
             std::vector<PEdge> edge_objects;
             for (const auto& item : edges){
                 edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
             }
             return edge_objects;
         }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, json>> edges) {
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, py::handle>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, std::unordered_map<std::string, PValue>>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, PAttrMap>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, py::handle>> edges) {
+            std::vector<PEdge> edge_objects;
+            for (const auto& item : edges){
+                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
+            }
+            return edge_objects;
+        }
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, std::unordered_map<std::string, PValue>>> edges) {
             std::vector<PEdge> edge_objects;
             for (const auto& item : edges){
                 edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
@@ -384,10 +547,10 @@ namespace ggsolver {
             return number_of_nodes() + number_of_edges();
         }
 
-        inline std::unordered_map<unsigned long, PNode> get_nodes_factory(){
+        inline std::unordered_map<unsigned long, PNode> get_nodes_dict(){
             return m_nodes;
         }
-        inline std::unordered_map<unsigned long, PEdge> get_edges_factory(){
+        inline std::unordered_map<unsigned long, PEdge> get_edges_dict(){
             return m_edges;
         }
     };
