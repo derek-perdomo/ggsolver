@@ -1,63 +1,73 @@
-2022-03-27 16:41:01,530 DEBUG root ---------------------------------
+2022-04-01 16:48:11,751 DEBUG root START-----------------------
 
 
-2022-03-27 16:41:09,868 DEBUG root ---------------------------------
+2022-04-01 16:48:11,751 DEBUG root ---------------------------------
 
+2022-04-01 16:48:11,887 DEBUG root ggsolver: 100000 node addition: 135.0709 ms.
+2022-04-01 16:48:19,554 DEBUG root ggsolver: 1000000 edge addition: 7666.8341 ms.
+2022-04-01 16:48:21,396 DEBUG root ggsolver: 100000 succcessor queries: 1840.8972999999999 ms.
+2022-04-01 16:48:23,217 DEBUG root ggsolver: 100000 predecessor queries: 1821.28 ms.
+2022-04-01 16:48:23,217 DEBUG root Peak was 184.552232 MB
+2022-04-01 16:48:23,418 DEBUG root ---------------------------------
 
-2022-03-27 16:41:10,144 DEBUG root ggsolver: 100000 node addition: 254.9852 ms.
-2022-03-27 16:41:17,007 DEBUG root ggsolver: 1000000 edge addition: 6862.786 ms.
-2022-03-27 16:41:17,008 DEBUG root Peak was 194.544056 MB
-2022-03-27 16:41:17,050 DEBUG root ---------------------------------
+2022-04-01 16:48:23,535 DEBUG root ggsolver: 100000 node addition: 116.0405 ms.
+2022-04-01 16:48:30,337 DEBUG root ggsolver: 1000000 edge addition: 6801.5145999999995 ms.
+2022-04-01 16:48:32,217 DEBUG root ggsolver: 100000 succcessor queries: 1879.1227999999999 ms.
+2022-04-01 16:48:34,110 DEBUG root ggsolver: 100000 predecessor queries: 1893.4454999999998 ms.
+2022-04-01 16:48:34,111 DEBUG root Peak was 184.441812 MB
+2022-04-01 16:48:34,348 DEBUG root ---------------------------------
 
+2022-04-01 16:48:34,456 DEBUG root ggsolver: 100000 node addition: 107.5286 ms.
+2022-04-01 16:48:41,026 DEBUG root ggsolver: 1000000 edge addition: 6568.7559 ms.
+2022-04-01 16:48:42,821 DEBUG root ggsolver: 100000 succcessor queries: 1794.0518 ms.
+2022-04-01 16:48:44,511 DEBUG root ggsolver: 100000 predecessor queries: 1689.8406 ms.
+2022-04-01 16:48:44,511 DEBUG root Peak was 184.440132 MB
+2022-04-01 16:48:44,716 DEBUG root ---------------------------------
 
-2022-03-27 16:41:17,301 DEBUG root ggsolver: 100000 node addition: 232.51069999999999 ms.
-2022-03-27 16:41:23,940 DEBUG root ggsolver: 1000000 edge addition: 6638.5805 ms.
-2022-03-27 16:41:23,942 DEBUG root Peak was 194.435848 MB
-2022-03-27 16:41:24,038 DEBUG root ---------------------------------
+2022-04-01 16:48:44,844 DEBUG root ggsolver: 100000 node addition: 126.87559999999999 ms.
+2022-04-01 16:48:51,550 DEBUG root ggsolver: 1000000 edge addition: 6705.0891 ms.
+2022-04-01 16:48:53,263 DEBUG root ggsolver: 100000 succcessor queries: 1711.9000999999998 ms.
+2022-04-01 16:48:54,922 DEBUG root ggsolver: 100000 predecessor queries: 1659.6829 ms.
+2022-04-01 16:48:54,923 DEBUG root Peak was 184.442708 MB
+2022-04-01 16:48:55,112 DEBUG root ---------------------------------
 
+2022-04-01 16:48:55,215 DEBUG root ggsolver: 100000 node addition: 102.47319999999999 ms.
+2022-04-01 16:49:01,802 DEBUG root ggsolver: 1000000 edge addition: 6586.4698 ms.
+2022-04-01 16:49:03,599 DEBUG root ggsolver: 100000 succcessor queries: 1795.8899 ms.
+2022-04-01 16:49:05,404 DEBUG root ggsolver: 100000 predecessor queries: 1804.9695 ms.
+2022-04-01 16:49:05,404 DEBUG root Peak was 184.44506 MB
+2022-04-01 16:49:05,640 DEBUG root ---------------------------------
 
-2022-03-27 16:41:24,369 DEBUG root ggsolver: 100000 node addition: 278.12809999999996 ms.
-2022-03-27 16:41:31,838 DEBUG root ggsolver: 1000000 edge addition: 7468.8638 ms.
-2022-03-27 16:41:31,842 DEBUG root Peak was 194.437864 MB
-2022-03-27 16:41:31,928 DEBUG root ---------------------------------
+2022-04-01 16:49:05,746 DEBUG root ggsolver: 100000 node addition: 104.28739999999999 ms.
+2022-04-01 16:49:12,586 DEBUG root ggsolver: 1000000 edge addition: 6840.0453 ms.
+2022-04-01 16:49:14,431 DEBUG root ggsolver: 100000 succcessor queries: 1844.0156 ms.
+2022-04-01 16:49:16,249 DEBUG root ggsolver: 100000 predecessor queries: 1818.1399999999999 ms.
+2022-04-01 16:49:16,250 DEBUG root Peak was 184.441504 MB
+2022-04-01 16:49:16,443 DEBUG root ---------------------------------
 
+2022-04-01 16:49:16,559 DEBUG root ggsolver: 100000 node addition: 115.1866 ms.
+2022-04-01 16:49:23,354 DEBUG root ggsolver: 1000000 edge addition: 6794.522 ms.
+2022-04-01 16:49:25,207 DEBUG root ggsolver: 100000 succcessor queries: 1852.6298 ms.
+2022-04-01 16:49:27,155 DEBUG root ggsolver: 100000 predecessor queries: 1947.1844999999998 ms.
+2022-04-01 16:49:27,155 DEBUG root Peak was 184.442848 MB
+2022-04-01 16:49:27,381 DEBUG root ---------------------------------
 
-2022-03-27 16:41:32,155 DEBUG root ggsolver: 100000 node addition: 146.9142 ms.
-2022-03-27 16:41:39,045 DEBUG root ggsolver: 1000000 edge addition: 6888.9673999999995 ms.
-2022-03-27 16:41:39,047 DEBUG root Peak was 194.433524 MB
-2022-03-27 16:41:39,127 DEBUG root ---------------------------------
+2022-04-01 16:49:27,498 DEBUG root ggsolver: 100000 node addition: 115.997 ms.
+2022-04-01 16:49:34,462 DEBUG root ggsolver: 1000000 edge addition: 6963.468699999999 ms.
+2022-04-01 16:49:36,313 DEBUG root ggsolver: 100000 succcessor queries: 1850.9583 ms.
+2022-04-01 16:49:38,103 DEBUG root ggsolver: 100000 predecessor queries: 1789.5484 ms.
+2022-04-01 16:49:38,103 DEBUG root Peak was 184.44044 MB
+2022-04-01 16:49:38,318 DEBUG root ---------------------------------
 
+2022-04-01 16:49:38,427 DEBUG root ggsolver: 100000 node addition: 109.0504 ms.
+2022-04-01 16:49:45,122 DEBUG root ggsolver: 1000000 edge addition: 6693.9425 ms.
+2022-04-01 16:49:46,962 DEBUG root ggsolver: 100000 succcessor queries: 1839.9184 ms.
+2022-04-01 16:49:48,797 DEBUG root ggsolver: 100000 predecessor queries: 1834.8568 ms.
+2022-04-01 16:49:48,798 DEBUG root Peak was 184.443828 MB
+2022-04-01 16:49:48,977 DEBUG root ---------------------------------
 
-2022-03-27 16:41:39,318 DEBUG root ggsolver: 100000 node addition: 112.8864 ms.
-2022-03-27 16:41:46,398 DEBUG root ggsolver: 1000000 edge addition: 7079.556 ms.
-2022-03-27 16:41:46,400 DEBUG root Peak was 194.434896 MB
-2022-03-27 16:41:46,482 DEBUG root ---------------------------------
-
-
-2022-03-27 16:41:46,947 DEBUG root ggsolver: 100000 node addition: 377.6932 ms.
-2022-03-27 16:41:54,645 DEBUG root ggsolver: 1000000 edge addition: 7697.6955 ms.
-2022-03-27 16:41:54,654 DEBUG root Peak was 194.436296 MB
-2022-03-27 16:41:54,765 DEBUG root ---------------------------------
-
-
-2022-03-27 16:41:55,032 DEBUG root ggsolver: 100000 node addition: 144.55089999999998 ms.
-2022-03-27 16:42:02,684 DEBUG root ggsolver: 1000000 edge addition: 7650.4504 ms.
-2022-03-27 16:42:02,688 DEBUG root Peak was 194.431396 MB
-2022-03-27 16:42:02,819 DEBUG root ---------------------------------
-
-
-2022-03-27 16:42:03,170 DEBUG root ggsolver: 100000 node addition: 241.887 ms.
-2022-03-27 16:42:10,559 DEBUG root ggsolver: 1000000 edge addition: 7387.9712 ms.
-2022-03-27 16:42:10,562 DEBUG root Peak was 194.432796 MB
-2022-03-27 16:42:10,662 DEBUG root ---------------------------------
-
-
-2022-03-27 16:42:10,888 DEBUG root ggsolver: 100000 node addition: 119.02359999999999 ms.
-2022-03-27 16:42:18,656 DEBUG root ggsolver: 1000000 edge addition: 7766.4865 ms.
-2022-03-27 16:42:18,658 DEBUG root Peak was 194.432572 MB
-2022-03-27 16:42:18,745 DEBUG root ---------------------------------
-
-
-2022-03-27 16:42:18,970 DEBUG root ggsolver: 100000 node addition: 113.2474 ms.
-2022-03-27 16:42:25,878 DEBUG root ggsolver: 1000000 edge addition: 6906.6431999999995 ms.
-2022-03-27 16:42:25,880 DEBUG root Peak was 194.438256 MB
+2022-04-01 16:49:49,095 DEBUG root ggsolver: 100000 node addition: 118.0304 ms.
+2022-04-01 16:49:55,908 DEBUG root ggsolver: 1000000 edge addition: 6811.9014 ms.
+2022-04-01 16:49:57,759 DEBUG root ggsolver: 100000 succcessor queries: 1849.8972999999999 ms.
+2022-04-01 16:49:59,513 DEBUG root ggsolver: 100000 predecessor queries: 1754.1415 ms.
+2022-04-01 16:49:59,513 DEBUG root Peak was 184.441252 MB

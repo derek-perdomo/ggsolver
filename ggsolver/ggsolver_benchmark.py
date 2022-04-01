@@ -11,16 +11,17 @@ logging.basicConfig(level=logging.DEBUG,
                     )
                     
 
-def profile(graph, tag):
+def profile(tag):
+    graph = gg.TGraph()
+
     num_nodes = int(1e5)
     num_edges = int(1e6)
     num_queries = int(1e5)
 
     tracemalloc.start()
     # Add a 10K nodes, 100K edges at random.
-    node_list = list(range(num_nodes))
     start0 = time.time_ns()
-    nodes = graph.add_nodes_from(num_nodes)
+    graph.add_nodes_from(num_nodes)
     end0 = time.time_ns()
     logging.debug(f"{tag}: {num_nodes} node addition: {10 ** -6 * (end0 - start0)} ms.")
 
@@ -30,30 +31,28 @@ def profile(graph, tag):
     logging.debug(f"{tag}: {num_edges} edge addition: {10 ** -6 * (end1 - start1)} ms.")
     
     # # Run a 100K successor and predecessor queries.
-    # start2 = time.time_ns()
-    # for _ in range(num_queries):
-    #     n = random.randint(0, num_nodes - 1)
-    #     graph.successors(n)
+    start2 = time.time_ns()
+    for _ in range(num_queries):
+        n = random.randint(0, num_nodes - 1)
+        graph.successors(n)
 
-    # end2 = time.time_ns()
-    # logging.debug(f"{tag}: {num_queries} succcessor queries: {10 ** -6 * (end2 - start2)} ms.")
+    end2 = time.time_ns()
+    logging.debug(f"{tag}: {num_queries} succcessor queries: {10 ** -6 * (end2 - start2)} ms.")
 
-    # for _ in range(num_queries):
-    #     n = random.randint(0, num_nodes - 1)
-    #     graph.predecessors(n)
+    for _ in range(num_queries):
+        n = random.randint(0, num_nodes - 1)
+        graph.predecessors(n)
 
-    # end3 = time.time_ns()
-    # logging.debug(f"{tag}: {num_queries} predecessor queries: {10 ** -6 * (end3 - end2)} ms.")
+    end3 = time.time_ns()
+    logging.debug(f"{tag}: {num_queries} predecessor queries: {10 ** -6 * (end3 - end2)} ms.")
     _, peak = tracemalloc.get_traced_memory()
     logging.debug(f"Peak was {peak / 10 ** 6} MB")
     tracemalloc.stop()
 
 
 if __name__ == '__main__':
-    # Create a graph
-    gg_graph = gg.TGraph()
-
     # Run profiler
+    logging.debug("START-----------------------\n\n")
     for _ in range(10):
-        logging.debug("---------------------------------\n\n")
-        profile(gg_graph, tag="ggsolver")
+        logging.debug("---------------------------------\n")
+        profile(tag="ggsolver")
