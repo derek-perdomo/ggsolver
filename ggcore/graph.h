@@ -55,17 +55,18 @@ namespace ggsolver {
             throw "attribute " + key + " is not in Node.";
         }
 
-        template <typename T>
-        void set_attr(const std::string& key, const T& value) {
-            // If key is not special attribute
-            if (!is_special_attr(key)) {
-                TEntity::set_attr<T>(key, value);
-            }
-            else {
-                throw std::invalid_argument("Use specialized TNode.set_<attr> "
-                                            "functions to update specialized attributes.");
-            }
-        }
+        // TODO
+//        template <typename T>
+//        void set_attr(const std::string& key, const T& value) {
+//            // If key is not special attribute
+//            if (!is_special_attr(key)) {
+//                TEntity::set_attr<T>(key, value);
+//            }
+//            else {
+//                throw std::invalid_argument("Use specialized TNode.set_<attr> "
+//                                            "functions to update specialized attributes.");
+//            }
+//        }
 
     private:
         friend class TGraph;
@@ -116,17 +117,18 @@ namespace ggsolver {
             }
         }
 
-        template <typename T>
-        void set_attr(const std::string& key, const T& value) {
-            // If key is not special attribute
-            if (!is_special_attr(key)) {
-                TEntity::set_attr<T>(key, value);
-            }
-            else {
-                throw std::invalid_argument("Use specialized TNode.set_<attr> "
-                                            "functions to update specialized attributes.");
-            }
-        }
+        // TODO
+//        template <typename T>
+//        void set_attr(const std::string& key, const T& value) {
+//            // If key is not special attribute
+//            if (!is_special_attr(key)) {
+//                TEntity::set_attr<T>(key, value);
+//            }
+//            else {
+//                throw std::invalid_argument("Use specialized TNode.set_<attr> "
+//                                            "functions to update specialized attributes.");
+//            }
+//        }
 
     private:
         friend class TGraph;

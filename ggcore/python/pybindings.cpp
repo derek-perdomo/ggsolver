@@ -19,7 +19,7 @@ PYBIND11_MODULE(ggsolver, m) {
 	m.def("Version", &Version);
 
     // TValue::Type (Enum class)
-    py::enum_<TValue::Type>(m, "Type")
+    py::enum_<TValue::Type>(m, "TValueType")
             .value("py_none", TValue::Type::py_none)
             .value("py_bool", TValue::Type::py_bool)
             .value("py_int", TValue::Type::py_int)
@@ -49,8 +49,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("set_entity", &TValue::set_entity)
             .def("get_type", &TValue::get_type)
             .def("get_object", &TValue::get_object)
-            .def("get_entity", &TValue::get_entity<TEntity>)
             .def("get_function", &TValue::get_function<py::function>)
+            .def("get_entity", &TValue::get_entity<TEntity>)
             ;
 
     // Attribute Map
@@ -59,7 +59,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def(py::init<const std::unordered_map<std::string, PValue>&>())
             .def(py::init<const py::handle&>())
             .def("get_attr", &TAttrMap::get_attr)
-            .def("set_attr", &TAttrMap::set_attr<py::handle>)
+            .def("set_attr", py::overload_cast<const std::string&, const py::handle&>(&TAttrMap::set_attr))
+            .def("set_attr", py::overload_cast<const std::string&, const PValue&>(&TAttrMap::set_attr))
             ;
 
     // Entity class
@@ -69,7 +70,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("has_attr", &TEntity::has_attr)
             .def("get_type", &TEntity::get_type)
             .def("get_attr", &TEntity::get_attr)
-            .def("set_attr", &TEntity::set_attr<py::handle>)
+            .def("set_attr", py::overload_cast<const std::string&, const py::handle&>(&TEntity::set_attr))
+            .def("set_attr", py::overload_cast<const std::string&, const PValue&>(&TEntity::set_attr))
             ;
 
 
@@ -79,7 +81,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("has_attr", &TNode::has_attr)
             .def("get_type", &TNode::get_type)
             .def("get_attr", &TNode::get_attr)
-            .def("set_attr", &TNode::set_attr<py::handle>)
+            .def("set_attr", py::overload_cast<const std::string&, const py::handle&>(&TNode::set_attr))
+            .def("set_attr", py::overload_cast<const std::string&, const PValue&>(&TNode::set_attr))
             .def("get_node_id", &TNode::get_node_id)
             ;
 
@@ -89,7 +92,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("has_attr", &TEdge::has_attr)
             .def("get_type", &TEdge::get_type)
             .def("get_attr", &TEdge::get_attr)
-            .def("set_attr", &TEdge::set_attr<py::handle>)
+            .def("set_attr", py::overload_cast<const std::string&, const py::handle&>(&TEdge::set_attr))
+            .def("set_attr", py::overload_cast<const std::string&, const PValue&>(&TEdge::set_attr))
             .def("get_edge_id", &TEdge::get_edge_id)
             .def("get_uid", &TEdge::get_uid)
             .def("get_vid", &TEdge::get_vid)
@@ -152,7 +156,8 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("get_attr", &TGraph::get_attr)
             .def("get_nodes_dict", &TGraph::get_nodes_dict)
             .def("get_edges_dict", &TGraph::get_edges_dict)
-            .def("set_attr", &TGraph::set_attr<py::handle>)
+            .def("set_attr", py::overload_cast<const std::string&, const py::handle&>(&TGraph::set_attr))
+            .def("set_attr", py::overload_cast<const std::string&, const PValue&>(&TGraph::set_attr))
             ;
 
 }
