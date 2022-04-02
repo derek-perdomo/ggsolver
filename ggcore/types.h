@@ -227,7 +227,8 @@ namespace ggsolver {
                 m_value = val.cast<py::function>();
             }
             else {
-                throw "TValue.set_object() cannot process py::handle. ";
+                std::cout << "\tUnknown type.." << py::isinstance<PEntity>(val) << std::endl;
+                throw std::runtime_error("TValue.set_object() cannot process py::handle. ");
             }
 
             std::cout << "TValue.set_object(): complete" << std::endl;
