@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <exception>
 #include <vector>
 #include <variant>
 #include <memory>
@@ -128,8 +129,6 @@ namespace ggsolver {
         void set_object(const py::handle& val) {
             std::cout << "TValue.set_object(): " << typeid(val).name() << std::endl;
             std::cout << "\tval.__class__: " << val.attr("__class__").attr("__name__").cast<std::string>() << std::endl;
-            auto cast_val = val.cast<PEntity>();
-            std::cout << "\tCast to Entity Successful." << std::endl;
 
             if (py::isinstance<nullptr_t>(val) || val.is_none()){
                 std::cout << "\tProcessing none" << std::endl;
@@ -227,8 +226,33 @@ namespace ggsolver {
                 m_value = val.cast<py::function>();
             }
             else {
-                std::cout << "\tUnknown type.." << py::isinstance<PEntity>(val) << std::endl;
-                throw std::runtime_error("TValue.set_object() cannot process py::handle. ");
+                std::cout << "\tProcessing non-standard py type. Identifying if val is Entity..." << std::endl;
+
+                // Try constructing an entity from object.
+                try {
+                    auto ent = val.cast<PEntity>();
+                    set_entity(ent);
+//                    auto is_entity = py::hasattr(val, "__entity__");
+//                    std::cout << "\tis_entity(val): " << is_entity << std::endl;
+//                    if (is_entity) {
+//                        auto ent = val.cast<PEntity>();
+//                        set_entity(ent);
+//                    }
+//                    else {
+//                        throw "Unexpected type.";
+//                    }
+                }
+                catch (py::cast_error e) {
+                    std::string err_str = "Casting failed from " +
+                            val.attr("__class__").attr("__name__").cast<std::string>() +
+                                    " to PEntity.";
+                    throw std::runtime_error(err_str);
+                }
+                catch (std::exception e) {
+                    std::string err_str = "TValue.set_object() cannot process py::handle of type " +
+                            val.attr("__class__").attr("__name__").cast<std::string>();
+                    throw std::runtime_error(err_str);
+                }
             }
 
             std::cout << "TValue.set_object(): complete" << std::endl;
@@ -382,7 +406,6 @@ namespace ggsolver {
         void set_attr(const std::string& key, const py::handle& value) {
             std::cout << "TAttrMap.set_attr(py::handle): processing..." << std::endl;
             auto p_value = std::make_shared<TValue>(value);
-            std::cout << p_value->get_string() << std::endl;
             m_dict[key] = p_value;
             std::cout << "TAttrMap.set_attr(py::handle): complete" << std::endl;
         }
@@ -414,19 +437,24 @@ namespace ggsolver {
     class TEntity {
     private:
         PAttrMap m_attr_map;
-        const std::vector<std::string> m_special_attr_names {};
+        const std::vector<std::string> m_special_attr_names {"__entity__"};
 
     public:
-        TEntity() : m_attr_map(std::make_shared<TAttrMap>()) {};
+        TEntity() : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
+        };
         TEntity(const PAttrMap& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
             m_attr_map->update(attr_map);
         }
         TEntity(const py::handle& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
             if (py::isinstance<py::dict>(attr_map)) {
                 m_attr_map->update(attr_map.cast<py::dict>());
             }
         }
         TEntity(const std::unordered_map<std::string, PValue>& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
             m_attr_map->update(attr_map);
         }
 

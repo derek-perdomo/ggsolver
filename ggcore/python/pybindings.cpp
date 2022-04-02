@@ -66,6 +66,8 @@ PYBIND11_MODULE(ggsolver, m) {
     // Entity class
     py::class_<TEntity, std::shared_ptr<TEntity>>(m, "TEntity")
             .def(py::init<>())
+            .def(py::init<const py::handle&>())
+            .def(py::init<const PAttrMap&>())
             .def("is_special_attr", &TEntity::is_special_attr)
             .def("has_attr", &TEntity::has_attr)
             .def("get_type", &TEntity::get_type)

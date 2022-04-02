@@ -9,12 +9,11 @@ from ggsolver import *
 
 class Entity(TEntity):
     def __init__(self, name, attr_map=None):
-        if attr_map is None:
-            super(Entity, self).__init__()
-        else:
-            super(Entity, self).__init__(attr_map)
-
-        # self.__setattr__("name", name)
+        map = {"name": name, "__entity__": "Entity"}
+        if attr_map is not None:
+            assert "name" not in attr_map and "__entity__" not in attr_map
+            map.update(attr_map)
+        super(Entity, self).__init__(map)
 
     def __str__(self):
         return f"Entity(name: {self.__getattr__('name')})"
@@ -48,7 +47,7 @@ def construct_entity(entity):
 if __name__ == '__main__':
     ent0 = Entity("ent0")
     ent1 = Entity("ent1")
-    # ent0.my_attr = TValue(ent1)
-    ent0.__setattr__("tmp", ent0)
+    print(dir(ent0))
+    ent1.__setattr__("tmp", ent0)
     # print(str(ent0.my_attr))
 
