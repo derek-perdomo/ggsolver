@@ -345,7 +345,8 @@ namespace ggsolver {
                 return dict;
             }
             else {  // (m_type == Type::gg_entity)
-                throw std::runtime_error("TValue.get_object(): cannot process entity. Use get_entity() instead.");
+                py::object obj = py::cast(get_entity<PEntity>());
+                return obj;
             }
         }
 
