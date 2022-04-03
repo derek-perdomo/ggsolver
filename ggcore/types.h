@@ -389,8 +389,9 @@ namespace ggsolver {
     public:
         TEntity() {
             std::cout << "TEntity() called." << std::endl;
+            // TODO: check if HEADERs are correctly loaded. Use set_attr here.
             m_attr_map[HEADER_GGSOLVER_VERSION] = std::make_shared<TValue>(ggsolver_version());
-            m_attr_map[HEADER_ENTITY] = std::make_shared<TValue>(m_class_name);
+            m_attr_map[HEADER_ENTITY] = std::make_shared<TValue>(std::string(m_class_name));
         };
         TEntity(const TAttrMap& attr_map) : TEntity() {
             std::cout << "TEntity(const TAttrMap&) called with attr_map with keys: ";
