@@ -10,7 +10,7 @@
 
 namespace ggsolver {
 
-		inline std::string Version() {
+		inline std::string ggsolver_version() {
 			return std::string(
 				std::to_string(GGCORE_VERSION_MAJOR) + "." +
 				std::to_string(GGCORE_VERSION_MINOR) + "." +

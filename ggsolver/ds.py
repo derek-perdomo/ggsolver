@@ -9,24 +9,27 @@ from ggsolver import *
 
 class Entity(TEntity):
     def __init__(self, name, attr_map=None):
-        map = {"name": name, "__entity__": "Entity"}
+        map = {"name": name}
         if attr_map is not None:
-            assert "name" not in attr_map and "__entity__" not in attr_map
+            assert "name" not in attr_map, "`name` is a reserved attribute. Do not include it in `attr_map` parameter. "
             map.update(attr_map)
+
         super(Entity, self).__init__(map)
 
     def __str__(self):
         return f"Entity(name: {self.__getattr__('name')})"
 
     def __getattr__(self, item):
-        val = super(Entity, self).get_attr(item)
-        if val.get_type() == TValueType.gg_entity:
-            return construct_entity(val.get_entity())
-        else:
+        print("(py) Entity.__getattr__", item)
+        try:
+            val = self.get_attr(item)
+            print(val)
             return val.get_object()
+        except Exception as err:
+            print(err)
 
     def __setattr__(self, key, value):
-        # print(key, value)
+        print("(py) Entity.__setattr__: ", key)
         super(Entity, self).set_attr(key, value)
 
     def is_special_attr(self, key):
@@ -47,7 +50,23 @@ def construct_entity(entity):
 if __name__ == '__main__':
     ent0 = Entity("ent0")
     ent1 = Entity("ent1")
-    print(dir(ent0))
-    ent1.__setattr__("tmp", ent0)
-    # print(str(ent0.my_attr))
+    print(f"(py) ent0.get_attr_list()={ent0.get_attr_list()}")
+    print(f"(py) ent1.get_attr_list()={ent1.get_attr_list()}")
+    ent1.tmp = ent0
+    print(ent1.get_attr_list())
+    print("---", str(ent1.tmp))
+    ent1.tmp = 10
+    print("---", str(ent1.tmp))
+
+    # n1 = TNode()
+    # n2 = TNode({"nbr": n1})
+    #
+    # print("n1: ", n1.get_attr_list())
+    # print("n2: ", n2.get_attr_list())
+    #
+    # node = n2.get_attr("nbr")
+    # node = node.get_object()
+    # print(type(n1), type(node))
+
+
 
