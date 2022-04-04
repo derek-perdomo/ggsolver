@@ -13,6 +13,11 @@
 #include "types.h"
 #include "version.h"
 
+#define HEADER_NODE_ID "nid"
+#define HEADER_EDGE_ID "eid"
+#define HEADER_EDGE_SRC_ID "uid"
+#define HEADER_EDGE_DST_ID "vid"
+
 using namespace std;
 
 namespace ggsolver {
@@ -25,129 +30,94 @@ namespace ggsolver {
     typedef std::shared_ptr<TEdge> PEdge;
     typedef std::shared_ptr<TGraph> PGraph;
 
-    using TEdgeIdTriple = std::tuple<unsigned long, unsigned long, PAttrMap>;
-    using TEdgeNodeTriple = std::tuple<PNode, PNode, PAttrMap>;
+    using TEdgeIdTriple = std::tuple<unsigned long, unsigned long, TAttrMap>;
+    using TEdgeNodeTriple = std::tuple<PNode, PNode, TAttrMap>;
 
 
     class TNode : public TEntity {
     private:
-        const std::vector<std::string> m_special_attr_names {"nid"};
-        unsigned long m_snap_id;
+        const std::vector<std::string> m_reserved_attr {HEADER_NODE_ID};
+        const std::string m_class_name = "TNode";
 
     public:
-        explicit TNode() : m_snap_id(-1) {}    // default (-1) will store the maximum value of long due to `unsigned`.
-        TNode(const PAttrMap& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
-        TNode(const py::handle& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
-        TNode(const std::unordered_map<std::string, PValue>& attr_map) : TEntity(attr_map), m_snap_id(-1) {}
-
-        unsigned long get_node_id() {
-            return m_snap_id;
+        explicit TNode() {
+            set_attr(HEADER_NODE_ID, std::make_shared<TValue>((long)-1));
         }
-        PValue get_attr(const std::string& key){
-            if (!is_special_attr(key)) {
-                return TEntity::get_attr(key);
+        TNode(const TAttrMap& attr_map) : TNode() {
+            for (const auto& item : attr_map) {
+                set_attr(item.first, item.second);
             }
-
-            if (key == "nid") {
-                return std::make_shared<TValue>(get_node_id());
-            }
-
-            throw "attribute " + key + " is not in Node.";
         }
-
-        // TODO
-//        template <typename T>
-//        void set_attr(const std::string& key, const T& value) {
-//            // If key is not special attribute
-//            if (!is_special_attr(key)) {
-//                TEntity::set_attr<T>(key, value);
-//            }
-//            else {
-//                throw std::invalid_argument("Use specialized TNode.set_<attr> "
-//                                            "functions to update specialized attributes.");
-//            }
-//        }
+        TNode(const py::handle& attr_map) : TNode() {
+            auto dict = attr_map.cast<py::dict>();
+            for (const auto& item : dict) {
+                set_attr(item.first.cast<std::string>(), item.second);
+            }
+        }
+        unsigned long get_nid() {
+            return get_attr(HEADER_NODE_ID)->get_int();
+        }
 
     private:
         friend class TGraph;
-        void set_node_id(unsigned long nid) {
-            m_snap_id = nid;
+        void set_nid(const long& nid) {
+            set_attr(HEADER_NODE_ID, std::make_shared<TValue>(nid));
         }
     };
 
     class TEdge : public TEntity {
     private:
-        const std::vector<std::string> m_special_attr_names {"uid", "vid", "eid"};
-        unsigned long m_snap_id;
-        unsigned long m_uid;
-        unsigned long m_vid;
+        const std::vector<std::string> m_reserved_attr {"uid", "vid", "eid"};
+        const std::string m_class_name = "TEdge";
 
     public:
-        TEdge() : m_snap_id(-1), m_uid(-1), m_vid(-1) {}
-        TEdge(const PAttrMap& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
-        TEdge(const py::handle& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
-        TEdge(const std::unordered_map<std::string, PValue>& attr_map) : TEntity(attr_map), m_snap_id(-1), m_uid(-1), m_vid(-1) {}
-
-        unsigned long get_edge_id() {
-            return m_snap_id;
+        TEdge() {
+            set_attr(HEADER_EDGE_ID, std::make_shared<TValue>((long)-1));
+            set_attr(HEADER_EDGE_SRC_ID, std::make_shared<TValue>((long)-1));
+            set_attr(HEADER_EDGE_DST_ID, std::make_shared<TValue>((long)-1));
         }
-        unsigned long get_uid() {
-            return m_uid;
+        TEdge(const TAttrMap& attr_map) : TEdge() {
+            for (const auto& item : attr_map) {
+                set_attr(item.first, item.second);
+            }
         }
-        unsigned long get_vid() {
-            return m_vid;
-        }
-
-        PValue get_attr(const std::string& key){
-            if (!is_special_attr(key)) {
-                return TEntity::get_attr(key);
-            }
-
-            if (key == "eid") {
-                return std::make_shared<TValue>(get_edge_id());
-            }
-            else if (key == "uid") {
-                return std::make_shared<TValue>(get_uid());
-            }
-            else if (key == "vid") {
-                return std::make_shared<TValue>(get_vid());
-            }
-            else {
-                throw "attribute " + key + " is not in Node.";
+        TEdge(const py::handle& attr_map) : TEdge() {
+            auto dict = attr_map.cast<py::dict>();
+            for (const auto& item : dict) {
+                set_attr(item.first.cast<std::string>(), item.second);
             }
         }
 
-        // TODO
-//        template <typename T>
-//        void set_attr(const std::string& key, const T& value) {
-//            // If key is not special attribute
-//            if (!is_special_attr(key)) {
-//                TEntity::set_attr<T>(key, value);
-//            }
-//            else {
-//                throw std::invalid_argument("Use specialized TNode.set_<attr> "
-//                                            "functions to update specialized attributes.");
-//            }
-//        }
+        long get_eid() {
+            return get_attr(HEADER_EDGE_ID)->get_int();
+        }
+        long get_uid() {
+            return get_attr(HEADER_EDGE_SRC_ID)->get_int();
+        }
+        long get_vid() {
+            return get_attr(HEADER_EDGE_DST_ID)->get_int();
+        }
 
     private:
         friend class TGraph;
-        void set_edge_id(unsigned long eid, unsigned long uid, unsigned long vid){
-            m_snap_id = eid;
-            m_uid = uid;
-            m_vid = vid;
+        void set_edge_id(const long& eid, const long& uid, const long& vid){
+            set_attr(HEADER_EDGE_ID, std::make_shared<TValue>(eid));
+            set_attr(HEADER_EDGE_SRC_ID, std::make_shared<TValue>(uid));
+            set_attr(HEADER_EDGE_DST_ID, std::make_shared<TValue>(vid));
         }
     };
+
 
     class TGraph : public TEntity {
     private:    // Representation
         PNEGraph m_graph;
         std::unordered_map<unsigned long, PNode> m_nodes;
         std::unordered_map<unsigned long, PEdge> m_edges;
-        const std::vector<std::string> m_special_attr_names {"nodes", "edges", "graph"};
+        const std::vector<std::string> m_reserved_attr {"nodes", "edges", "graph"};
+        const std::string m_class_name = "TGraph";
 
     public:
-        TGraph() {
+        TGraph() : TEntity() {
             m_graph = TNEGraph::New();
         }
 
@@ -159,19 +129,19 @@ namespace ggsolver {
             // Create a new node
             auto node = std::make_shared<TNode>();
             // Set its node id
-            node->set_node_id(nid);
+            node->set_nid(nid);
             // Update nodes id:object map
             m_nodes[nid] = node;
             // Return node object
             return node;
         }
-        PNode add_node(const PAttrMap& attr_map) {
+        PNode add_node(const TAttrMap& attr_map) {
             // Add node to snap graph
             auto nid = m_graph->AddNode();
             // Create a new node
             auto node = std::make_shared<TNode>(attr_map);
             // Set its node id
-            node->set_node_id(nid);
+            node->set_nid(nid);
             // Update nodes id:object map
             m_nodes[nid] = node;
             // Return node object
@@ -183,19 +153,7 @@ namespace ggsolver {
             // Create a new node
             auto node = std::make_shared<TNode>(attr_map);
             // Set its node id
-            node->set_node_id(nid);
-            // Update nodes id:object map
-            m_nodes[nid] = node;
-            // Return node object
-            return node;
-        }
-        PNode add_node(const std::unordered_map<std::string, PValue>& attr_map) {
-            // Add node to snap graph
-            auto nid = m_graph->AddNode();
-            // Create a new node
-            auto node = std::make_shared<TNode>(attr_map);
-            // Set its node id
-            node->set_node_id(nid);
+            node->set_nid(nid);
             // Update nodes id:object map
             m_nodes[nid] = node;
             // Return node object
@@ -210,7 +168,7 @@ namespace ggsolver {
             }
             return nodes;
         }
-        std::vector<PNode> add_nodes_from(const std::vector<PAttrMap>& attr_maps) {
+        std::vector<PNode> add_nodes_from(const std::vector<TAttrMap>& attr_maps) {
             std::vector<PNode> nodes;
             for(const auto& item : attr_maps) {
                 nodes.push_back(add_node(item));
@@ -218,13 +176,6 @@ namespace ggsolver {
             return nodes;
         }
         std::vector<PNode> add_nodes_from(const std::vector<py::handle>& attr_maps) {
-            std::vector<PNode> nodes;
-            for(const auto& item : attr_maps) {
-                nodes.push_back(add_node(item));
-            }
-            return nodes;
-        }
-        std::vector<PNode> add_nodes_from(const std::vector<std::unordered_map<std::string, PValue>>& attr_maps) {
             std::vector<PNode> nodes;
             for(const auto& item : attr_maps) {
                 nodes.push_back(add_node(item));
@@ -247,7 +198,7 @@ namespace ggsolver {
             }
             throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
         }
-        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const PAttrMap& attr_map) {
+        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const TAttrMap& attr_map) {
             if (has_node(uid) && has_node(vid)) {
                 // Add edge to snap graph
                 auto eid = m_graph->AddEdge(uid, vid);
@@ -277,50 +228,20 @@ namespace ggsolver {
             }
             throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
         }
-        PEdge add_edge(const unsigned long& uid, const unsigned long& vid, const std::unordered_map<std::string, PValue>& attr_map) {
-            if (has_node(uid) && has_node(vid)) {
-                // Add edge to snap graph
-                auto eid = m_graph->AddEdge(uid, vid);
-                // Create a new edge
-                auto edge = std::make_shared<TEdge>(attr_map);
-                // Set its edge id
-                edge->set_edge_id(eid, uid, vid);
-                // Update edges {id:object} map
-                m_edges[eid] = edge;
-                // Return edge object
-                return edge;
-            }
-            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
-        }
         PEdge add_edge(const PNode& u, const PNode& v) {
-            return add_edge(u->get_node_id(), v->get_node_id());
+            return add_edge(u->get_nid(), v->get_nid());
         }
-        PEdge add_edge(const PNode& u, const PNode& v, const PAttrMap& attr_map) {
-            return add_edge(u->get_node_id(), v->get_node_id(), attr_map);
+        PEdge add_edge(const PNode& u, const PNode& v, const TAttrMap& attr_map) {
+            return add_edge(u->get_nid(), v->get_nid(), attr_map);
         }
         PEdge add_edge(const PNode& u, const PNode& v, const py::handle& attr_map) {
             if (has_node(u) && has_node(v)) {
                 // Add edge to snap graph
-                auto eid = m_graph->AddEdge(u->get_node_id(), v->get_node_id());
+                auto eid = m_graph->AddEdge(u->get_nid(), v->get_nid());
                 // Create a new edge
                 auto edge = std::make_shared<TEdge>(attr_map);
                 // Set its edge id
-                edge->set_edge_id(eid, u->get_node_id(), v->get_node_id());
-                // Update edges {id:object} map
-                m_edges[eid] = edge;
-                // Return edge object
-                return edge;
-            }
-            throw std::invalid_argument("TGraph.add_edge: uid and/or vid are not in graph.");
-        }
-        PEdge add_edge(const PNode& u, const PNode& v, const std::unordered_map<std::string, PValue>& attr_map) {
-            if (has_node(u) && has_node(v)) {
-                // Add edge to snap graph
-                auto eid = m_graph->AddEdge(u->get_node_id(), v->get_node_id());
-                // Create a new edge
-                auto edge = std::make_shared<TEdge>(attr_map);
-                // Set its edge id
-                edge->set_edge_id(eid, u->get_node_id(), v->get_node_id());
+                edge->set_edge_id(eid, u->get_nid(), v->get_nid());
                 // Update edges {id:object} map
                 m_edges[eid] = edge;
                 // Return edge object
@@ -343,7 +264,7 @@ namespace ggsolver {
             }
             return edge_objects;
         }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, PAttrMap>> edges) {
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, TAttrMap>> edges) {
             std::vector<PEdge> edge_objects;
             for (const auto& item : edges){
                 edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
@@ -357,14 +278,7 @@ namespace ggsolver {
             }
             return edge_objects;
         }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<unsigned long, unsigned long, std::unordered_map<std::string, PValue>>> edges) {
-            std::vector<PEdge> edge_objects;
-            for (const auto& item : edges){
-                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
-            }
-            return edge_objects;
-        }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, PAttrMap>> edges) {
+        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, TAttrMap>> edges) {
             std::vector<PEdge> edge_objects;
             for (const auto& item : edges){
                 edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
@@ -372,13 +286,6 @@ namespace ggsolver {
             return edge_objects;
         }
         std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, py::handle>> edges) {
-            std::vector<PEdge> edge_objects;
-            for (const auto& item : edges){
-                edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
-            }
-            return edge_objects;
-        }
-        std::vector<PEdge> add_edges_from(std::vector<std::tuple<PNode, PNode, std::unordered_map<std::string, PValue>>> edges) {
             std::vector<PEdge> edge_objects;
             for (const auto& item : edges){
                 edge_objects.push_back(add_edge(std::get<0>(item), std::get<1>(item), std::get<2>(item)));
@@ -396,7 +303,7 @@ namespace ggsolver {
             }
         }
         void rem_node(const PNode& node) {
-            rem_node(node->get_node_id());
+            rem_node(node->get_nid());
         }
         void rem_nodes_from(std::vector<unsigned long> nodes) {
             for (const auto& nid : nodes){
@@ -419,7 +326,7 @@ namespace ggsolver {
             }
         }
         void rem_edge(const PEdge& edge) {
-            rem_edge(edge->get_edge_id());
+            rem_edge(edge->get_eid());
         }
         void rem_edges_from(std::vector<unsigned long> edges) {
             for (const auto& eid : edges){
@@ -439,7 +346,7 @@ namespace ggsolver {
             return false;
         }
         bool has_node(const PNode& node) {
-            return has_node(node->get_node_id());
+            return has_node(node->get_nid());
         }
         bool has_edge(const unsigned long& eid) {
             if (m_edges.find(eid) != m_edges.end()){
@@ -448,7 +355,7 @@ namespace ggsolver {
             return false;
         }
         bool has_edge(const PEdge& edge) {
-            return has_edge(edge->get_edge_id());
+            return has_edge(edge->get_eid());
         }
 
         void clear() {
@@ -488,7 +395,7 @@ namespace ggsolver {
             return ret_in_edges;
         }
         std::vector<PEdge> in_edges(const PNode& v) {
-            return in_edges(v->get_node_id());
+            return in_edges(v->get_nid());
         }
         std::vector<PEdge> out_edges(const unsigned long& uid) {
             // Initialize empty in edges vector
@@ -508,7 +415,7 @@ namespace ggsolver {
             return ret_out_edges;
         }
         std::vector<PEdge> out_edges(const PNode& u) {
-            return out_edges(u->get_node_id());
+            return out_edges(u->get_nid());
         }
 
         std::vector<PNode> successors(const unsigned long& uid) {
@@ -522,7 +429,7 @@ namespace ggsolver {
             return ret_successors;
         }
         std::vector<PNode> successors(const PNode& u) {
-            return successors(u->get_node_id());
+            return successors(u->get_nid());
         }
         std::vector<PNode> predecessors(const unsigned long& vid) {
             auto ret_in_edges = in_edges(vid);
@@ -535,7 +442,7 @@ namespace ggsolver {
             return ret_successors;
         }
         std::vector<PNode> predecessors(const PNode& u) {
-            return predecessors(u->get_node_id());
+            return predecessors(u->get_nid());
         }
 
         unsigned long number_of_nodes() {
@@ -556,7 +463,6 @@ namespace ggsolver {
             return m_edges;
         }
     };
-
 }
 
 #endif //GGCORE_GRAPH_H

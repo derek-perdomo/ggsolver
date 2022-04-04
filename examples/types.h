@@ -1,3 +1,5 @@
+/// This is backup file, before major revisions.
+
 #ifndef GGCORE_TYPES_H
 #define GGCORE_TYPES_H
 
@@ -14,43 +16,47 @@
 #include <stdexcept>
 #include <type_traits>
 #include <pybind11/pybind11.h>
+#include <nlohmann/json.hpp>
 #include "version.h"
 
-#define HEADER_GGSOLVER_VERSION "__ggsolver__"
-#define HEADER_ENTITY           "__entity__"
+#define HEADER_GGSOLVER_VERSION "__ggsolver_version"
 
+using json = nlohmann::json;
 namespace py = pybind11;
+
 
 namespace ggsolver {
 
-    class TValue;
     class TEntity;
-    typedef std::shared_ptr<TValue> PValue;
+    class TValue;
+    class TAttrMap;
     typedef std::shared_ptr<TEntity> PEntity;
-    typedef std::unordered_map<std::string, PValue> TAttrMap;
+    typedef std::shared_ptr<TValue> PValue;
+    typedef std::shared_ptr<TAttrMap> PAttrMap;
 
 
-    enum class Type : uint8_t {
-        py_none,
-        py_bool,
-        py_int,
-        py_float,
-        py_str,
-        py_tuple,
-        py_list,
-        py_set,
-        py_dict,
-        py_function,
-        py_object,
-        gg_t_entity,
-    };
-
+    /// We can't work with JSON because it does not distinguish between list, tuple and set + it can't store Entity.
     class TValue {
     public:
+        enum class Type : uint8_t {
+            py_none,
+            py_bool,
+            py_int,
+            py_float,
+            py_str,
+            py_tuple,
+            py_list,
+            py_set,
+            py_dict,
+            py_function,
+            py_object,
+            gg_entity,
+        };
+
         typedef std::variant<
             std::nullptr_t,
             bool,
-            long,
+            unsigned long,
             double,
             std::string,
             PEntity,
@@ -67,10 +73,10 @@ namespace ggsolver {
     public:
         TValue() : m_type(Type::py_none), m_value(nullptr) {}
         explicit TValue(const bool& val) : m_type(Type::py_bool), m_value(val) {}
-        explicit TValue(const long& val) : m_type(Type::py_int), m_value(val) {}
+        explicit TValue(const unsigned long& val) : m_type(Type::py_int), m_value(val) {}
         explicit TValue(const double& val) : m_type(Type::py_float), m_value(val) {}
         explicit TValue(const std::string& val) : m_type(Type::py_float), m_value(val) {}
-        explicit TValue(const PEntity& val) : m_type(Type::gg_t_entity), m_value(std::move(val)) {}
+        explicit TValue(const PEntity& val) : m_type(Type::gg_entity), m_value(std::move(val)) {}
         explicit TValue(const std::vector<PValue>& val) : m_type(Type::py_list), m_value(val) {}
         explicit TValue(const std::unordered_set<PValue>& val) : m_type(Type::py_set), m_value(val) {}
         explicit TValue(const std::unordered_map<std::string, PValue>& val) : m_type(Type::py_float), m_value(val) {}
@@ -83,7 +89,7 @@ namespace ggsolver {
             m_value = obj.m_value;
         }
         ~TValue() {
-            std::cout << "Destroying TValue object of type " << (int) m_type << std::endl;
+            std::cout << "Destroying TValue objet" << std::endl;
             m_type.~Type();
             m_value.~Value();
         }
@@ -96,7 +102,7 @@ namespace ggsolver {
             m_type = Type::py_bool;
             m_value = val;
         }
-        void set_int(const long& val) {
+        void set_int(const unsigned long& val) {
             m_type = Type::py_int;
             m_value = val;
         }
@@ -112,7 +118,7 @@ namespace ggsolver {
             std::cout << "\tupdated variant value" << std::endl;
         }
         void set_entity(const PEntity& val) {
-            m_type = Type::gg_t_entity;
+            m_type = Type::gg_entity;
             m_value = val;
         }
         void set_vector(const std::vector<PValue>& val, Type type=Type::py_list) {
@@ -128,8 +134,8 @@ namespace ggsolver {
             m_value = val;
         }
         void set_object(const py::handle& val) {
-            std::cout << "TValue.set_object(py::handle&): type(val) = " <<
-                val.attr("__class__").attr("__name__").cast<std::string>() << std::endl;
+            std::cout << "TValue.set_object(): " << typeid(val).name() << std::endl;
+            std::cout << "\tval.__class__: " << val.attr("__class__").attr("__name__").cast<std::string>() << std::endl;
 
             if (py::isinstance<nullptr_t>(val) || val.is_none()){
                 std::cout << "\tProcessing none" << std::endl;
@@ -141,7 +147,7 @@ namespace ggsolver {
             }
             else if (py::isinstance<py::int_>(val)) {
                 std::cout << "\tProcessing int" << std::endl;
-                set_int(val.cast<long>());
+                set_int(val.cast<unsigned long>());
             }
             else if (py::isinstance<py::float_>(val)) {
                 std::cout << "\tProcessing float" << std::endl;
@@ -272,9 +278,9 @@ namespace ggsolver {
                 return std::get<bool>(m_value);
             throw "value is not bool.";
         }
-        long get_int() {
+        unsigned long get_int() {
             if (m_type == Type::py_int)
-                return std::get<long>(m_value);
+                return std::get<unsigned long>(m_value);
             throw "value is not integer.";
         }
         double get_double() {
@@ -345,7 +351,7 @@ namespace ggsolver {
                 }
                 return dict;
             }
-            else {  // (m_type == Type::gg_t_<type>)
+            else {  // (m_type == Type::gg_entity)
                 std::cout << "\tTValue.get_object(): Accessing TEntity" << std::endl;
                 TEntity* ent = get_entity().get();
                 std::cout << "\tTValue.get_object(): entity retrieved from variant" << std::endl;
@@ -358,7 +364,7 @@ namespace ggsolver {
 
         template <typename T>
         std::shared_ptr<T> get_entity() {
-            if (std::is_base_of<TEntity, T>::value && m_type == Type::gg_t_entity) {
+            if (std::is_base_of<TEntity, T>::value && m_type == Type::gg_entity) {
                 auto ent = std::get<PEntity>(m_value);
                 return std::dynamic_pointer_cast<T>(ent);
             }
@@ -380,109 +386,149 @@ namespace ggsolver {
         }
     };
 
-    class TEntity {
+
+    class TAttrMap {
     private:
-        TAttrMap m_attr_map;
-        const std::vector<std::string> m_reserved_attr {HEADER_GGSOLVER_VERSION, HEADER_ENTITY};
-        const std::string m_class_name = "TEntity";
+        std::unordered_map<std::string, PValue> m_dict {};
 
     public:
-        TEntity() {
-            std::cout << "TEntity() called." << std::endl;
-            // TODO: check if HEADERs are correctly loaded. Use set_attr here.
-            m_attr_map[HEADER_GGSOLVER_VERSION] = std::make_shared<TValue>(ggsolver_version());
-            m_attr_map[HEADER_ENTITY] = std::make_shared<TValue>(std::string(m_class_name));
-        };
-        TEntity(const TAttrMap& attr_map) : TEntity() {
-            std::cout << "TEntity(const TAttrMap&) called with attr_map with keys: ";
-            for (const auto& item : attr_map) {
-                std::cout << item.first << ", ";
-            }
-            std::cout << std::endl;
-            m_attr_map.insert(attr_map.begin(), attr_map.end());
-        }
-        TEntity(const py::handle& attr_map) : TEntity() {
-            auto dict = attr_map.cast<py::dict>();
-
-            std::cout << "TEntity(const py::handle&) called with attr_map with keys: ";
-            for (const auto& item : dict) {
-                std::cout << item.first.cast<std::string>() << ", ";
-            }
-            std::cout << std::endl;
-
-            for (const auto& item : dict) {
-//                m_attr_map[item.first.cast<std::string>()] = std::make_shared<TValue>(item.second);
-                set_attr(item.first.cast<std::string>(), item.second);
-            }
-        }
-
-        virtual bool is_reserved_attr(const std::string& key) {
-            return std::find(m_reserved_attr.begin(), m_reserved_attr.end(), key) != m_reserved_attr.end();
-        }
-        bool has_attr(const std::string& key) {
-            return m_attr_map.find(key) != m_attr_map.end();
-        }
-        Type get_type(const std::string& key) {
-            if (has_attr(key)) {
-                return m_attr_map[key]->get_type();
-            }
-            throw std::runtime_error("TEntity.get_type():: key: " + key + " is not entity attribute.");
-        }
-        std::vector<std::string> get_attr_list() {
-            std::vector<std::string> out;
-            for (const auto& item : m_attr_map) {
-                out.push_back(item.first);
-            }
-            return out;
-        }
-
-        void set_attr(const std::string& key, PValue value) {
-            if (!is_reserved_attr(key)) {
-                std::cout << "(cpp) TEntity.set_attr(PValue): setting key=" << key << std::endl;
-                m_attr_map[key] = value;
-
-                std::cout << "\tKeys: ";
-                for (auto const& item : m_attr_map) {
-                    std::cout << item.first << ", ";
+        TAttrMap() {}
+        explicit TAttrMap(const std::unordered_map<std::string, PValue>& dict) : m_dict(dict) {}
+        explicit TAttrMap(const py::handle& obj) {
+            if (py::isinstance<py::dict>(obj)) {
+                auto dict = obj.cast<py::dict>();
+                for (const auto& item : dict) {
+                    m_dict[item.first.cast<std::string>()] = std::make_shared<TValue>(item.second);
                 }
-                std::cout << std::endl;
-                std::cout << "(cpp) TEntity.set_attr(PValue): complete" << std::endl;
             }
             else {
-                std::cout << "(cpp) TEntity.set_attr(PValue):: cannot set reserved attr key=" << key << std::endl;
-                throw std::runtime_error("TEntity.set_attr() cannot set value of reserved attribute." );
+                throw "TAttrMap constructor expects py::dict.";
             }
-        }
-        void set_attr(const std::string& key, const py::handle& value) {
-            std::cout << "(cpp) TEntity.set_attr(py::handle):: key=" << key << std::endl;
-            auto p_value = std::make_shared<TValue>(value);
-            set_attr(key, std::move(p_value));
-//            m_attr_map.emplace(key, p_value);
-            std::cout << "\tKeys: ";
-            for (auto const& item : m_attr_map) {
-                std::cout << item.first << ", ";
-            }
-            std::cout << std::endl;
-            std::cout << "(cpp) TEntity.set_attr(py::handle): complete" << std::endl;
         }
 
         PValue get_attr(const std::string& key){
-            std::cout << "(cpp) TEntity.get_attr() with key=" << key << std::endl;
-            std::cout << "\tKeys: ";
-            for (auto const& item : m_attr_map) {
-                std::cout << item.first << ", ";
-            }
-            std::cout << std::endl;
-
-            if (has_attr(key)) {
-                std::cout << "TEntity.get_attr():: accessing key: " << key << std::endl;
-                return m_attr_map[key];
+            std::cout << "TAttrMap.get_attr() with key: " << key << std::endl;
+            auto has_key = m_dict.find(key);
+            if (has_key != m_dict.end()) {
+                std::cout << "\tkey found. fetching value corresponding to key." << key << std::endl;
+                return m_dict[key];
             }
             else {
-                throw std::runtime_error("TEntity.get_attr():: Attribute " + key + " is not available.");
+                for (const auto& item: m_dict){
+                    std::cout << "\tavailable key:" << item.first << std::endl;
+                }
+                throw std::runtime_error("TAttrMap.get_attr: key not in dictionary.");
             }
         }
 
+        void set_attr(const std::string& key, const PValue& value) {
+            std::cout << "TAttrMap.set_attr(PValue): processing key: " << key << std::endl;
+            m_dict[key] = std::move(value);
+            std::cout << "TAttrMap.set_attr(PValue): complete." << std::endl;
+        }
+        void set_attr(const std::string& key, const py::handle& value) {
+            std::cout << "TAttrMap.set_attr(py::handle): processing key:" << key << std::endl;
+            auto p_value = std::make_shared<TValue>(value);
+//            m_dict[key] = std::move(p_value);
+            m_dict.insert({key, std::move(p_value)});
+            std::cout << "TAttrMap.set_attr(py::handle): complete" << std::endl;
+            for (const auto& item: m_dict){
+                std::cout << "\tavailable key:" << item.first << std::endl;
+            }
+        }
+
+        void update(const PAttrMap& dict) {
+
+        }
+
+        void update(const py::dict& dict) {
+
+        }
+
+        void update(const std::unordered_map<std::string, PValue>& dict) {
+
+        }
+
+        bool has_key(const std::string& key){
+            return m_dict.find(key) != m_dict.end();
+        }
+
+        TValue::Type get_type(const std::string& key) {
+            if (has_key(key)) {
+                return m_dict[key]->get_type();
+            }
+        }
+    };
+
+
+    class TEntity {
+    private:
+        PAttrMap m_attr_map;
+        const std::vector<std::string> m_special_attr_names {"__entity__"};
+
+    public:
+        TEntity() : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
+        };
+        TEntity(const PAttrMap& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
+            m_attr_map->update(attr_map);
+        }
+        TEntity(const py::handle& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
+            if (py::isinstance<py::dict>(attr_map)) {
+                m_attr_map->update(attr_map.cast<py::dict>());
+            }
+        }
+        TEntity(const std::unordered_map<std::string, PValue>& attr_map) : m_attr_map(std::make_shared<TAttrMap>()) {
+            m_attr_map->set_attr("__entity__", std::make_shared<TValue>("TEntity"));
+            m_attr_map->update(attr_map);
+        }
+//        TEntity(const TEntity& ent) {
+//            m_attr_map = ent.m_attr_map;
+//            m_special_attr_names.insert(ent.m_special_attr_names.begin(), ent.m_special_attr_names.end());
+//        }
+
+        bool is_special_attr(const std::string& key) {
+            return std::find(m_special_attr_names.begin(), m_special_attr_names.end(), key) != m_special_attr_names.end();
+        }
+        bool has_attr(const std::string& key) {
+            return m_attr_map->has_key(key);
+        }
+        TValue::Type get_type(const std::string& key) {
+            return m_attr_map->get_type(key);
+        }
+
+        void set_attr(const std::string& key, const PValue& value) {
+            if (!is_special_attr(key)) {
+                std::cout << "TEntity.set_attr(PValue): processing non-special attribute." << std::endl;
+                m_attr_map->set_attr(key, value);
+            }
+            else {
+                std::cout << "TEntity.set_attr(PValue): processing special attribute." << std::endl;
+                throw std::invalid_argument("TEntity.set_attr() expects a nlohmann::json supported `value` type." );
+            }
+        }
+        void set_attr(const std::string& key, const py::handle& value) {
+            if (!is_special_attr(key)) {
+                std::cout << "TEntity.set_attr(py::handle): processing non-special attribute key:" << key << std::endl;
+                m_attr_map->set_attr(key, value);
+            }
+            else {
+                std::cout << "TEntity.set_attr(py::handle): processing special attribute." << std::endl;
+                throw std::invalid_argument("TEntity.set_attr() expects a nlohmann::json supported `value` type." );
+            }
+        }
+
+        PValue get_attr(const std::string& key){
+            if (!is_special_attr(key)) {
+                std::cout << "TEntity.get_attr(), key: " << key << std::endl;
+                return m_attr_map->get_attr(key);
+            }
+            else {
+                throw std::invalid_argument("Attr " + key + " is specialized. Use specialized getter function.");
+            }
+        }
     };
 
 
