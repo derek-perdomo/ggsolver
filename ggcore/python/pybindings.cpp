@@ -118,6 +118,7 @@ PYBIND11_MODULE(ggsolver, m) {
             .def("has_node", py::overload_cast<const unsigned long&>(&TGraph::has_node))
             .def("has_edge", py::overload_cast<const unsigned long&>(&TGraph::has_edge))
             .def("has_edge", py::overload_cast<const PEdge&>(&TGraph::has_edge))
+            .def("nodes", &TGraph::nodes)
             .def("edges", &TGraph::edges)
             .def("in_edges", py::overload_cast<const unsigned long&>(&TGraph::in_edges))
             .def("in_edges", py::overload_cast<const PNode&>(&TGraph::in_edges))

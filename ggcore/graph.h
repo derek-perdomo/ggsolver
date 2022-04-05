@@ -369,6 +369,13 @@ namespace ggsolver {
             m_edges.reserve(num_edges);
         }
 
+        std::vector<PNode> nodes() {
+            std::vector<PNode> ret_nodes;
+            for (const auto& key : m_nodes){
+                ret_nodes.push_back(key.second);
+            }
+            return ret_nodes;
+        }
 
         std::vector<PEdge> edges() {
             std::vector<PEdge> ret_edges;
@@ -462,6 +469,7 @@ namespace ggsolver {
         inline std::unordered_map<unsigned long, PEdge> get_edges_dict(){
             return m_edges;
         }
+
     };
 }
 
