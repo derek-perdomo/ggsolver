@@ -1,4 +1,5 @@
 from ggsolver import models
+from pprint import pprint
 
 
 class JobstmannGame(models.Game):
@@ -33,5 +34,17 @@ class JobstmannGame(models.Game):
 
 if __name__ == '__main__':
     game = JobstmannGame(final={3, 4})
-    game.graphify()
+    graph = game.graphify()
+
+    # Print the generated graph
+    print(f"Printing {graph}")
+    print(f"Nodes: {list(graph.nodes())}")
+    pprint(f"Edges: {list(graph.edges())}")
+
+    print("----- Node properties")
+    pprint(graph._node_properties)
+    print("----- Edge properties")
+    pprint(graph._edge_properties)
+    print("----- Graph properties")
+    pprint(graph._graph_properties)
 

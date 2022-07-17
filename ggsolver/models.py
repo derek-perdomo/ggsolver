@@ -1,27 +1,61 @@
 # TODO. Try implementing zlk package.
 # TODO. Add logging statements.
 # FIXME. _graphify_unpointed() needs to be modularized for reuse in _graphify_pointed().
+#   1. Define _graphify_node_property(self, graph, pname, default=None) -> NodePropertyMap
+#   2. Define _graphify_edge_property(self, graph, pname, default=None) -> EdgePropertyMap
+#   3. Define _graphify_graph_property(self, graph, pname, default=None) -> dict
+#   4. Define _graphify_edges(self, graph) -> graph [Mutates the same graph]
 
+# TODO. Make note that user will not be warned of any private attributes that are unserialized.
+# TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
 import inspect
+
 from ggsolver import util
-from ggsolver import graph
+from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
 
 
-class GraphicalModel(graph.Graph):
-    RESERVED_PROPERTIES = [
-        "state",                # node property
-        "is_turn_based",        # graph property
-        "is_stochastic",        # graph property
-        "is_quantitative",      # graph property
-    ]
+# ==========================================================================
+# RESERVED_PROPERTIES
+# ==========================================================================
+KEYWORDS = [
+    "turn",                 # node property: turn [0 (concurrent), 1 (P1), 2 (P2), 3 (Nature)
+    "state",                # node property: state
+    "label",                # node property: label of state (depends on graph property: atoms)
+    "prob",                 # edge property: probability associated with the edge
+    "act",                  # edge property: action associated with the edge (depends on edge property: actions)
+    "atoms",                # graph property: atoms (set of atomic propositions)
+    "actions",              # graph property: actions (set of all actions)
+    "delta",                # reserved.
+    "is_stochastic"         # reserved.
+    "is_turn_based"         # reserved.
+    "is_quantitative"       # reserved.
+]
+
+
+# ==========================================================================
+# DECORATOR FUNCTIONS.
+# ==========================================================================
+def register_property(property_dict):
+    def register_function(func):
+        if func.__name__ in KEYWORDS:
+            raise NameError(f"Cannot register {func.__name} as a property. The name is reserved.")
+        property_dict[func.__name__] = func
+        return func
+    return register_function
+
+
+class GraphicalModel:
+    NODE_PROPERTY = dict()
+    EDGE_PROPERTY = dict()
+    GRAPH_PROPERTY = dict()
 
     def __init__(self, **kwargs):
         super(GraphicalModel, self).__init__()
 
-        # Node, edge and graph property generators
-        self._node_property_generators = dict()
-        self._edge_property_generators = dict()
-        self._graph_property_generators = dict()
+        # # Node, edge and graph property generators
+        # self._node_property_generators = dict()
+        # self._edge_property_generators = dict()
+        # self._graph_property_generators = dict()
 
         # Pointed model
         self._init_state = None
@@ -32,23 +66,73 @@ class GraphicalModel(graph.Graph):
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def _graphify_pointed(self):
-        raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
+    def _add_states_to_graph(self, graph):
+        """
+        Mutates the input graph.
+        """
+        assert isinstance(self.states(), (tuple, list)), f"{self.__class__.__name__}.states() must return a list/tuple."
+        states = self.states()
+        node_ids = list(graph.add_nodes(len(states)))
+        p_map = NodePropertyMap(graph=graph)
+        for i in range(len(node_ids)):
+            p_map[node_ids[i]] = states[i]
+        graph["states"] = p_map
+        print(util.BColors.OKCYAN, f"[INFO] Processing node property: states.", util.BColors.ENDC)
 
-    def _graphify_unpointed(self):
-        raise NotImplementedError(f"{self.__class__.__name__}._graphify_unpointed() is not implemented.")
+    def _add_edges_to_graph(self, graph):
+        """
+        Mutates the input graph.
+        """
+        pass
+
+    def _add_node_prop_to_graph(self, graph, p_name, default=None):
+        """
+        Assumes nodes are already added to graph.
+        """
+        try:
+            p_map = NodePropertyMap(graph=graph, default=default)
+            p_func = self.NODE_PROPERTY[p_name]
+            for node in graph.nodes():
+                state = graph["states"][node]
+                p_map[node] = p_func(state)
+            graph[p_name] = p_map
+        except NotImplementedError:
+            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
+
+    def _add_edge_prop_to_graph(self, graph, p_name, default=None):
+        """
+        Mutates the input graph.
+        """
+        try:
+            p_map = EdgePropertyMap(graph=graph, default=default)
+            p_func = self.EDGE_PROPERTY[p_name]
+            for uid, vid, key in graph.edges():
+                p_map[(uid, vid, key)] = p_func(uid, vid, key)
+            graph[p_name] = p_map
+        except NotImplementedError:
+            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
+
+    def _add_graph_prop_to_graph(self, graph, p_name):
+        """
+        Mutates the input graph.
+        """
+        try:
+            if inspect.isfunction(self.GRAPH_PROPERTY[p_name]):
+                p_func = self.GRAPH_PROPERTY[p_name]
+                graph[p_name] = p_func(self)
+            elif inspect.ismethod(self.GRAPH_PROPERTY[p_name]):
+                p_func = self.GRAPH_PROPERTY[p_name]
+                graph[p_name] = p_func()
+            else:
+                graph[p_name] = self.GRAPH_PROPERTY[p_name]
+        except NotImplementedError:
+            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     def states(self):
         raise NotImplementedError(f"{self.__class__.__name__}.states() is not implemented.")
-
-    def actions(self):
-        raise NotImplementedError(f"{self.__class__.__name__}.actions() is not implemented.")
-
-    def delta(self, state, act):
-        raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
 
     # ==========================================================================
     # PUBLIC FUNCTIONS.
@@ -58,72 +142,61 @@ class GraphicalModel(graph.Graph):
             self._init_state = state
 
     def graphify(self, pointed=False):
-        if pointed is True and self._init_state is not None:
-            self._graphify_pointed()
-        elif pointed is True and self._init_state is None:
-            raise ValueError("TSys is not initialized. Did you forget to call TSys.initialize() function?")
+        if pointed is True and self._init_state is None:
+            raise ValueError(f"{self.__class__.__name__} is not initialized. "
+                             f"Did you forget to call {self.__class__.__name__}.initialize() function?")
+        elif pointed is True and self._init_state is not None:
+            graph = self.graphify_pointed()
         else:
-            self._graphify_unpointed()
+            graph = self.graphify_unpointed()
 
-        # Warn about any properties that were ignored.
-        # TODO. Make note that user will not be warned of any private attributes that are unserialized.
-        # TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
-        private_attr = {attr for attr in self.__dict__.keys() if attr[0] == "_"}
-        unserialized_attr = set(self.__dict__.keys()) - set(self.RESERVED_PROPERTIES) - private_attr
+        print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
+        return graph
 
-        if len(unserialized_attr) > 0:
-            print(util.BColors.WARNING,
-                  f"[WARN] Attributes {unserialized_attr} were not serialized because they are not "
-                  f"node/edge/graph properties.", util.BColors.ENDC)
+    def graphify_pointed(self):
+        raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
 
-        print(util.BColors.OKGREEN, f"[SUCCESS] {graph.Graph.__str__(self)} generated.", util.BColors.ENDC)
+    def graphify_unpointed(self):
+        # raise NotImplementedError(f"{self.__class__.__name__}._graphify_unpointed() is not implemented.")
+        graph = Graph()
+        self._add_states_to_graph(graph)
+        return graph
 
     def serialize(self):
+        # 1. Graphify
+        # 2. Serialize the graph
+        # 3. Return a dict
         pass
 
     def save(self, fpath, pointed=False, overwrite=False):
+        # 1. Graphify
+        # 2. Save the graph
         pass
 
     @classmethod
     def deserialize(cls, obj_dict):
+        # 1. Construct a graph from obj_dict.
+        # 2. Define functions from graph
+        # 3. Create cls() instance.
+        # 4. Update __dir__ with new methods
+        # 5. Return instance
         pass
 
     @classmethod
     def load(cls, fpath):
+        # 1. Load obj_dict
+        # 2. deserialize
         pass
 
-    # ==========================================================================
-    # DECORATOR FUNCTIONS.
-    # ==========================================================================
-    # @staticmethod
-    def node_property(self, func):
-        if func.__name__ in self.RESERVED_PROPERTIES:
-            raise NameError(f"{func.__name__} is a RESERVED_PROPERTY. Cannot mark it as a node property.")
-        self._node_properties[func.__name__] = func
-        return func
-
-    def edge_property(self, func):
-        if func.__name__ in self.RESERVED_PROPERTIES:
-            raise NameError(f"{func.__name__} is a RESERVED_PROPERTY. Cannot mark it as a edge property.")
-        self._edge_properties[func.__name__] = func
-        return func
-
-    def graph_property(self, func):
-        if func.__name__ in self.RESERVED_PROPERTIES:
-            raise NameError(f"{func.__name__} is a RESERVED_PROPERTY. Cannot mark it as a graph property.")
-        self._graph_properties[func.__name__] = func
-        return func
+    @register_property(GRAPH_PROPERTY)
+    def init_state(self):
+        return self._init_state
 
 
 class TSys(GraphicalModel):
-    RESERVED_PROPERTIES = GraphicalModel.RESERVED_PROPERTIES + [
-        "turn",             # node property
-        "label",            # node property
-        "act",              # edge property
-        "prob",             # edge property
-        "actions",          # graph property
-        "atoms",            # graph property
-    ]
+    NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
+    EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
+    GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
         super(TSys, self).__init__(**kwargs)
@@ -136,10 +209,11 @@ class TSys(GraphicalModel):
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def _graphify_unpointed(self):
+    def _add_edges_to_graph(self, graph):
+        """
+        Mutates the input graph.
+        """
         # Get list/tuple of states and actions
-        #   Avoid recomputing any complex parts of states() and action() functions.
-        states = self.states()
         actions = self.actions()
         try:
             atoms = self.atoms()
@@ -147,20 +221,15 @@ class TSys(GraphicalModel):
             atoms = None
 
         # Assert conditions on user implemented functions
-        assert isinstance(states, (tuple, list))
         assert isinstance(actions, (tuple, list))
         assert isinstance(atoms, (tuple, list)) or atoms is None
 
-        # Reset the transition system graph
-        self.clear()
-
-        # Add nodes
-        self.add_nodes(len(self.states()))
-
         # Add edges
-        property_act = graph.EdgePropertyMap(graph=self)
-        property_prob = graph.EdgePropertyMap(graph=self, default=0.0)
-        for st in states:
+        property_act = EdgePropertyMap(graph=self)
+        property_prob = EdgePropertyMap(graph=self, default=0.0)
+        states = self.states()
+        for nid in graph.nodes():
+            st = states[nid]
             for act in actions:
                 next_states = self.delta(st, act)
 
@@ -168,7 +237,7 @@ class TSys(GraphicalModel):
                 if not self._is_stochastic and next_states is not None:
                     uid = states.index(st)
                     vid = states.index(next_states)
-                    key = self.add_edge(uid, vid)
+                    key = graph.add_edge(uid, vid)
                     property_act[(uid, vid, key)] = act
 
                 # Stochastic, qualitative
@@ -176,7 +245,7 @@ class TSys(GraphicalModel):
                     for n_state in next_states:
                         uid = states.index(st)
                         vid = states.index(n_state)
-                        key = self.add_edge(uid, vid)
+                        key = graph.add_edge(uid, vid)
                         property_act[(uid, vid, key)] = actions.index(act)
 
                 # Stochastic, quantitative
@@ -184,7 +253,7 @@ class TSys(GraphicalModel):
                     for n_state in next_states.support():
                         uid = states.index(st)
                         vid = states.index(n_state)
-                        key = self.add_edge(uid, vid)
+                        key = graph.add_edge(uid, vid)
                         property_act[(uid, vid, key)] = actions.index(act)
                         property_prob[(uid, vid, key)] = next_states.pmf(n_state)
 
@@ -193,50 +262,55 @@ class TSys(GraphicalModel):
                                                 f"No edge(s) added to graph for state={st}, action={act}.",
                           util.BColors.ENDC)
 
-        # Generate standard node properties (state, turn, label)
-        property_state = graph.NodePropertyMap(graph=self)
-        for st in states:
-            property_state[states.index(st)] = st
+        graph["act"] = property_act
+        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: act.", util.BColors.ENDC)
 
-        property_turn = graph.NodePropertyMap(graph=self, default=0)
-        try:
-            for st in states:
-                st_turn = self.turn(st)
-                property_turn[states.index(st)] = st_turn if st_turn is not None else property_turn.default
-        except NotImplementedError:
-            pass
+        graph["prob"] = property_prob
+        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: prob.", util.BColors.ENDC)
 
-        property_label = graph.NodePropertyMap(graph=self, default=set())
-        try:
-            for st in states:
-                st_label = self.label(st)
-                property_label[states.index(st)] = st_label if st_label is not None else property_label.default
-        except NotImplementedError:
-            pass
+        return graph
 
-        # TODO. Add globbed properties.
-
-        # Add node, edge and graph properties to graph
-        self._node_properties.update({
-            "state": property_state,
-            "turn": property_turn,
-            "label": property_label
+    def _define_special_properties(self):
+        self.NODE_PROPERTY.update({
+            "turn": self.turn,
+            "label": self.label,
         })
-        self._edge_properties.update({
-            "act": property_act,
-            "prob": property_prob
+        self.GRAPH_PROPERTY.update({
+            "actions": self.actions,
+            "atoms": self.atoms,
         })
-        self._graph_properties.update({
-            "is_turn_based": self._is_turn_based,
-            "is_stochastic": self._is_stochastic,
-            "is_quantitative": self._is_quantitative,
-            "actions": actions,
-            "atoms": atoms
-        })
+
+    # ==========================================================================
+    # PUBLIC FUNCTIONS.
+    # ==========================================================================
+    def graphify_unpointed(self):
+        graph = super(TSys, self).graphify_unpointed()
+        self._add_edges_to_graph(graph)
+
+        # Define special properties
+        self._define_special_properties()
+
+        # Graphify properties.
+        for p_name in self.NODE_PROPERTY:
+            print(util.BColors.OKCYAN, f"[INFO] Processing node property: {p_name}.", util.BColors.ENDC)
+            self._add_node_prop_to_graph(graph, p_name)
+        for p_name in self.EDGE_PROPERTY:
+            print(util.BColors.OKCYAN + f"[INFO] Processing edge property: {p_name}.", util.BColors.ENDC)
+            self._add_edge_prop_to_graph(graph, p_name)
+        for p_name in self.GRAPH_PROPERTY:
+            print(util.BColors.OKCYAN + f"[INFO] Processing graph property: {p_name}.", util.BColors.ENDC)
+            self._add_graph_prop_to_graph(graph, p_name)
+        return graph
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    def actions(self):
+        raise NotImplementedError(f"{self.__class__.__name__}.actions() is not implemented.")
+
+    def delta(self, state, act):
+        raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
+
     def atoms(self):
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
@@ -246,24 +320,26 @@ class TSys(GraphicalModel):
     def turn(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
 
+    @register_property(GRAPH_PROPERTY)
+    def is_turn_based(self):
+        return self._is_turn_based
+
+    @register_property(GRAPH_PROPERTY)
+    def is_stochastic(self):
+        return self._is_stochastic
+
+    @register_property(GRAPH_PROPERTY)
+    def is_quantitative(self):
+        return self._is_quantitative
+
 
 class Automaton(GraphicalModel):
     """
     Alphabet is powerset(atoms).
     """
-    RESERVED_PROPERTIES = GraphicalModel.RESERVED_PROPERTIES + [
-        "final",                    # node property
-        "symbol",                   # edge property
-        "atoms",                    # graph property
-        "is_sbacc",                 # graph property
-        "is_complete",              # graph property
-        "is_stutter_invariant",     # graph property
-        "is_deterministic",         # graph property
-        "is_unambiguous",           # graph property
-        "is_terminal",              # graph property
-        "acc_cond",                 # graph property
-        "num_acc_sets",             # graph property
-    ]
+    NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
+    EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
+    GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
     def __init__(self, **kwargs):
         super(Automaton, self).__init__(**kwargs)
@@ -283,6 +359,9 @@ class Automaton(GraphicalModel):
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    def delta(self, state, inp):
+        raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
+
     def acc_cond(self):
         raise NotImplementedError(f"{self.__class__.__name__}.acc_cond() is not implemented.")
 
@@ -306,9 +385,9 @@ class Automaton(GraphicalModel):
 
 
 class Game(TSys):
-    RESERVED_PROPERTIES = TSys.RESERVED_PROPERTIES + [
-        "final"
-    ]
+    NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
+    EDGE_PROPERTY = TSys.EDGE_PROPERTY.copy()
+    GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
         super(Game, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
@@ -316,9 +395,10 @@ class Game(TSys):
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def _graphify_unpointed(self):
-        super(Game, self)._graphify_unpointed()
-        self._graph_properties["final"] = self.final()
+    def graphify_unpointed(self):
+        graph = super(Game, self).graphify_unpointed()
+        graph["final"] = self.final()
+        return graph
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
