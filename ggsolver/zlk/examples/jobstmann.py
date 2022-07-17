@@ -22,8 +22,8 @@ class JobstmannGame(models.Game):
             return act[1]
         return None
 
-    def final(self):
-        return list(self.param_final)
+    def final(self, state):
+        return True if state in {3, 4} else False
 
     def turn(self, state):
         if state in [0, 4, 6]:

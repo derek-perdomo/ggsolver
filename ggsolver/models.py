@@ -397,11 +397,17 @@ class Game(TSys):
     # ==========================================================================
     def graphify_unpointed(self):
         graph = super(Game, self).graphify_unpointed()
-        graph["final"] = self.final()
         return graph
+
+    def _define_special_properties(self):
+        super(Game, self)._define_special_properties()
+
+        self.NODE_PROPERTY.update({
+            "final": self.final,
+        })
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    def final(self):
+    def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
