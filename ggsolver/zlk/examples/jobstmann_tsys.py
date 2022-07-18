@@ -2,6 +2,11 @@
 We construct the Jobstmann example using a TSys and DFA.
 The graph is defined as a transition system.
 The objective, which is to eventually reach 3 or 4, is encoded as DFA.
+
+Rmk. In general, it is recommended to define Automaton directly as a graph.
+    Spot translate will yield a graph.
+    >>> from ggsolver.spotaut import translate
+    >>> aut = translate("Fa")
 """
 
 from ggsolver import models
