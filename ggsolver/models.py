@@ -128,6 +128,9 @@ class GraphicalModel:
         except NotImplementedError:
             print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
 
+    def _define_special_properties(self):
+        pass
+
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
@@ -341,6 +344,9 @@ class Automaton(GraphicalModel):
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
+    REACHABILITY = "Reach"
+    BUCHI = "Buchi"
+
     def __init__(self, **kwargs):
         super(Automaton, self).__init__(**kwargs)
 
@@ -355,6 +361,39 @@ class Automaton(GraphicalModel):
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
+    def _add_edges_to_graph(self, graph):
+        """
+        No merging of parallel edges performed right now.
+        # TODO. Merge parallel edges to compress DFA.
+        """
+        edge_label = EdgePropertyMap(graph)
+        states = self.states()
+        for st in states:
+            for inp in util.powerset(self.atoms()):
+                next_state = self.delta(st, inp)
+                if next_state is None:
+                    print(util.BColors.WARNING + f"[WARN] Automaton transition undefined on state:{st}, inp:{inp}")
+                    continue
+                uid = states.index(st)
+                vid = states.index(next_state)
+                key = graph.add_edge(uid, vid)
+                edge_label[(uid, vid, key)] = inp
+
+        graph["edge_label"] = edge_label
+        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: edge_label.", util.BColors.ENDC)
+
+        return graph
+
+    def _define_special_properties(self):
+        super(Automaton, self)._define_special_properties()
+
+        self.NODE_PROPERTY.update({
+            "final": self.final,
+        })
+        self.GRAPH_PROPERTY.update({
+            "atoms": self.atoms,
+            "acc_cond": self.acc_cond,
+        })
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -368,7 +407,7 @@ class Automaton(GraphicalModel):
     def atoms(self):
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
-    def final(self):
+    def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
     def num_acc_sets(self):
@@ -383,6 +422,25 @@ class Automaton(GraphicalModel):
         """
         pass
 
+    def graphify_unpointed(self):
+        graph = super(Automaton, self).graphify_unpointed()
+        self._add_edges_to_graph(graph)
+
+        # Define special properties
+        self._define_special_properties()
+
+        # Graphify properties.
+        for p_name in self.NODE_PROPERTY:
+            print(util.BColors.OKCYAN, f"[INFO] Processing node property: {p_name}.", util.BColors.ENDC)
+            self._add_node_prop_to_graph(graph, p_name)
+        for p_name in self.EDGE_PROPERTY:
+            print(util.BColors.OKCYAN + f"[INFO] Processing edge property: {p_name}.", util.BColors.ENDC)
+            self._add_edge_prop_to_graph(graph, p_name)
+        for p_name in self.GRAPH_PROPERTY:
+            print(util.BColors.OKCYAN + f"[INFO] Processing graph property: {p_name}.", util.BColors.ENDC)
+            self._add_graph_prop_to_graph(graph, p_name)
+        return graph
+
 
 class Game(TSys):
     NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
@@ -395,10 +453,6 @@ class Game(TSys):
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def graphify_unpointed(self):
-        graph = super(Game, self).graphify_unpointed()
-        return graph
-
     def _define_special_properties(self):
         super(Game, self)._define_special_properties()
 

@@ -1,4 +1,5 @@
 import numpy as np
+from itertools import chain, combinations
 
 
 class BColors:
@@ -30,3 +31,8 @@ class Distribution:
 
     def pmf(self, element):
         return self.prob[self.domain.index(element)]
+
+
+def powerset(iterable):
+    s = list(iterable)
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
