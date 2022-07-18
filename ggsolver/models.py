@@ -1,11 +1,5 @@
 # TODO. Try implementing zlk package.
 # TODO. Add logging statements.
-# FIXME. _graphify_unpointed() needs to be modularized for reuse in _graphify_pointed().
-#   1. Define _graphify_node_property(self, graph, pname, default=None) -> NodePropertyMap
-#   2. Define _graphify_edge_property(self, graph, pname, default=None) -> EdgePropertyMap
-#   3. Define _graphify_graph_property(self, graph, pname, default=None) -> dict
-#   4. Define _graphify_edges(self, graph) -> graph [Mutates the same graph]
-
 # TODO. Make note that user will not be warned of any private attributes that are unserialized.
 # TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
 import inspect
@@ -465,3 +459,65 @@ class Game(TSys):
     # ==========================================================================
     def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
+
+
+class Solver(Game):
+    NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
+    EDGE_PROPERTY = TSys.EDGE_PROPERTY.copy()
+    GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
+
+    def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
+        super(Solver, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
+        self._game = None
+
+    # ==========================================================================
+    # PRIVATE FUNCTIONS.
+    # ==========================================================================
+    def _define_special_properties(self):
+        super(Game, self)._define_special_properties()
+
+        self.NODE_PROPERTY.update({
+            "p1_win": self.p1_win,
+            "p2_win": self.p2_win,
+            "p3_win": self.p3_win,
+            "pi1": self.pi1,
+            "pi2": self.pi2,
+            "pi3": self.pi3
+        })
+        self.EDGE_PROPERTY.update({
+
+        })
+
+    # ==========================================================================
+    # PUBLIC FUNCTIONS.
+    # ==========================================================================
+    def solve(self):
+        raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
+
+    def load_game(self, game):
+        assert isinstance(game, Game)
+        self._game = game
+
+    def load_game_from_file(self, fpath):
+        raise NotImplementedError(f"{self.__class__.__name__}.load_game_from_file() is not implemented.")
+
+    # ==========================================================================
+    # FUNCTIONS TO BE IMPLEMENTED BY USER.
+    # ==========================================================================
+    def p1_win(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.p1_win() is not implemented.")
+
+    def p2_win(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.p2_win() is not implemented.")
+
+    def p3_win(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.p3_win() is not implemented.")
+
+    def pi1(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.pi1() is not implemented.")
+
+    def pi2(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.pi2() is not implemented.")
+
+    def pi3(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.pi3() is not implemented.")
