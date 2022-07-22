@@ -198,7 +198,7 @@ class Graph(IGraph):
         return self._graph.successors(uid)
 
     def predecessors(self, uid):
-        self._graph.predecessors(uid)
+        return self._graph.predecessors(uid)
 
     def neighbors(self, uid):
         return self._graph.neighbors(uid)
