@@ -4,3 +4,11 @@ ggsolver/__pycache__/
 docker1/
 
 .idea/
+
+.run/
+
+build/
+
+cmake-build-debug/
+
+ggsolver/
