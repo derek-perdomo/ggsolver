@@ -1,8 +1,9 @@
-from ggsolver import models
+from ggsolver.models import *
+from ggsolver.zlk.reachability import *
 from pprint import pprint
 
 
-class JobstmannGame(models.Game):
+class JobstmannGame(Game):
     def __init__(self, final):
         super(JobstmannGame, self).__init__()
         self.param_final = final
@@ -11,8 +12,8 @@ class JobstmannGame(models.Game):
         return list(range(8))
 
     def actions(self):
-        return [(0, 1), (0, 3), (1, 0), (1, 2), (1, 4), (2, 4), (2, 2), (3, 0), (3, 4), (3, 5), (4, 3), (5, 3), (5, 6),
-                (6, 6), (6, 7), (7, 0), (7, 3)]
+        return [(0, 1), (0, 3), (1, 0), (1, 2), (1, 4), (2, 4), (2, 2), (3, 0), (3, 4), (3, 5), (4, 1), (4, 3), (5, 3),
+                (5, 6), (6, 6), (6, 7), (7, 0), (7, 3)]
 
     def delta(self, state, act):
         """
@@ -35,16 +36,20 @@ class JobstmannGame(models.Game):
 if __name__ == '__main__':
     game = JobstmannGame(final={3, 4})
     graph = game.graphify()
+    win = SureWinReach(graph)
+    win.set_final()
+    win.solve()
+    print(win.p1_win(5))
 
-    # Print the generated graph
-    print(f"Printing {graph}")
-    print(f"Nodes: {list(graph.nodes())}")
-    pprint(f"Edges: {list(graph.edges())}")
-
-    print("----- Node properties")
-    pprint(graph._node_properties)
-    print("----- Edge properties")
-    pprint(graph._edge_properties)
-    print("----- Graph properties")
-    pprint(graph._graph_properties)
+    # # Print the generated graph
+    # print(f"Printing {graph}")
+    # print(f"Nodes: {list(graph.nodes())}")
+    # pprint(f"Edges: {list(graph.edges())}")
+    #
+    # print("----- Node properties")
+    # pprint(graph._node_properties)
+    # print("----- Edge properties")
+    # pprint(graph._edge_properties)
+    # print("----- Graph properties")
+    # pprint(graph._graph_properties)
 
