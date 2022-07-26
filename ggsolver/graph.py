@@ -101,6 +101,11 @@ class IGraph:
     def deserialize(self, obj_dict):
         pass
 
+    def has_property(self, pname):
+        if pname in self._node_properties or pname in self._edge_properties or pname in self._graph_properties:
+            return True
+        return False
+
 
 class NodePropertyMap(dict):
     def __init__(self, graph, default=None):
