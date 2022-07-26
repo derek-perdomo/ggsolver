@@ -10,3 +10,7 @@ docker1/
 build/
 
 cmake-build-debug/
+
+*/__pycache__/*
+
+*.pyc
