@@ -10,39 +10,21 @@ from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
 
 
 # ==========================================================================
-# RESERVED_PROPERTIES
-# ==========================================================================
-KEYWORDS = [
-    "turn",                 # node property: turn [0 (concurrent), 1 (P1), 2 (P2), 3 (Nature)
-    "state",                # node property: state
-    "label",                # node property: label of state (depends on graph property: atoms)
-    "prob",                 # edge property: probability associated with the edge
-    "act",                  # edge property: action associated with the edge (depends on edge property: actions)
-    "atoms",                # graph property: atoms (set of atomic propositions)
-    "actions",              # graph property: actions (set of all actions)
-    "delta",                # reserved.
-    "is_stochastic"         # reserved.
-    "is_turn_based"         # reserved.
-    "is_quantitative"       # reserved.
-]
-
-
-# ==========================================================================
 # DECORATOR FUNCTIONS.
 # ==========================================================================
-def register_property(property_dict):
+def register_property(property_set: set):
     def register_function(func):
-        if func.__name__ in KEYWORDS:
-            raise NameError(f"Cannot register {func.__name} as a property. The name is reserved.")
-        property_dict[func.__name__] = func
+        if func.__name__ in property_set:
+            print(util.BColors.WARNING, f"[WARN] Duplicate property: {func.__name__}.", util.BColors.ENDC)
+        property_set.add(func.__name__)
         return func
     return register_function
 
 
 class GraphicalModel:
-    NODE_PROPERTY = dict()
-    EDGE_PROPERTY = dict()
-    GRAPH_PROPERTY = dict()
+    NODE_PROPERTY = set()
+    EDGE_PROPERTY = set()
+    GRAPH_PROPERTY = set()
 
     def __init__(self, **kwargs):
         super(GraphicalModel, self).__init__()
@@ -84,9 +66,15 @@ class GraphicalModel:
         """
         Assumes nodes are already added to graph.
         """
+        if graph.has_property(p_name):
+            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            return
+
         try:
             p_map = NodePropertyMap(graph=graph, default=default)
-            p_func = self.NODE_PROPERTY[p_name]
+            p_func = getattr(self, p_name)   # self.NODE_PROPERTY[p_name]
+            if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
+                raise TypeError(f"Node property {p_func} is not a function.")
             for node in graph.nodes():
                 state = graph["states"][node]
                 p_map[node] = p_func(state)
@@ -98,9 +86,15 @@ class GraphicalModel:
         """
         Mutates the input graph.
         """
+        if graph.has_property(p_name):
+            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            return
+
         try:
             p_map = EdgePropertyMap(graph=graph, default=default)
-            p_func = self.EDGE_PROPERTY[p_name]
+            p_func = getattr(self, p_name)  # self.EDGE_PROPERTY[p_name]
+            if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
+                raise TypeError(f"Edge property {p_func} is not a function.")
             for uid, vid, key in graph.edges():
                 p_map[(uid, vid, key)] = p_func(uid, vid, key)
             graph[p_name] = p_map
@@ -111,24 +105,25 @@ class GraphicalModel:
         """
         Mutates the input graph.
         """
+        if graph.has_property(p_name):
+            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            return
+
         try:
-            if inspect.isfunction(self.GRAPH_PROPERTY[p_name]):
-                p_func = self.GRAPH_PROPERTY[p_name]
+            p_func = getattr(self, p_name)
+            if inspect.isfunction(p_func):
                 graph[p_name] = p_func(self)
-            elif inspect.ismethod(self.GRAPH_PROPERTY[p_name]):
-                p_func = self.GRAPH_PROPERTY[p_name]
+            elif inspect.ismethod(p_func):
                 graph[p_name] = p_func()
             else:
-                graph[p_name] = self.GRAPH_PROPERTY[p_name]
+                raise TypeError(f"Graph property {p_name} is neither a function nor a method.")
         except NotImplementedError:
             print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
-
-    def _define_special_properties(self):
-        pass
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    @register_property(GRAPH_PROPERTY)
     def states(self):
         raise NotImplementedError(f"{self.__class__.__name__}.states() is not implemented.")
 
@@ -268,25 +263,12 @@ class TSys(GraphicalModel):
 
         return graph
 
-    def _define_special_properties(self):
-        self.NODE_PROPERTY.update({
-            "turn": self.turn,
-            "label": self.label,
-        })
-        self.GRAPH_PROPERTY.update({
-            "actions": self.actions,
-            "atoms": self.atoms,
-        })
-
     # ==========================================================================
     # PUBLIC FUNCTIONS.
     # ==========================================================================
     def graphify_unpointed(self):
         graph = super(TSys, self).graphify_unpointed()
         self._add_edges_to_graph(graph)
-
-        # Define special properties
-        self._define_special_properties()
 
         # Graphify properties.
         for p_name in self.NODE_PROPERTY:
@@ -303,18 +285,22 @@ class TSys(GraphicalModel):
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    @register_property(GRAPH_PROPERTY)
     def actions(self):
         raise NotImplementedError(f"{self.__class__.__name__}.actions() is not implemented.")
 
     def delta(self, state, act):
         raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
 
+    @register_property(GRAPH_PROPERTY)
     def atoms(self):
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def label(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def turn(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
 
@@ -379,32 +365,25 @@ class Automaton(GraphicalModel):
 
         return graph
 
-    def _define_special_properties(self):
-        super(Automaton, self)._define_special_properties()
-
-        self.NODE_PROPERTY.update({
-            "final": self.final,
-        })
-        self.GRAPH_PROPERTY.update({
-            "atoms": self.atoms,
-            "acc_cond": self.acc_cond,
-        })
-
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     def delta(self, state, inp):
         raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
 
+    @register_property(GRAPH_PROPERTY)
     def acc_cond(self):
         raise NotImplementedError(f"{self.__class__.__name__}.acc_cond() is not implemented.")
 
+    @register_property(GRAPH_PROPERTY)
     def atoms(self):
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
+    @register_property(GRAPH_PROPERTY)
     def num_acc_sets(self):
         raise NotImplementedError(f"{self.__class__.__name__}.num_acc_sets() is not implemented.")
 
@@ -420,9 +399,6 @@ class Automaton(GraphicalModel):
     def graphify_unpointed(self):
         graph = super(Automaton, self).graphify_unpointed()
         self._add_edges_to_graph(graph)
-
-        # Define special properties
-        self._define_special_properties()
 
         # Graphify properties.
         for p_name in self.NODE_PROPERTY:
@@ -446,18 +422,9 @@ class Game(TSys):
         super(Game, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
 
     # ==========================================================================
-    # PRIVATE FUNCTIONS.
-    # ==========================================================================
-    def _define_special_properties(self):
-        super(Game, self)._define_special_properties()
-
-        self.NODE_PROPERTY.update({
-            "final": self.final,
-        })
-
-    # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    @register_property(NODE_PROPERTY)
     def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
@@ -470,24 +437,6 @@ class Solver(Game):
     def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
         super(Solver, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
         self._game = None
-
-    # ==========================================================================
-    # PRIVATE FUNCTIONS.
-    # ==========================================================================
-    def _define_special_properties(self):
-        super(Game, self)._define_special_properties()
-
-        self.NODE_PROPERTY.update({
-            "p1_win": self.p1_win,
-            "p2_win": self.p2_win,
-            "p3_win": self.p3_win,
-            "pi1": self.pi1,
-            "pi2": self.pi2,
-            "pi3": self.pi3
-        })
-        self.EDGE_PROPERTY.update({
-
-        })
 
     # ==========================================================================
     # PUBLIC FUNCTIONS.
@@ -505,20 +454,26 @@ class Solver(Game):
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
+    @register_property(NODE_PROPERTY)
     def p1_win(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.p1_win() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def p2_win(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.p2_win() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def p3_win(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.p3_win() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def pi1(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.pi1() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def pi2(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.pi2() is not implemented.")
 
+    @register_property(NODE_PROPERTY)
     def pi3(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.pi3() is not implemented.")
