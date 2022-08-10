@@ -1,7 +1,7 @@
 """
 In this example, two robots interact over a gridworld. The robot 1 is P1 and robot 2 is P2.
 
-State: (p1.row, p1.col, p2.row, p2.col)
+State: (p1.row, p1.col, p2.row, p2.col, turn)
 Actions (P1): N, E, S, W.
 Actions (P2): N, E, S, W.
 Objective: Do not collide with each other while staying within the gridworld. That is, any action leading the robot
