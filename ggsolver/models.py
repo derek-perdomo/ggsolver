@@ -180,9 +180,18 @@ class GraphicalModel:
 
     @classmethod
     def load(cls, fpath):
-        # 1. Load obj_dict
-        # 2. deserialize
-        pass
+        # 1. Load game graph
+        graph = Graph.load(fpath)
+
+        # 2. Define graphical model functions
+        def states():
+            return graph["states"]
+
+        # 3. Construct object and update its methods
+        obj = cls()
+        obj.states = states
+
+        return obj
 
     @register_property(GRAPH_PROPERTY)
     def init_state(self):
