@@ -50,11 +50,12 @@ class GraphicalModel:
         assert isinstance(self.states(), (tuple, list)), f"{self.__class__.__name__}.states() must return a list/tuple."
         states = self.states()
         node_ids = list(graph.add_nodes(len(states)))
+        # FIXME. Is this property getting saved twice? Why?
         p_map = NodePropertyMap(graph=graph)
         for i in range(len(node_ids)):
             p_map[node_ids[i]] = states[i]
         graph["states"] = p_map
-        print(util.BColors.OKCYAN, f"[INFO] Processing node property: states.", util.BColors.ENDC)
+        print(util.BColors.OKCYAN, f"[INFO] Processing graph property: states.", util.BColors.ENDC)
 
     def _add_edges_to_graph(self, graph):
         """
@@ -163,8 +164,10 @@ class GraphicalModel:
 
     def save(self, fpath, pointed=False, overwrite=False):
         # 1. Graphify
+        graph = self.graphify(pointed=pointed)
+
         # 2. Save the graph
-        pass
+        graph.save(fpath, overwrite=overwrite)
 
     @classmethod
     def deserialize(cls, obj_dict):
@@ -477,3 +480,9 @@ class Solver(Game):
     @register_property(NODE_PROPERTY)
     def pi3(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.pi3() is not implemented.")
+
+    @property
+    def game(self):
+        if self._game is None:
+            raise ValueError("Solver is not initialized. Did you forget to call Solver.load_game() function?")
+        return self._game

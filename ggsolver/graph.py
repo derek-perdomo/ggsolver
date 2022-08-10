@@ -1,4 +1,6 @@
 # import graph_tool as gt
+import json
+
 import networkx as nx
 from tqdm import tqdm
 from ggsolver import util
@@ -105,6 +107,9 @@ class IGraph:
         if pname in self._node_properties or pname in self._edge_properties or pname in self._graph_properties:
             return True
         return False
+
+    def save(self, fpath, overwrite=False):
+        pass
 
 
 class NodePropertyMap(dict):
@@ -240,7 +245,7 @@ class Graph(IGraph):
         graph["edges"] = dict()
         for uid in range(self.number_of_nodes()):
             successors = self.successors(uid)
-            if len(successors) == 0:
+            if len(list(successors)) == 0:
                 continue
 
             graph["edges"][uid] = dict()
@@ -293,3 +298,9 @@ class Graph(IGraph):
 
         # Return constructed object
         return obj
+
+    def save(self, fpath, overwrite=False):
+        # TODO. process overwrite flag.
+        graph_dict = self.serialize()
+        with open(fpath, "w") as file:
+            json.dump(graph_dict, file)
