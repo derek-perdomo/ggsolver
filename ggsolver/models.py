@@ -453,6 +453,24 @@ class Solver(Game):
     # ==========================================================================
     # PUBLIC FUNCTIONS.
     # ==========================================================================
+    def actions(self):
+        return self.game.actions()
+
+    def delta(self, state, act):
+        return self.game.delta(state, act)
+
+    def atoms(self):
+        return self.game.atoms()
+
+    def label(self, state):
+        return self.game.label(state)
+
+    def turn(self, state):
+        return self.game.turn(state)
+
+    def states(self):
+        return self.game.states()
+
     def solve(self):
         raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
 
