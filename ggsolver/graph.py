@@ -252,7 +252,17 @@ class Graph(IGraph):
 
         # Add node properties
         graph["node_properties"] = self._node_properties
-        graph["edge_properties"] = self._edge_properties
+        graph["edge_properties"] = {
+            prop_name: [
+                {
+                    "edge": edge,
+                    "pvalue": pvalue
+                }
+                for edge, pvalue in prop_value.items()
+            ]
+            for prop_name, prop_value in self._edge_properties.items()
+        }
+        # [{"edge": edge, "pvalue": pvalue} for edge, pvalue in self._edge_properties.items()]
         graph["graph_properties"] = self._graph_properties
 
         # Warn about any properties that were ignored.
@@ -290,9 +300,22 @@ class Graph(IGraph):
                     obj._graph.add_edge(int(uid), int(vid), key=int(key))
 
         # Add properties
-        obj._node_properties = graph_dict["node_properties"]
-        obj._edge_properties = graph_dict["edge_properties"]
-        obj._graph_properties = graph_dict["graph_properties"]
+        # FIXME. Generate Node/Edge/Graph properties.
+        for node_prop, np_value in graph_dict["node_properties"].items():
+            np_map = NodePropertyMap(graph=obj)
+            np_map.update(np_value)
+            obj[node_prop] = np_map
+
+        for graph_prop, gp_value in graph_dict["graph_properties"].items():
+            setattr(obj, graph_prop, gp_value)
+
+        for edge_prop, ep_value in graph_dict["edge_properties"].items():
+            ep_map = EdgePropertyMap(graph=obj)
+            ep_map.update({
+                tuple(d["edge"]): d["pvalue"]
+                for d in ep_value
+            })
+            obj[edge_prop] = ep_map
 
         # Return constructed object
         return obj

@@ -19,11 +19,11 @@ def construct_graph():
         name[i] = f"Node {i}"
     graph["name"] = name
 
-    # # Add an edge property
-    # label = EdgePropertyMap(graph=graph)
-    # for edge in graph.edges():
-    #     label[edge] = str(f"Edge {edge}")
-    # graph["label"] = label
+    # Add an edge property
+    label = EdgePropertyMap(graph=graph)
+    for edge in graph.edges():
+        label[edge] = str(f"Edge {edge}")
+    graph["label"] = label
 
     # Add a graph property
     graph["type"] = "MultiDiGraph"
@@ -63,6 +63,9 @@ def check_load():
     print()
     print()
     pprint(ngraph.serialize())
+    print()
+    print()
+    pprint({k:v for k, v in ngraph["label"].items()})
 
 
 if __name__ == '__main__':
