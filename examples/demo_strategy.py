@@ -13,8 +13,10 @@ action to move away from the other robot. For example, if P1 is in (1, 0) and P2
 "N" because P2 is 1-step south of P1, and P2 will execute "S" because P1 is 1-step north of P2.
 """
 import itertools
+from ggsolver.graph import Graph
 from ggsolver.models import Game, Solver
 from ggsolver.gw_util import *
+from pprint import pprint
 
 
 class GWGame(Game):
@@ -66,6 +68,8 @@ class GWGame(Game):
                 return GWGame.SINK_STATE
 
     def turn(self, state):
+        if state == GWGame.SINK_STATE:
+            return -1
         return state[4]
 
 
@@ -153,5 +157,8 @@ if __name__ == '__main__':
     print(strategy.pi1(state=(0, 1, 1, 1, 1)))
     print(strategy.pi2(state=(0, 1, 1, 1, 2)))
 
-    game.save("gwgame1.game")
-    graph = game.graphify()
+    # graph = game.graphify()
+    # pprint(graph.serialize())
+    game.save("gwgame1.game", overwrite=True)
+    game_graph = Graph.load("gwgame1.game")
+    pprint(game_graph.serialize())
