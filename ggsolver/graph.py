@@ -1,8 +1,6 @@
-# import graph_tool as gt
 import json
-
+import os
 import networkx as nx
-from tqdm import tqdm
 from ggsolver import util
 
 
@@ -177,14 +175,14 @@ class Graph(IGraph):
         return uid
     
     def add_nodes(self, num_nodes):
-        return (self.add_node() for _ in range(num_nodes))
+        return [self.add_node() for _ in range(num_nodes)]
 
     def add_edge(self, uid, vid):
         return self._graph.add_edge(uid, vid)
 
     def add_edges(self, edges):
         """ (uid, vid) pairs """
-        return (self.add_edge(uid, vid) for uid, vid in edges)
+        return [self.add_edge(uid, vid) for uid, vid in edges]
 
     def rem_node(self, uid):
         raise NotImplementedError("Removal of nodes is not supported. Use SubGraph instead.")
@@ -244,7 +242,7 @@ class Graph(IGraph):
         # Add edges
         graph["edges"] = dict()
         for uid in range(self.number_of_nodes()):
-            successors = self.successors(uid)
+            successors = list(self.successors(uid))
             if len(list(successors)) == 0:
                 continue
 
@@ -265,7 +263,7 @@ class Graph(IGraph):
             "_graph_properties"
         }
         print(util.BColors.WARNING, f"[WARN] Attributes {ignored_attr} were not serialized because they are not "
-                                     f"node/edge/graph properties.", util.BColors.ENDC)
+                                    f"node/edge/graph properties.", util.BColors.ENDC)
 
         # TODO. Add metadata such as time of serialization, serializer version etc.
         obj_dict = {"graph": graph}
@@ -279,28 +277,40 @@ class Graph(IGraph):
         obj = cls()
 
         # Get serialized graph object
-        graph = obj_dict["graph"]
+        graph_dict = obj_dict["graph"]
 
         # Add nodes
-        obj.add_nodes(num_nodes=int(obj_dict["nodes"]))
+        obj.add_nodes(num_nodes=int(graph_dict["nodes"]))
 
         # Add edges
-        edges = obj_dict["edges"]
+        edges = graph_dict["edges"]
         for uid in edges:
             for vid in edges[uid]:
-                for key in edges[uid][vid]:
+                for key in range(edges[uid][vid]):
                     obj._graph.add_edge(int(uid), int(vid), key=int(key))
 
         # Add properties
-        obj._node_properties = obj_dict["node_properties"]
-        obj._edge_properties = obj_dict["edge_properties"]
-        obj._graph_properties = obj_dict["graph_properties"]
+        obj._node_properties = graph_dict["node_properties"]
+        obj._edge_properties = graph_dict["edge_properties"]
+        obj._graph_properties = graph_dict["graph_properties"]
 
         # Return constructed object
         return obj
 
     def save(self, fpath, overwrite=False):
-        # TODO. process overwrite flag.
+        if not overwrite and os.path.exists(fpath):
+            raise FileExistsError("File already exists. To overwrite, call Graph.save(..., overwrite=True).")
+
         graph_dict = self.serialize()
         with open(fpath, "w") as file:
-            json.dump(graph_dict, file)
+            json.dump(graph_dict, file, indent=2)
+
+    @classmethod
+    def load(cls, fpath):
+        if not os.path.exists(fpath):
+            raise FileNotFoundError("File does not exist.")
+
+        with open(fpath, "r") as file:
+            obj_dict = json.load(file)
+            graph = cls.deserialize(obj_dict)
+            return graph
