@@ -75,9 +75,12 @@ class GWGame(Game):
 
 class GWStrategy(Solver):
     def pi1(self, state):
+        if state == GWGame.SINK_STATE:
+            return []
+
         _, _, _, _, turn = state
         if turn != 1:
-            raise ValueError(f"pi1 is not defined for player {turn} state: {state}. ")
+            return []
 
         strategy = []
         for act in self.game.actions():
@@ -111,9 +114,12 @@ class GWStrategy(Solver):
         return strategy
 
     def pi2(self, state):
+        if state == GWGame.SINK_STATE:
+            return []
+
         _, _, _, _, turn = state
         if turn != 2:
-            raise ValueError(f"pi2 is not defined for player {turn} state: {state}. ")
+            return []
 
         strategy = []
         for act in self.game.actions():
@@ -162,3 +168,5 @@ if __name__ == '__main__':
     game.save("gwgame1.game", overwrite=True)
     game_graph = Graph.load("gwgame1.game")
     pprint(game_graph.serialize())
+
+    strategy.save("gwgame1.strategy", overwrite=True)
