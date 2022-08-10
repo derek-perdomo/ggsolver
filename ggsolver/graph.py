@@ -254,8 +254,8 @@ class Graph(IGraph):
 
         # Add node properties
         graph["node_properties"] = self._node_properties
-        graph["edge_properties"] = self._node_properties
-        graph["graph_properties"] = self._node_properties
+        graph["edge_properties"] = self._edge_properties
+        graph["graph_properties"] = self._graph_properties
 
         # Warn about any properties that were ignored.
         ignored_attr = set(self.__dict__.keys()) - {
