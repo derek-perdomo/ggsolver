@@ -205,9 +205,40 @@ class GraphicalModel:
         for nprop, nprop_value in graph.node_properties.items():
             setattr(obj, nprop, partial(get_node_property, name=nprop))
 
-        # Add edge properties
+        # TODO. Add edge properties (How to handle them is unclear).
 
+        # Reconstruct delta function
+        def delta(state, act):
+            # Get node from state
+            node = obj._state2node[state]
 
+            # Get out_edges from node in graph
+            out_edges = graph.out_edges(node)
+
+            # Iterate over each out edge to match action.
+            successors = set()
+            for uid, vid, key in out_edges:
+                action_label = graph["act"][(uid, vid, key)]
+                if action_label == act:
+                    successors.add(vid)
+
+            # If model is deterministic, then return single state.
+            if not graph["is_stochastic"]:
+                return graph["states"][successors.pop()]
+
+            # If model is stochastic and NOT quantitative, then return list of states.
+            elif graph["is_stochastic"] and not graph["is_quantitative"]:
+                return [graph["states"][vid] for vid in successors]
+
+            # If model is stochastic and quantitative, then return distribution.
+            else:
+                successors = [graph["states"][vid] for vid in successors]
+                prob = [graph["prob"][uid] for uid in successors]
+                return util.Distribution(successors, prob)
+
+        obj.delta = delta
+
+        # Return reconstructed object
         return obj
 
     @register_property(GRAPH_PROPERTY)
