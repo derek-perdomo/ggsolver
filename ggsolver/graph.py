@@ -1,5 +1,7 @@
 import json
 import os
+import pickle
+
 import networkx as nx
 from ggsolver import util
 
@@ -106,7 +108,10 @@ class IGraph:
             return True
         return False
 
-    def save(self, fpath, overwrite=False):
+    def save(self, fpath, overwrite=False, protocol="json"):
+        pass
+
+    def load(self, fpath, protocol="json"):
         pass
 
 
@@ -262,16 +267,10 @@ class Graph(IGraph):
             ]
             for prop_name, prop_value in self._edge_properties.items()
         }
-        # [{"edge": edge, "pvalue": pvalue} for edge, pvalue in self._edge_properties.items()]
         graph["graph_properties"] = self._graph_properties
 
         # Warn about any properties that were ignored.
-        ignored_attr = set(self.__dict__.keys()) - {
-            "_graph",
-            "_node_properties",
-            "_edge_properties",
-            "_graph_properties"
-        }
+        ignored_attr = set(self.__dict__.keys()) - set(self._graph_properties.keys())
         print(util.BColors.WARNING, f"[WARN] Attributes {ignored_attr} were not serialized because they are not "
                                     f"node/edge/graph properties.", util.BColors.ENDC)
 
@@ -300,14 +299,13 @@ class Graph(IGraph):
                     obj._graph.add_edge(int(uid), int(vid), key=int(key))
 
         # Add properties
-        # FIXME. Generate Node/Edge/Graph properties.
         for node_prop, np_value in graph_dict["node_properties"].items():
             np_map = NodePropertyMap(graph=obj)
             np_map.update(np_value)
             obj[node_prop] = np_map
 
         for graph_prop, gp_value in graph_dict["graph_properties"].items():
-            setattr(obj, graph_prop, gp_value)
+            obj[graph_prop] = gp_value
 
         for edge_prop, ep_value in graph_dict["edge_properties"].items():
             ep_map = EdgePropertyMap(graph=obj)
@@ -320,20 +318,34 @@ class Graph(IGraph):
         # Return constructed object
         return obj
 
-    def save(self, fpath, overwrite=False):
+    def save(self, fpath, overwrite=False, protocol="json"):
         if not overwrite and os.path.exists(fpath):
             raise FileExistsError("File already exists. To overwrite, call Graph.save(..., overwrite=True).")
 
         graph_dict = self.serialize()
-        with open(fpath, "w") as file:
-            json.dump(graph_dict, file, indent=2)
+        if protocol == "json":
+            with open(fpath, "w") as file:
+                json.dump(graph_dict, file, indent=2)
+        elif protocol == "pickle":
+            with open(fpath, "wb") as file:
+                pickle.dump(graph_dict, file)
+        else:
+            raise ValueError(f"Graph.save() does not support '{protocol}' protocol. One of ['json', 'pickle'] expected")
 
     @classmethod
-    def load(cls, fpath):
+    def load(cls, fpath, protocol="json"):
         if not os.path.exists(fpath):
             raise FileNotFoundError("File does not exist.")
 
-        with open(fpath, "r") as file:
-            obj_dict = json.load(file)
-            graph = cls.deserialize(obj_dict)
-            return graph
+        if protocol == "json":
+            with open(fpath, "r") as file:
+                obj_dict = json.load(file)
+                graph = cls.deserialize(obj_dict)
+        elif protocol == "pickle":
+            with open(fpath, "rb") as file:
+                obj_dict = pickle.load(file)
+                graph = cls.deserialize(obj_dict)
+        else:
+            raise ValueError(f"Graph.load() does not support '{protocol}' protocol. One of ['json', 'pickle'] expected")
+
+        return graph
