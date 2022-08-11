@@ -7,7 +7,7 @@
 import inspect
 from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
-
+from functools import partial
 
 # ==========================================================================
 # DECORATOR FUNCTIONS.
@@ -29,10 +29,8 @@ class GraphicalModel:
     def __init__(self, **kwargs):
         super(GraphicalModel, self).__init__()
 
-        # # Node, edge and graph property generators
-        # self._node_property_generators = dict()
-        # self._edge_property_generators = dict()
-        # self._graph_property_generators = dict()
+        # Utility function (inverse state mapping)
+        self._state2node = dict()
 
         # Pointed model
         self._init_state = None
@@ -162,12 +160,12 @@ class GraphicalModel:
         # 3. Return a dict
         pass
 
-    def save(self, fpath, pointed=False, overwrite=False):
+    def save(self, fpath, pointed=False, overwrite=False, protocol="json"):
         # 1. Graphify
         graph = self.graphify(pointed=pointed)
 
         # 2. Save the graph
-        graph.save(fpath, overwrite=overwrite)
+        graph.save(fpath, overwrite=overwrite, protocol=protocol)
 
     @classmethod
     def deserialize(cls, obj_dict):
@@ -180,16 +178,35 @@ class GraphicalModel:
 
     @classmethod
     def load(cls, fpath):
-        # 1. Load game graph
+        # Load game graph
         graph = Graph.load(fpath)
 
-        # 2. Define graphical model functions
-        def states():
-            return graph["states"]
-
-        # 3. Construct object and update its methods
+        # Create object
         obj = cls()
-        obj.states = states
+
+        # Add graph properties
+        for gprop, gprop_value in graph.graph_properties.items():
+            func_code = f"""def {gprop}():\n\treturn {gprop_value}"""
+            exec(func_code)
+            func = locals()[gprop]
+            setattr(obj, gprop, func)
+
+        # Construct inverse state mapping
+        for node in graph.nodes():
+            state = graph["states"][node]
+            if isinstance(state, list):
+                state = tuple(state)
+            obj._state2node[state] = node
+
+        # Add node properties
+        def get_node_property(state, name):
+            return graph.node_properties[name][obj._state2node[state]]
+
+        for nprop, nprop_value in graph.node_properties.items():
+            setattr(obj, nprop, partial(get_node_property, name=nprop))
+
+        # Add edge properties
+
 
         return obj
 

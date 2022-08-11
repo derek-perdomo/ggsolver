@@ -36,6 +36,18 @@ class IGraph:
         else:
             self._graph_properties[pname] = pmap
 
+    @property
+    def node_properties(self):
+        return self._node_properties
+
+    @property
+    def edge_properties(self):
+        return self._edge_properties
+
+    @property
+    def graph_properties(self):
+        return self._graph_properties
+
     def add_node(self):
         pass
 

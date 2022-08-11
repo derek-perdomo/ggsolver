@@ -170,3 +170,13 @@ if __name__ == '__main__':
     pprint(game_graph.serialize())
 
     strategy.save("gwgame1.strategy", overwrite=True)
+    solver_object = Solver.load("gwgame1.strategy")
+    print(solver_object._state2node[(0, 0, 0, 0, 1)])
+    print(solver_object._state2node["sink-state"])
+    print(solver_object.actions())
+    print(solver_object.is_turn_based())
+    print("turn: ", solver_object.turn((0, 0, 0, 0, 1)))
+    print("turn: ", solver_object.turn((0, 0, 1, 0, 2)))
+    print("pi1: ", solver_object.pi1((0, 0, 2, 0, 1)))
+    print("pi2: ", solver_object.pi2((0, 0, 1, 0, 2)))
+

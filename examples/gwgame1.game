@@ -23477,7 +23477,6 @@
     },
     "graph_properties": {
       "is_turn_based": true,
-      "init_state": null,
       "actions": [
         "N",
         "E",
@@ -23485,7 +23484,8 @@
         "W"
       ],
       "is_quantitative": false,
-      "is_stochastic": false
+      "is_stochastic": false,
+      "init_state": null
     }
   }
 }
