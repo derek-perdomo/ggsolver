@@ -179,4 +179,4 @@ if __name__ == '__main__':
     print("turn: ", solver_object.turn((0, 0, 1, 0, 2)))
     print("pi1: ", solver_object.pi1((0, 0, 2, 0, 1)))
     print("pi2: ", solver_object.pi2((0, 0, 1, 0, 2)))
-
+    print("delta: ", solver_object.delta((0, 0, 1, 0, 2), "N"))

@@ -23476,16 +23476,16 @@
       "prob": []
     },
     "graph_properties": {
-      "is_turn_based": true,
+      "is_quantitative": false,
+      "init_state": null,
+      "is_stochastic": false,
       "actions": [
         "N",
         "E",
         "S",
         "W"
       ],
-      "is_quantitative": false,
-      "is_stochastic": false,
-      "init_state": null
+      "is_turn_based": true
     }
   }
 }
