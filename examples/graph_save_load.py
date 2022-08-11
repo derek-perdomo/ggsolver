@@ -69,7 +69,7 @@ def check_load():
 
 
 if __name__ == '__main__':
-    check_serialize()
-    check_save()
+    # check_serialize()
+    # check_save()
     check_deserialize()
-    check_load()
+    # check_load()

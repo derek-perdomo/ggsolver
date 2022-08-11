@@ -301,7 +301,7 @@ class Graph(IGraph):
         # Add properties
         for node_prop, np_value in graph_dict["node_properties"].items():
             np_map = NodePropertyMap(graph=obj)
-            np_map.update(np_value)
+            np_map.update({int(k): v for k, v in np_value.items()})
             obj[node_prop] = np_map
 
         for graph_prop, gp_value in graph_dict["graph_properties"].items():
