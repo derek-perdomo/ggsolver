@@ -65,11 +65,11 @@ def check_load():
     pprint(ngraph.serialize())
     print()
     print()
-    pprint({k:v for k, v in ngraph["label"].items()})
+    pprint({k: v for k, v in ngraph["label"].items()})
 
 
 if __name__ == '__main__':
-    # check_serialize()
-    # check_save()
-    # check_deserialize()
+    check_serialize()
+    check_save()
+    check_deserialize()
     check_load()
