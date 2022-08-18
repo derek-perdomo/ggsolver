@@ -5,9 +5,12 @@
 # TODO. Instead of registering property function, register just name and then use getattr to
 #  find the appropriate function during serialization. This will allow rebinding functions.
 import inspect
+import logging
+import typing
 from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
 from functools import partial
+
 
 # ==========================================================================
 # DECORATOR FUNCTIONS.
@@ -21,20 +24,34 @@ def register_property(property_set: set):
     return register_function
 
 
+# ==========================================================================
+# BASE CLASS.
+# ==========================================================================
 class GraphicalModel:
     NODE_PROPERTY = set()
     EDGE_PROPERTY = set()
     GRAPH_PROPERTY = set()
 
-    def __init__(self, **kwargs):
+    def __init__(self, is_deterministic=True, is_quantitative=False, **kwargs):
+        """
+        Types of Graphical Models. Acceptable values:
+        - Deterministic: (det: True, quant: [don't care]),
+        - Non-deterministic: (det: False, quant: False),
+        - Stochastic: (det: False, quant: True).
+        """
+        # Types of Graphical Models. Acceptable values:
+        self._is_deterministic = is_deterministic
+        self._is_quantitative = is_quantitative
+
         # Input domain (Expected value: A function that returns an Iterable object.)
         self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
 
-        # Utility function (inverse state mapping)
-        self._state2node = dict()
-
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
+
+        # Caching variables during serializing and deserializing the model.
+        self.__states = list()
+        self.__state2node = dict()
 
     def __str__(self):
         return f"<{self.__class__.__name__} object at {id(self)}>"
@@ -42,32 +59,100 @@ class GraphicalModel:
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def _add_states_to_graph(self, graph):
+    def _add_nodes_to_graph(self, graph):
         """
-        Mutates the input graph.
+        Adds nodes to the input graph and sets the "state" property.
         """
         assert isinstance(self.states(), (tuple, list)), f"{self.__class__.__name__}.states() must return a list/tuple."
         states = self.states()
         node_ids = list(graph.add_nodes(len(states)))
-        # FIXME. Is this property getting saved twice? Why?
         p_map = NodePropertyMap(graph=graph)
         for i in range(len(node_ids)):
             p_map[node_ids[i]] = states[i]
-        graph["states"] = p_map
-        print(util.BColors.OKCYAN, f"[INFO] Processing graph property: states.", util.BColors.ENDC)
+        graph["state"] = p_map
+
+        # Cache states
+        self.__states = states
+
+        # Logging and printing
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: states. Added {len(node_ids)} states."))
 
     def _add_edges_to_graph(self, graph):
         """
-        Mutates the input graph.
+        Adds edges to the input graph and sets the "input" property.
+        Each edge is unique identified by a triple (state, input, next_state).
+
+        Assumes: self._add_nodes_to_graph() is called before and self.__states is cached.
         """
-        pass
+        try:
+            inputs = self._inp_domain()
+            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.inp_domain must be a list/tuple."
+        except TypeError:
+            logging.error(util.ColoredMsg.error(f"[ERROR] Input domain of {self} is not set. No edges were added."))
+            return
+
+        if len(inputs) == 0:
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Input domain of {self} is empty. No edges were added."))
+
+        # Create an edge property called input
+        property_inp = EdgePropertyMap(graph=self)
+        property_prob = EdgePropertyMap(graph=self, default=None)
+
+        # Generate edges by applying each input to every state.
+        for state in self.__states:
+            for inp in inputs:
+                next_states = self.delta(state, inp)
+
+                # There are three types of graphical models. Handle each separately.
+                # If model is deterministic, next states is a single state.
+                if self.is_deterministic:
+                    uid = self.__states.index(state)
+                    vid = self.__states.index(next_states)
+                    key = graph.add_edge(uid, vid)
+                    property_inp[(uid, vid, key)] = inp
+
+                # If model is non-deterministic, next states is an Iterable of states.
+                elif not self.is_deterministic and not self.is_quantitative:
+                    for next_state in next_states:
+                        uid = self.__states.index(state)
+                        vid = self.__states.index(next_state)
+                        key = graph.add_edge(uid, vid)
+                        property_inp[(uid, vid, key)] = inp
+
+                # If model is stochastic, next states is a Distribution of states.
+                elif not self.is_deterministic and self.is_quantitative:
+                    for next_state in next_states.support():
+                        uid = self.__states.index(state)
+                        vid = self.__states.index(next_state)
+                        key = graph.add_edge(uid, vid)
+                        property_inp[(uid, vid, key)] = inp
+                        property_prob[(uid, vid, key)] = next_states.pmf(next_state)
+
+                else:
+                    raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
+                                    f"Check the values: is_deterministic: {self.is_deterministic}, "
+                                    f"self.is_quantitative:{self.is_quantitative}.")
+
+        # Update the properties with graph
+        graph["inp_domain"] = inputs
+        graph["input"] = property_inp
+        graph["prob"] = property_prob
+
+        # Logging and printing
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. OK."))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: prob. OK."))
 
     def _add_node_prop_to_graph(self, graph, p_name, default=None):
         """
-        Assumes nodes are already added to graph.
+        Adds the node property called `p_name` to the graph.
+
+        Requires: `p_name` should be a function in self that inputs a single parameter: state.
+
+        Assumes: self._add_nodes_to_graph() is called before.
         """
         if graph.has_property(p_name):
-            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property is ignored: {p_name}. IGNORED"))
             return
 
         try:
@@ -75,57 +160,80 @@ class GraphicalModel:
             p_func = getattr(self, p_name)   # self.NODE_PROPERTY[p_name]
             if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
                 raise TypeError(f"Node property {p_func} is not a function.")
-            for node in graph.nodes():
-                state = graph["states"][node]
-                p_map[node] = p_func(state)
+            for uid in range(len(self.__states)):
+                p_map[uid] = p_func(self.__states[uid])
             graph[p_name] = p_map
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: {p_name}. OK"))
         except NotImplementedError:
-            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function not implemented: {p_name}. IGNORED"))
+        except AttributeError:
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
 
     def _add_edge_prop_to_graph(self, graph, p_name, default=None):
         """
-        Mutates the input graph.
+        Adds an edge property called `p_name` to the graph.
+
+        Requires: `p_name` should be a function in self that inputs three parameters: state, inp, next_state .
+
+        Assumes: self._add_nodes_to_graph() is called.
+        Assumes: self._add_edges_to_graph() is called.
         """
         if graph.has_property(p_name):
-            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
             return
 
         try:
             p_map = EdgePropertyMap(graph=graph, default=default)
-            p_func = getattr(self, p_name)  # self.EDGE_PROPERTY[p_name]
+            p_func = getattr(self, p_name)
             if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
                 raise TypeError(f"Edge property {p_func} is not a function.")
             for uid, vid, key in graph.edges():
-                p_map[(uid, vid, key)] = p_func(uid, vid, key)
+                p_map[(uid, vid, key)] = p_func(self.__states[uid], graph["input"][(uid, vid, key)], self.__states[vid])
             graph[p_name] = p_map
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: {p_name}. OK"))
         except NotImplementedError:
-            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Edge property not implemented: {p_name}. IGNORED"))
+        except AttributeError:
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
 
     def _add_graph_prop_to_graph(self, graph, p_name):
         """
-        Mutates the input graph.
+        Adds a graph property called `p_name` to the graph.
+
+        Requires: `p_name` should be a function in self that inputs no parameters.
+
+        Assumes: self._add_states_to_graph() is called before and self.__states is cached.
         """
         if graph.has_property(p_name):
-            print(util.BColors.WARNING, f"[WARN] Duplicate property is ignored: {p_name} ")
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
             return
 
         try:
             p_func = getattr(self, p_name)
-            if inspect.isfunction(p_func):
-                graph[p_name] = p_func(self)
-            elif inspect.ismethod(p_func):
+            if inspect.ismethod(p_func) or (inspect.isfunction(p_func) and p_func.__name__ == "<lambda>"):
                 graph[p_name] = p_func()
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+            elif inspect.isfunction(p_func):
+                graph[p_name] = p_func(self)
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+            # elif inspect.ismethod(p_func):
+            #     graph[p_name] = p_func()
+            #     logging.warning(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
             else:
                 raise TypeError(f"Graph property {p_name} is neither a function nor a method.")
         except NotImplementedError:
-            print(util.BColors.WARNING, f"[WARN] Ignoring node property: {p_name}. NotImplemented", util.BColors.ENDC)
-
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. IGNORED"))
+        except AttributeError:
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     # @register_property(GRAPH_PROPERTY)
     def states(self):
         raise NotImplementedError(f"{self.__class__.__name__}.states() is not implemented.")
+
+    def delta(self, state, inp) -> typing.Union[util.Distribution, typing.Iterable, object]:
+        pass
 
     # ==========================================================================
     # PUBLIC FUNCTIONS.
@@ -150,9 +258,40 @@ class GraphicalModel:
         raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
 
     def graphify_unpointed(self):
-        # raise NotImplementedError(f"{self.__class__.__name__}._graphify_unpointed() is not implemented.")
         graph = Graph()
-        self._add_states_to_graph(graph)
+
+        # Glob node, edge and graph properties
+        state_props = self.NODE_PROPERTY
+        trans_props = self.EDGE_PROPERTY
+        graph_props = self.GRAPH_PROPERTY
+
+        # Warn about duplication
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
+                                            f"{set.intersection(state_props, trans_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
+                                            f"{set.intersection(trans_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
+                                            f"{set.intersection(graph_props, state_props)}"))
+
+        # Add nodes and edges to the graph
+        self._add_nodes_to_graph(graph)
+        self._add_edges_to_graph(graph)
+
+        # Add node properties
+        for p_name in state_props:
+            self._add_node_prop_to_graph(graph, p_name)
+
+        # Add edge properties
+        for p_name in trans_props:
+            self._add_edge_prop_to_graph(graph, p_name)
+
+        # Add graph properties
+        for p_name in graph_props:
+            self._add_graph_prop_to_graph(graph, p_name)
+
         return graph
 
     def serialize(self):
@@ -194,14 +333,14 @@ class GraphicalModel:
 
         # Construct inverse state mapping
         for node in graph.nodes():
-            state = graph["states"][node]
+            state = graph["state"][node]
             if isinstance(state, list):
                 state = tuple(state)
-            obj._state2node[state] = node
+            obj.__state2node[state] = node
 
         # Add node properties
         def get_node_property(state, name):
-            return graph.node_properties[name][obj._state2node[state]]
+            return graph.node_properties[name][obj.__state2node[state]]
 
         for nprop, nprop_value in graph.node_properties.items():
             setattr(obj, nprop, partial(get_node_property, name=nprop))
@@ -211,7 +350,7 @@ class GraphicalModel:
         # Reconstruct delta function
         def delta(state, act):
             # Get node from state
-            node = obj._state2node[state]
+            node = obj.__state2node[state]
 
             # Get out_edges from node in graph
             out_edges = graph.out_edges(node)
@@ -225,15 +364,15 @@ class GraphicalModel:
 
             # If model is deterministic, then return single state.
             if not graph["is_stochastic"]:
-                return graph["states"][successors.pop()]
+                return graph["state"][successors.pop()]
 
             # If model is stochastic and NOT quantitative, then return list of states.
             elif graph["is_stochastic"] and not graph["is_quantitative"]:
-                return [graph["states"][vid] for vid in successors]
+                return [graph["state"][vid] for vid in successors]
 
             # If model is stochastic and quantitative, then return distribution.
             else:
-                successors = [graph["states"][vid] for vid in successors]
+                successors = [graph["state"][vid] for vid in successors]
                 prob = [graph["prob"][uid] for uid in successors]
                 return util.Distribution(successors, prob)
 
@@ -246,102 +385,31 @@ class GraphicalModel:
     def init_state(self):
         return self._init_state
 
+    @register_property(GRAPH_PROPERTY)
+    def is_deterministic(self):
+        return self._is_deterministic
 
+    @register_property(GRAPH_PROPERTY)
+    def is_quantitative(self):
+        return self._is_quantitative
+
+
+# ==========================================================================
+# USER MODELS.
+# ==========================================================================
 class TSys(GraphicalModel):
     NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
-    def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
-        super(TSys, self).__init__(input_domain=self.actions, **kwargs)
+    def __init__(self, is_turn_based=True, is_deterministic=True, is_quantitative=False, **kwargs):
+        super(TSys, self).__init__(input_domain=self.actions,
+                                   is_deterministic=is_deterministic,
+                                   is_quantitative=is_quantitative,
+                                   **kwargs)
 
-        # TSys properties
-        self._is_turn_based = is_tb
-        self._is_stochastic = is_stoch
-        self._is_quantitative = is_quant
-
-    # ==========================================================================
-    # PRIVATE FUNCTIONS.
-    # ==========================================================================
-    def _add_edges_to_graph(self, graph):
-        """
-        Mutates the input graph.
-        """
-        # Get list/tuple of states and actions
-        actions = self.actions()
-        try:
-            atoms = self.atoms()
-        except NotImplementedError:
-            atoms = None
-
-        # Assert conditions on user implemented functions
-        assert isinstance(actions, (tuple, list))
-        assert isinstance(atoms, (tuple, list)) or atoms is None
-
-        # Add edges
-        property_act = EdgePropertyMap(graph=self)
-        property_prob = EdgePropertyMap(graph=self, default=0.0)
-        states = self.states()
-        for nid in graph.nodes():
-            st = states[nid]
-            for act in actions:
-                next_states = self.delta(st, act)
-
-                # Deterministic TSys
-                if not self._is_stochastic and next_states is not None:
-                    uid = states.index(st)
-                    vid = states.index(next_states)
-                    key = graph.add_edge(uid, vid)
-                    property_act[(uid, vid, key)] = act
-
-                # Stochastic, qualitative
-                elif self._is_stochastic and not self._is_quantitative and next_states is not None:
-                    for n_state in next_states:
-                        uid = states.index(st)
-                        vid = states.index(n_state)
-                        key = graph.add_edge(uid, vid)
-                        property_act[(uid, vid, key)] = actions.index(act)
-
-                # Stochastic, quantitative
-                elif self._is_stochastic and self._is_stochastic and next_states is not None:
-                    for n_state in next_states.support():
-                        uid = states.index(st)
-                        vid = states.index(n_state)
-                        key = graph.add_edge(uid, vid)
-                        property_act[(uid, vid, key)] = actions.index(act)
-                        property_prob[(uid, vid, key)] = next_states.pmf(n_state)
-
-                else:
-                    print(util.BColors.WARNING, f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                f"No edge(s) added to graph for state={st}, action={act}.",
-                          util.BColors.ENDC)
-
-        graph["act"] = property_act
-        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: act.", util.BColors.ENDC)
-
-        graph["prob"] = property_prob
-        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: prob.", util.BColors.ENDC)
-
-        return graph
-
-    # ==========================================================================
-    # PUBLIC FUNCTIONS.
-    # ==========================================================================
-    def graphify_unpointed(self):
-        graph = super(TSys, self).graphify_unpointed()
-        self._add_edges_to_graph(graph)
-
-        # Graphify properties.
-        for p_name in self.NODE_PROPERTY:
-            print(util.BColors.OKCYAN, f"[INFO] Processing node property: {p_name}.", util.BColors.ENDC)
-            self._add_node_prop_to_graph(graph, p_name)
-        for p_name in self.EDGE_PROPERTY:
-            print(util.BColors.OKCYAN + f"[INFO] Processing edge property: {p_name}.", util.BColors.ENDC)
-            self._add_edge_prop_to_graph(graph, p_name)
-        for p_name in self.GRAPH_PROPERTY:
-            print(util.BColors.OKCYAN + f"[INFO] Processing graph property: {p_name}.", util.BColors.ENDC)
-            self._add_graph_prop_to_graph(graph, p_name)
-        return graph
+        # TSys can be turn-based or concurrent.
+        self._is_turn_based = is_turn_based
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -369,13 +437,20 @@ class TSys(GraphicalModel):
     def is_turn_based(self):
         return self._is_turn_based
 
-    @register_property(GRAPH_PROPERTY)
-    def is_stochastic(self):
-        return self._is_stochastic
 
-    @register_property(GRAPH_PROPERTY)
-    def is_quantitative(self):
-        return self._is_quantitative
+class Game(TSys):
+    def __init__(self, is_turn_based=True, is_deterministic=True, is_quantitative=False, **kwargs):
+        super(Game, self).__init__(is_turn_based=is_turn_based,
+                                   is_deterministic=is_deterministic,
+                                   is_quantitative=is_quantitative,
+                                   **kwargs)
+
+    # ==========================================================================
+    # FUNCTIONS TO BE IMPLEMENTED BY USER.
+    # ==========================================================================
+    @register_property(TSys.NODE_PROPERTY)
+    def final(self, state):
+        raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
 
 class Automaton(GraphicalModel):
@@ -389,22 +464,36 @@ class Automaton(GraphicalModel):
     REACHABILITY = "Reach"
     BUCHI = "Buchi"
 
-    def __init__(self, **kwargs):
+    def __init__(self, acc_cond, **kwargs):
         super(Automaton, self).__init__(**kwargs)
 
+        # If user provides direct definition of automaton
+        if "states" in kwargs:
+            self.states = lambda: list(kwargs["states"])
+
+        if "atoms" in kwargs:
+            self.atoms = lambda: list(kwargs["atoms"])
+
+        if "init_state" in kwargs:
+            self._init_state = lambda: list(kwargs["init_state"])
+
+        if "final" in kwargs:
+            self.final = lambda st: st in kwargs["final"]
+
         # Default properties (will be treated as graph properties during serialization)
-        self.is_sbacc = None
-        self.is_complete = None
-        self.is_stutter_invariant = None
-        self.is_deterministic = None
-        self.is_unambiguous = None
-        self.is_terminal = None
+        self._acc_cond = acc_cond
+        self._is_sbacc = kwargs["is_sbacc"] if "is_sbacc" in kwargs else None
+        self._is_complete = kwargs["is_complete"] if "is_complete" in kwargs else None
+        self._is_stutter_invariant = kwargs["is_stutter_invariant"] if "is_stutter_invariant" in kwargs else None
+        self._is_unambiguous = kwargs["is_unambiguous"] if "is_unambiguous" in kwargs else None
+        self._is_terminal = kwargs["is_terminal"] if "is_terminal" in kwargs else None
 
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
     def _add_edges_to_graph(self, graph):
         """
+        TODO. post process edges to merge parallel edges.
         No merging of parallel edges performed right now.
         # TODO. Merge parallel edges to compress DFA.
         """
@@ -429,12 +518,9 @@ class Automaton(GraphicalModel):
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    def delta(self, state, inp):
-        raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
-
     @register_property(GRAPH_PROPERTY)
     def acc_cond(self):
-        raise NotImplementedError(f"{self.__class__.__name__}.acc_cond() is not implemented.")
+        return self._acc_cond
 
     @register_property(GRAPH_PROPERTY)
     def atoms(self):
@@ -451,43 +537,25 @@ class Automaton(GraphicalModel):
     # ==========================================================================
     # PUBLIC FUNCTIONS.
     # ==========================================================================
-    def is_supported_acc_cond(self):
-        """
-        Checks if acceptance condition is supported.
-        """
-        pass
+    @register_property(GRAPH_PROPERTY)
+    def is_sbacc(self):
+        return self._is_sbacc
 
-    def graphify_unpointed(self):
-        graph = super(Automaton, self).graphify_unpointed()
-        self._add_edges_to_graph(graph)
+    @register_property(GRAPH_PROPERTY)
+    def is_complete(self):
+        return self._is_complete
 
-        # Graphify properties.
-        for p_name in self.NODE_PROPERTY:
-            print(util.BColors.OKCYAN, f"[INFO] Processing node property: {p_name}.", util.BColors.ENDC)
-            self._add_node_prop_to_graph(graph, p_name)
-        for p_name in self.EDGE_PROPERTY:
-            print(util.BColors.OKCYAN + f"[INFO] Processing edge property: {p_name}.", util.BColors.ENDC)
-            self._add_edge_prop_to_graph(graph, p_name)
-        for p_name in self.GRAPH_PROPERTY:
-            print(util.BColors.OKCYAN + f"[INFO] Processing graph property: {p_name}.", util.BColors.ENDC)
-            self._add_graph_prop_to_graph(graph, p_name)
-        return graph
+    @register_property(GRAPH_PROPERTY)
+    def is_stutter_invariant(self):
+        return self._is_stutter_invariant
 
+    @register_property(GRAPH_PROPERTY)
+    def is_unambiguous(self):
+        return self._is_unambiguous
 
-class Game(TSys):
-    NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
-    EDGE_PROPERTY = TSys.EDGE_PROPERTY.copy()
-    GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
-
-    def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
-        super(Game, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
-
-    # ==========================================================================
-    # FUNCTIONS TO BE IMPLEMENTED BY USER.
-    # ==========================================================================
-    @register_property(NODE_PROPERTY)
-    def final(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
+    @register_property(GRAPH_PROPERTY)
+    def is_terminal(self):
+        return self._is_terminal
 
 
 class Solver(Game):
