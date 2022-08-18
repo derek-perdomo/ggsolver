@@ -27,13 +27,14 @@ class GraphicalModel:
     GRAPH_PROPERTY = set()
 
     def __init__(self, **kwargs):
-        super(GraphicalModel, self).__init__()
+        # Input domain (Expected value: A function that returns an Iterable object.)
+        self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
 
         # Utility function (inverse state mapping)
         self._state2node = dict()
 
         # Pointed model
-        self._init_state = None
+        self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
 
     def __str__(self):
         return f"<{self.__class__.__name__} object at {id(self)}>"
@@ -122,7 +123,7 @@ class GraphicalModel:
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    @register_property(GRAPH_PROPERTY)
+    # @register_property(GRAPH_PROPERTY)
     def states(self):
         raise NotImplementedError(f"{self.__class__.__name__}.states() is not implemented.")
 
@@ -252,7 +253,7 @@ class TSys(GraphicalModel):
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
-        super(TSys, self).__init__(**kwargs)
+        super(TSys, self).__init__(input_domain=self.actions, **kwargs)
 
         # TSys properties
         self._is_turn_based = is_tb
