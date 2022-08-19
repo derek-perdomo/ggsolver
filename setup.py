@@ -22,7 +22,7 @@ maintainer_email = "abhi.bp1993@gmail.com"
 url = "https://akulkarni.me/"
 project_urls = {
     "Bug Tracker": "https://github.com/abhibp1993/ggsolver/issues",
-    "Documentation": "https://networkx.org/documentation/stable/",
+    "Documentation": "",
     "Source Code": "https://github.com/abhibp1993/ggsolver",
 }
 platforms = ["Linux"]
@@ -48,7 +48,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 
-with open("networkx/__init__.py") as fid:
+with open("ggsolver/__init__.py") as fid:
     for line in fid:
         if line.startswith("__version__"):
             version = line.strip().split()[-1][1:-1]
