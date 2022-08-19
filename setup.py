@@ -62,7 +62,7 @@ packages = [
 
 install_requires = []
 
-with open("README.rst") as fh:
+with open("README.md") as fh:
     long_description = fh.read()
 
 if __name__ == "__main__":
