@@ -225,6 +225,7 @@ class GraphicalModel:
             logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. IGNORED"))
         except AttributeError:
             logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+    
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================

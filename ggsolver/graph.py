@@ -163,7 +163,7 @@ class EdgePropertyMap(dict):
         return f"<EdgePropertyMap graph={repr(self.graph)}>"
 
     def __missing__(self, edge):
-        if self.graph.has_edge(edge):
+        if self.graph.has_edge(*edge):
             return self.default
         raise ValueError(f"[ERROR] EdgePropertyMap.__missing__:: {repr(self.graph)} does not contain node {edge}.")
 
@@ -250,6 +250,7 @@ class Graph(IGraph):
         self._graph.clear()
 
     def serialize(self):
+        # TODO. Node, Edge Property not storing default values. (update deserialize accordingly).
         # Initialize a graph dictionary
         graph = dict()
 
@@ -281,10 +282,10 @@ class Graph(IGraph):
         }
         graph["graph_properties"] = self._graph_properties
 
-        # Warn about any properties that were ignored.
-        ignored_attr = set(self.__dict__.keys()) - set(self._graph_properties.keys())
-        print(util.BColors.WARNING, f"[WARN] Attributes {ignored_attr} were not serialized because they are not "
-                                    f"node/edge/graph properties.", util.BColors.ENDC)
+        # # Warn about any properties that were ignored.
+        # ignored_attr = set(self.__dict__.keys()) - set(self._graph_properties.keys())
+        # print(util.BColors.WARNING, f"[WARN] Attributes {ignored_attr} were not serialized because they are not "
+        #                             f"node/edge/graph properties.", util.BColors.ENDC)
 
         # TODO. Add metadata such as time of serialization, serializer version etc.
         obj_dict = {"graph": graph}
