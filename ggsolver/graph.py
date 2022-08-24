@@ -388,3 +388,8 @@ class Graph(IGraph):
             raise ValueError(f"Graph.load() does not support '{protocol}' protocol. One of ['json', 'pickle'] expected")
 
         return graph
+
+    def to_png(self, fname):
+        dot_graph = nx.nx_agraph.to_agraph(self._graph)
+        dot_graph.layout("dot")
+        dot_graph.draw(fname)

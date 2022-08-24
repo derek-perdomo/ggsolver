@@ -108,4 +108,5 @@ if __name__ == '__main__':
     #   protocol: either json or pickle.
     g.save(fpath="mygraph.graph", overwrite=True, protocol="json")
     loaded_g = graph.Graph.load(fpath="mygraph.graph", protocol="json")
+    loaded_g.to_png("graph.svg", with_labels=True)
     print("ok")
