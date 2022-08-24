@@ -152,6 +152,19 @@ class NodePropertyMap(dict):
         if value != self.default:
             super(NodePropertyMap, self).__setitem__(node, value)
 
+    def serialize(self):
+        return {
+            "default": self.default,
+            "dict": {k: v for k, v in self.items()}
+        }
+
+    def deserialize(self, obj_dict):
+        self.clear()
+        self.default = obj_dict["default"]
+        # Explicitly deserialize to ensure all keys are valid nodes.
+        for k, v in obj_dict["dict"].items():
+            self[int(k)] = v
+
 
 class EdgePropertyMap(dict):
     def __init__(self, graph, default=None):
@@ -176,6 +189,19 @@ class EdgePropertyMap(dict):
     def __setitem__(self, node, value):
         if value != self.default:
             super(EdgePropertyMap, self).__setitem__(node, value)
+
+    def serialize(self):
+        return {
+            "default": self.default,
+            "dict": [{"edge": edge, "pvalue": pvalue} for edge, pvalue in self.items()]
+        }
+
+    def deserialize(self, obj_dict):
+        self.clear()
+        self.default = obj_dict["default"]
+        # Explicitly deserialize to ensure all keys are valid edges.
+        for item in obj_dict["dict"]:
+            self[tuple(item["edge"])] = item["pvalue"]
 
 
 class Graph(IGraph):
@@ -269,17 +295,19 @@ class Graph(IGraph):
                 graph["edges"][uid].update({vid: self._graph.number_of_edges(uid, vid)})
 
         # Add node properties
-        graph["node_properties"] = self._node_properties
-        graph["edge_properties"] = {
-            prop_name: [
-                {
-                    "edge": edge,
-                    "pvalue": pvalue
-                }
-                for edge, pvalue in prop_value.items()
-            ]
-            for prop_name, prop_value in self._edge_properties.items()
-        }
+        # graph["node_properties"] = self._node_properties
+        # graph["edge_properties"] = {
+        #     prop_name: [
+        #         {
+        #             "edge": edge,
+        #             "pvalue": pvalue
+        #         }
+        #         for edge, pvalue in prop_value.items()
+        #     ]
+        #     for prop_name, prop_value in self._edge_properties.items()
+        # }
+        graph["node_properties"] = {p_name: prop.serialize() for p_name, prop in self._node_properties.items()}
+        graph["edge_properties"] = {p_name: prop.serialize() for p_name, prop in self._edge_properties.items()}
         graph["graph_properties"] = self._graph_properties
 
         # # Warn about any properties that were ignored.
@@ -314,7 +342,8 @@ class Graph(IGraph):
         # Add properties
         for node_prop, np_value in graph_dict["node_properties"].items():
             np_map = NodePropertyMap(graph=obj)
-            np_map.update({int(k): v for k, v in np_value.items()})
+            # np_map.update({int(k): v for k, v in np_value.items()})
+            np_map.deserialize(np_value)
             obj[node_prop] = np_map
 
         for graph_prop, gp_value in graph_dict["graph_properties"].items():
@@ -322,10 +351,7 @@ class Graph(IGraph):
 
         for edge_prop, ep_value in graph_dict["edge_properties"].items():
             ep_map = EdgePropertyMap(graph=obj)
-            ep_map.update({
-                tuple(d["edge"]): d["pvalue"]
-                for d in ep_value
-            })
+            ep_map.deserialize(ep_value)
             obj[edge_prop] = ep_map
 
         # Return constructed object
