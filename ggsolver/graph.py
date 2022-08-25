@@ -216,7 +216,7 @@ class Graph(IGraph):
         uid = self._graph.number_of_nodes()
         self._graph.add_node(uid)
         return uid
-    
+
     def add_nodes(self, num_nodes):
         return [self.add_node() for _ in range(num_nodes)]
 
@@ -389,7 +389,51 @@ class Graph(IGraph):
 
         return graph
 
-    def to_png(self, fname):
-        dot_graph = nx.nx_agraph.to_agraph(self._graph)
+    def to_png(self, fname, nlabel=None, elabel=None):
+        """
+
+        :param fname:
+        :param nlabel:
+        :param elabel:
+        :return:
+        :warning: If the node labels are not unique, the generated figure may contain 0, 1, 2, ...
+            that avoid duplication.
+        """
+        max_nodes = 500
+        if self._graph.number_of_nodes() > max_nodes:
+            raise ValueError(f"Cannot draw a graph with more than {max_nodes} nodes.")
+
+        g = self._graph
+
+        # If node properties to displayed are specified, process them.
+        if nlabel is not None:
+            g = nx.MultiDiGraph()
+
+            # If more than one property is selected, then display as tuple.
+            if len(nlabel) == 1:
+                node_state_map = {n: self[prop][n] for prop in nlabel for n in self._graph.nodes()}
+            else:
+                node_state_map = {n: tuple(self[prop][n] for prop in nlabel) for n in self._graph.nodes()}
+
+            # Add nodes to dummy graph
+            for n in node_state_map.values():
+                g.add_node(str(n))
+
+            # If edge labels to be displayed are specified, process them.
+            if elabel is not None:
+                for u, v, k in self._graph.edges(keys=True):
+                    if len(elabel) == 1:
+                        g.add_edge(str(node_state_map[u]), str(node_state_map[v]),
+                                   label=self[elabel[0]][(u, v, k)])
+                    else:
+                        g.add_edge(str(node_state_map[u]), str(node_state_map[v]),
+                                   label=tuple(self[prop][(u, v, k)] for prop in elabel))
+            else:
+                for u, v, k in self._graph.edges(keys=True):
+                    g.add_edge(str(node_state_map[u]), str(node_state_map[v]))
+
+        dot_graph = nx.nx_agraph.to_agraph(g)
         dot_graph.layout("dot")
         dot_graph.draw(fname)
+
+
