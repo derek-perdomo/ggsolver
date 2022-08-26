@@ -1,3 +1,8 @@
+"""
+ggsolver: graph.py
+License goes here...
+"""
+
 import json
 import os
 import pickle
@@ -205,6 +210,10 @@ class EdgePropertyMap(dict):
 
 
 class Graph(IGraph):
+    """
+    A MultiDiGraph class represented as a 5-tuple (nodes, edges, node_properties, edge_properties, graph_properties).
+    In addition, the graph implements a serialization protocol, save-load and drawing functionality.
+    """
     def __init__(self):
         super(Graph, self).__init__()
         self._graph = nx.MultiDiGraph()
@@ -213,70 +222,197 @@ class Graph(IGraph):
         return f"<Graph with |V|={self.number_of_nodes()}, |E|={self.number_of_edges()}>"
 
     def add_node(self):
+        """
+        Adds a new node to the graph.
+
+        :warning: Duplication is NOT checked.
+
+        :return: (int) ID of the added node.
+        """
         uid = self._graph.number_of_nodes()
         self._graph.add_node(uid)
         return uid
 
     def add_nodes(self, num_nodes):
+        """
+        Adds multiple nodes to the graph.
+
+        :warning: Duplication is NOT checked.
+        :param num_nodes: (int) Number of nodes to be added.
+        :return: (list) IDs of added nodes.
+        """
         return [self.add_node() for _ in range(num_nodes)]
 
     def add_edge(self, uid, vid):
+        """
+        Adds a new edge between the give nodes.
+
+        :warning: Duplication is NOT checked. Hence, calling the function twice adds two parallel edges between
+            the same nodes.
+
+        :return: (int) Key of the added edge. Key = 0 means the first edge was added between the given nodes.
+            If Key = k, then (k+1)-th edge was added.
+        """
         return self._graph.add_edge(uid, vid)
 
     def add_edges(self, edges):
-        """ (uid, vid) pairs """
+        """
+        Adds multiple edge between the give nodes.
+
+        :warning: Duplication is NOT checked. Hence, calling the function twice adds two parallel edges between
+            the same nodes.
+
+        :return: (int) Key of the added edge. Key = 0 means the first edge was added between the given nodes.
+            If Key = k, then (k+1)-th edge was added.
+        """
         return [self.add_edge(uid, vid) for uid, vid in edges]
 
     def rem_node(self, uid):
+        """
+        Removal of nodes is NOT supported. Use filtering instead.
+        """
         raise NotImplementedError("Removal of nodes is not supported. Use SubGraph instead.")
 
     def rem_edge(self, uid, vid, key):
+        """
+        Removal of edges is NOT supported. Use filtering instead.
+        """
         raise NotImplementedError("Removal of nodes is not supported. Use SubGraph instead.")
 
     def has_node(self, uid):
+        """
+        Checks whether the graph has the given node or not.
+
+        :param uid: (int) Node ID to be checked for containment.
+        :return: (bool) True if given node is in the graph, else False.
+        """
         return self._graph.has_node(uid)
 
     def has_edge(self, uid, vid, key=None):
+        """
+        Checks whether the graph has the given edge or not.
+
+        :param uid: (int) Source node ID.
+        :param vid: (int) Target node ID.
+        :param key: If provided, checks whether the edge (u, v, k) is in the graph or not. Otherwise, checks if there
+            exists an edge between nodes represented by uid and vid.
+        :type key: int, optional
+        :return: (bool) True if given edge is in the graph, else False.
+        """
         return self._graph.has_edge(uid, vid, key)
 
     def nodes(self):
-        return self._graph.nodes()
+        """
+        List of all nodes in the graph.
+        """
+        return list(self._graph.nodes())
 
     def edges(self):
-        return self._graph.edges(keys=True)
+        """
+        List of all edges in the graph. Each edge is represented as a 3-tuple (uid, vid, key).
+        """
+        return list(self._graph.edges(keys=True))
 
     def successors(self, uid):
-        return self._graph.successors(uid)
+        """
+        List of all successors of the node represented by uid.
+        """
+        return list(self._graph.successors(uid))
 
     def predecessors(self, uid):
-        return self._graph.predecessors(uid)
+        """
+        List of all predecessors of the node represented by uid.
+        """
+        return list(self._graph.predecessors(uid))
 
     def neighbors(self, uid):
-        return self._graph.neighbors(uid)
+        """
+        List of all (in and out) neighbors of the node represented by uid.
+        """
+        return list(self._graph.neighbors(uid))
 
     def ancestors(self, uid):
-        return nx.ancestors(self._graph, uid)
+        """
+        List of all nodes from which the node represented by uid is reachable.
+        """
+        return list(nx.ancestors(self._graph, uid))
 
     def descendants(self, uid):
-        return nx.descendants(self._graph, uid)
+        """
+        List of all nodes that can be reached from  the node represented by uid.
+        """
+        return list(nx.descendants(self._graph, uid))
 
     def in_edges(self, uid):
+        """
+        List of all in edges to the node represented by uid.
+        """
         return self._graph.in_edges(uid, keys=True)
 
     def out_edges(self, uid):
+        """
+        List of all out edges from the node represented by uid.
+        """
         return self._graph.out_edges(uid, keys=True)
 
     def number_of_nodes(self):
+        """
+        The number of nodes in the graph.
+        """
         return self._graph.number_of_nodes()
 
     def number_of_edges(self):
+        """
+        The number of edges in the graph.
+        """
         return self._graph.number_of_edges()
 
     def clear(self):
+        """
+        Clears all nodes, edges and the node, edge and graph properties.
+        """
         self._graph.clear()
+        self._node_properties = dict()
+        self._edge_properties = dict()
+        self._graph_properties = dict()
 
     def serialize(self):
-        # TODO. Node, Edge Property not storing default values. (update deserialize accordingly).
+        """
+        Serializes the graph into a dictionary with the following format::
+
+            {
+                "graph": {
+                    "nodes": <number of nodes>,
+                    "edges": {
+                        uid: {vid: key},
+                        ...
+                    }
+                    "node_properties": {
+                        "property_name": {
+                            "default": <value>,
+                            "dict": {
+                                "uid": <property value>,
+                                ...
+                            }
+                        },
+                        ...
+                    },
+                    "edge_properties": {
+                        "property_name": {
+                            "default": <value>,
+                            "dict": [{"edge": [uid, vid, key], "pvalue": <property value>} ...]
+                        },
+                        ...
+                    },
+                    "graph_properties": {
+                        "property_name": <value>,
+                        ...
+                    }
+                }
+            }
+
+        :return: (dict) Serialized graph
+        """
         # Initialize a graph dictionary
         graph = dict()
 
@@ -323,6 +459,11 @@ class Graph(IGraph):
 
     @classmethod
     def deserialize(cls, obj_dict):
+        """
+        Constructs a graph from a serialized graph object. The format is described in :py:meth:`Graph.serialize`.
+
+        :return: (Graph) A new :class:`Graph` object..
+        """
         # Instantiate new object
         obj = cls()
 
@@ -358,6 +499,15 @@ class Graph(IGraph):
         return obj
 
     def save(self, fpath, overwrite=False, protocol="json"):
+        """
+        Saves the graph to file.
+
+        :param fpath: (str) Path to which the file should be saved. Must include an extension.
+        :param overwrite: (bool) Specifies whether to overwrite the file, if it exists. [Default: False]
+        :param protocol: (str) The protocol to use to save the file. Options: {"json" [Default], "pickle"}.
+
+        .. note:: Pickle protocol is not tested.
+        """
         if not overwrite and os.path.exists(fpath):
             raise FileExistsError("File already exists. To overwrite, call Graph.save(..., overwrite=True).")
 
@@ -373,6 +523,14 @@ class Graph(IGraph):
 
     @classmethod
     def load(cls, fpath, protocol="json"):
+        """
+        Loads the graph from file.
+
+        :param fpath: (str) Path to which the file should be saved. Must include an extension.
+        :param protocol: (str) The protocol to use to save the file. Options: {"json" [Default], "pickle"}.
+
+        .. note:: Pickle protocol is not tested.
+        """
         if not os.path.exists(fpath):
             raise FileNotFoundError("File does not exist.")
 
