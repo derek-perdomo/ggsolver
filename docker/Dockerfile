@@ -37,7 +37,7 @@ RUN conda install -c conda-forge pyzmq
 RUN conda install -c conda-forge networkx
 RUN conda install -c conda-forge pyyaml
 RUN conda install -c conda-forge lark
-RUN conda install -c conda-forge jupyterlab
+RUN #conda install -c conda-forge jupyterlab
 
 
 
@@ -45,6 +45,7 @@ RUN conda install -c conda-forge jupyterlab
 #RUN pip3 install numpy matplotlib pyzmq pydot networkx pygraphviz pytest
 #RUN pip3 install scipy pygame pyyaml lark
 #RUN pip3 install sortedcontainers
-#RUN pip3 install jupyterlab
-#
-#
+RUN pip3 install jupyterlab
+RUN pip3 install sphinx
+RUN pip3 install myst-parser
+RUN pip3 install sphinx_rtd_theme recommonmark
