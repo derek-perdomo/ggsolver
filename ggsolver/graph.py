@@ -435,5 +435,3 @@ class Graph(IGraph):
         dot_graph = nx.nx_agraph.to_agraph(g)
         dot_graph.layout("dot")
         dot_graph.draw(fname)
-
-

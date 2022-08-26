@@ -2951,7 +2951,7 @@
       }
     },
     "node_properties": {
-      "states": {
+      "state": {
         "0": [
           0,
           0,
@@ -26282,7 +26282,7 @@
       "prob": []
     },
     "graph_properties": {
-      "is_quantitative": false,
+      "is_turn_based": true,
       "init_state": null,
       "is_stochastic": false,
       "actions": [
@@ -26291,7 +26291,7 @@
         "S",
         "W"
       ],
-      "is_turn_based": true
+      "is_quantitative": false
     }
   }
 }

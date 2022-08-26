@@ -18,6 +18,12 @@ from ggsolver.models import Game, Solver
 from ggsolver.gw_util import *
 from pprint import pprint
 
+import logging, sys
+logger = logging.getLogger()
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.INFO)
+
+
 
 class GWGame(Game):
     SINK_STATE = "sink-state"
@@ -166,17 +172,17 @@ if __name__ == '__main__':
     # graph = game.graphify()
     # pprint(graph.serialize())
     game.save("gwgame1.game", overwrite=True)
-    game_graph = Graph.load("gwgame1.game")
-    pprint(game_graph.serialize())
+    # game_graph = Graph.load("gwgame1.game")
+    # pprint(game_graph.serialize())
 
-    strategy.save("gwgame1.strategy", overwrite=True)
-    solver_object = Solver.load("gwgame1.strategy")
-    print(solver_object._state2node[(0, 0, 0, 0, 1)])
-    print(solver_object._state2node["sink-state"])
-    print(solver_object.actions())
-    print(solver_object.is_turn_based())
-    print("turn: ", solver_object.turn((0, 0, 0, 0, 1)))
-    print("turn: ", solver_object.turn((0, 0, 1, 0, 2)))
-    print("pi1: ", solver_object.pi1((0, 0, 2, 0, 1)))
-    print("pi2: ", solver_object.pi2((0, 0, 1, 0, 2)))
-    print("delta: ", solver_object.delta((0, 0, 1, 0, 2), "N"))
+    # strategy.save("gwgame1.strategy", overwrite=True)
+    # solver_object = Solver.load("gwgame1.strategy")
+    # print(solver_object._state2node[(0, 0, 0, 0, 1)])
+    # print(solver_object._state2node["sink-state"])
+    # print(solver_object.actions())
+    # print(solver_object.is_turn_based())
+    # print("turn: ", solver_object.turn((0, 0, 0, 0, 1)))
+    # print("turn: ", solver_object.turn((0, 0, 1, 0, 2)))
+    # print("pi1: ", solver_object.pi1((0, 0, 2, 0, 1)))
+    # print("pi2: ", solver_object.pi2((0, 0, 1, 0, 2)))
+    # print("delta: ", solver_object.delta((0, 0, 1, 0, 2), "N"))

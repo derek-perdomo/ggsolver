@@ -559,75 +559,72 @@ class Automaton(GraphicalModel):
         return self._is_terminal
 
 
-class Solver(Game):
-    NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
-    EDGE_PROPERTY = TSys.EDGE_PROPERTY.copy()
-    GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
+class Solver:
+    DETERMINISTIC = "deterministic"
+    RANDOMIZED = "deterministic"
 
-    def __init__(self, is_tb=True, is_stoch=False, is_quant=False, **kwargs):
-        super(Solver, self).__init__(is_tb=is_tb, is_stoch=is_stoch, is_quant=is_quant, **kwargs)
-        self._game = None
+    def __init__(self, graph, strategy_type=DETERMINISTIC, **kwargs):
+        self._graph = graph
 
-    # ==========================================================================
-    # PUBLIC FUNCTIONS.
-    # ==========================================================================
-    def actions(self):
-        return self.game.actions()
+        # Winning regions of the players
+        self.win1 = None
+        self.win2 = None
+        self.win3 = None
 
-    def delta(self, state, act):
-        return self.game.delta(state, act)
+    def reset(self):
+        # Winning regions of the players
+        self.win1 = None
+        self.win2 = None
+        self.win3 = None
 
-    def atoms(self):
-        return self.game.atoms()
-
-    def label(self, state):
-        return self.game.label(state)
-
-    def turn(self, state):
-        return self.game.turn(state)
-
-    def states(self):
-        return self.game.states()
+        # Winning strategies of the players
+        self.pi1 = None
+        self.pi2 = None
+        self.pi3 = None
 
     def solve(self):
         raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
 
-    def load_game(self, game):
-        assert isinstance(game, Game)
-        self._game = game
+    def pi(self, state):
+        """
+        Implement only for concurrent games.
 
-    def load_game_from_file(self, fpath):
-        raise NotImplementedError(f"{self.__class__.__name__}.load_game_from_file() is not implemented.")
+        :param state:
+        :return:
+        """
+        raise NotImplementedError
 
-    # ==========================================================================
-    # FUNCTIONS TO BE IMPLEMENTED BY USER.
-    # ==========================================================================
-    @register_property(NODE_PROPERTY)
-    def p1_win(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.p1_win() is not implemented.")
-
-    @register_property(NODE_PROPERTY)
-    def p2_win(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.p2_win() is not implemented.")
-
-    @register_property(NODE_PROPERTY)
-    def p3_win(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.p3_win() is not implemented.")
-
-    @register_property(NODE_PROPERTY)
     def pi1(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.pi1() is not implemented.")
+        """
+        Implement only for turn-based games for states of P1.
 
-    @register_property(NODE_PROPERTY)
+        :param state:
+        :return:
+        """
+        raise NotImplementedError
+
     def pi2(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.pi2() is not implemented.")
+        """
+        Implement only for turn-based games for states of P2.
 
-    @register_property(NODE_PROPERTY)
+        :param state:
+        :return:
+        """
+        raise NotImplementedError
+
     def pi3(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.pi3() is not implemented.")
+        """
+        Implement only for turn-based games for states of P3 (Nature).
 
-    @property
-    def game(self):
-        if self._game is None:
-            raise ValueError("Solver is not initialized. Did you forget to call Solver.load_game() function?")
-        return self._game
+        :param state:
+        :return:
+        """
+        raise NotImplementedError
+
+    def save(self, fpath, overwrite=False, protocol="json"):
+        # Add win1, win2, win3 as graph properties
+        # Add pi1, pi2, pi3 as node properties
+        pass
+
+    def load(self, fpath, protocol="json"):
+        pass
