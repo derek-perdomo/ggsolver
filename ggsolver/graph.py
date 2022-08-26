@@ -547,13 +547,14 @@ class Graph(IGraph):
 
         return graph
 
-    def to_png(self, fname, nlabel=None, elabel=None):
+    def to_png(self, fpath, nlabel=None, elabel=None):
         """
+        Generates a PNG image of the graph.
 
-        :param fname:
-        :param nlabel:
-        :param elabel:
-        :return:
+        :param fpath: (str) Path to which the file should be saved. Must include an extension.
+        :param nlabel: (list of str) Specifies the node properties to use to annotate a node in image.
+        :param elabel: (list of str) Specifies the edge properties to use to annotate an edge in image.
+
         :warning: If the node labels are not unique, the generated figure may contain 0, 1, 2, ...
             that avoid duplication.
         """
@@ -592,6 +593,6 @@ class Graph(IGraph):
 
         dot_graph = nx.nx_agraph.to_agraph(g)
         dot_graph.layout("dot")
-        dot_graph.draw(fname)
+        dot_graph.draw(fpath)
 
 
