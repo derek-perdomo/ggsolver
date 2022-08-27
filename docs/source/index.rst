@@ -23,7 +23,7 @@ Indices and tables
 
 .. toctree::
    :caption: ggsolver Documentation:
-   :maxdepth: 2
+   :maxdepth: 3
 
    Home Page <self>
    install

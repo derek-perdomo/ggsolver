@@ -43,14 +43,17 @@ class IGraph:
 
     @property
     def node_properties(self):
+        """ Returns the node properties as a dictionary of {"property name": NodePropertyMap object}. """
         return self._node_properties
 
     @property
     def edge_properties(self):
+        """ Returns the edge properties as a dictionary of {"property name": EdgePropertyMap object}. """
         return self._edge_properties
 
     @property
     def graph_properties(self):
+        """ Returns the graph properties as a dictionary of {"property name": property value}. """
         return self._graph_properties
 
     def add_node(self):
