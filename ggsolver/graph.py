@@ -136,6 +136,12 @@ class IGraph:
 
 
 class NodePropertyMap(dict):
+    """
+    Implements a default dictionary that maps a node ID to its property value. To store data efficiently,
+    only the non-default values are stored in the dictionary.
+
+    Raises an error if the node ID is invalid.
+    """
     def __init__(self, graph, default=None):
         super(NodePropertyMap, self).__init__()
         self.graph = graph
@@ -175,6 +181,12 @@ class NodePropertyMap(dict):
 
 
 class EdgePropertyMap(dict):
+    """
+    Implements a default dictionary that maps an edge (uid, vid, key) to its property value. To store data efficiently,
+    only the non-default values are stored in the dictionary.
+
+    Raises an error if the edge (uid, vid, key) is invalid.
+    """
     def __init__(self, graph, default=None):
         super(EdgePropertyMap, self).__init__()
         self.graph = graph

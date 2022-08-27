@@ -5,6 +5,10 @@ Graph
     :members:   __init__
 
 
+.. autoclass:: ggsolver.graph.EdgePropertyMap
+    :members:   __init__
+
+
 .. autoclass:: ggsolver.graph.Graph
     :members:   __init__,
                 node_properties,
