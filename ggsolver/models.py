@@ -39,6 +39,7 @@ class GraphicalModel:
 
         # Input domain (Expected value: A function that returns an Iterable object.)
         self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
+        self._inp_name = kwargs["input_name"] if "input_name" in kwargs else None
 
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
@@ -129,8 +130,10 @@ class GraphicalModel:
 
         # Update the properties with graph
         graph["inp_domain"] = inputs
-        graph["input"] = property_inp
         graph["prob"] = property_prob
+        graph["input"] = property_inp
+        if self._inp_name is not None:
+            graph[self._inp_name] = property_inp
 
         # Logging and printing
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
