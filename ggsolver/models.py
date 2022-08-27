@@ -33,12 +33,6 @@ class GraphicalModel:
     GRAPH_PROPERTY = set()
 
     def __init__(self, is_deterministic=True, is_probabilistic=False, **kwargs):
-        """
-        Types of Graphical Models. Acceptable values:
-        - Deterministic: (det: True, quant: [don't care]),
-        - Non-deterministic: (det: False, quant: False),
-        - Stochastic: (det: False, quant: True).
-        """
         # Types of Graphical Models. Acceptable values:
         self._is_deterministic = is_deterministic
         self._is_probabilistic = is_probabilistic
@@ -229,8 +223,12 @@ class GraphicalModel:
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    # @register_property(GRAPH_PROPERTY)
     def states(self):
+        """
+        Defines the states component of the graphical model.
+
+        :return: (list/tuple of JSONifiable object). List or tuple of states.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.states() is not implemented.")
 
     def delta(self, state, inp) -> typing.Union[util.Distribution, typing.Iterable, object]:
@@ -248,6 +246,14 @@ class GraphicalModel:
         self._init_state = state
 
     def graphify(self, pointed=False):
+        """
+        Constructs the underlying graph of the graphical model.
+
+        :param pointed: (bool) If pointed is `True`, the :py:meth:`TSys.graphify_pointed()` is called, which constructs
+            a pointed graphical model containing only the states reachable from the initial state.  Otherwise,
+            :py:meth:`TSys.graphify_unpointed()` is called, which constructs the complete transition system.
+        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
+        """
         if pointed is True and self._init_state is None:
             raise ValueError(f"{self.__class__.__name__} is not initialized. "
                              f"Did you forget to call {self.__class__.__name__}.initialize() function?")
@@ -260,9 +266,21 @@ class GraphicalModel:
         return graph
 
     def graphify_pointed(self):
+        """
+        Constructs the underlying graph of the graphical model. The constructed graph contains only the states that are
+        reachable from the initial state.
+
+        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
 
     def graphify_unpointed(self):
+        """
+        Constructs the underlying graph of the graphical model. The constructed graph contains all possible states in
+        the model.
+
+        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
+        """
         graph = Graph()
 
         # Glob node, edge and graph properties
@@ -300,12 +318,62 @@ class GraphicalModel:
         return graph
 
     def serialize(self):
+        """
+        Serializes the underlying graph of the graphical model into a dictionary with the following format.
+        The state properties are saved as node properties, transition properties are stored are edge properties
+        and model properties are stored as graph properties in the underlying graph::
+
+            {
+                "graph": {
+                    "nodes": <number of nodes>,
+                    "edges": {
+                        uid: {vid: key},
+                        ...
+                    }
+                    "node_properties": {
+                        "property_name": {
+                            "default": <value>,
+                            "dict": {
+                                "uid": <property value>,
+                                ...
+                            }
+                        },
+                        ...
+                    },
+                    "edge_properties": {
+                        "property_name": {
+                            "default": <value>,
+                            "dict": [{"edge": [uid, vid, key], "pvalue": <property value>} ...]
+                        },
+                        ...
+                    },
+                    "graph_properties": {
+                        "property_name": <value>,
+                        ...
+                    }
+                }
+            }
+
+        :return: (dict) Serialized graphical model.
+        """
         # 1. Graphify
         # 2. Serialize the graph
         # 3. Return a dict
-        pass
+        raise NotImplementedError
 
     def save(self, fpath, pointed=False, overwrite=False, protocol="json"):
+        """
+        Saves the graphical model to file.
+
+        :param fpath: (str) Path to which the file should be saved. Must include an extension.
+        :param pointed: (bool) If pointed is `True`, the :py:meth:`TSys.graphify_pointed()` is called, which constructs
+            a pointed graphical model containing only the states reachable from the initial state.  Otherwise,
+            :py:meth:`TSys.graphify_unpointed()` is called, which constructs the complete transition system.
+        :param overwrite: (bool) Specifies whether to overwrite the file, if it exists. [Default: False]
+        :param protocol: (str) The protocol to use to save the file. Options: {"json" [Default], "pickle"}.
+
+        .. note:: Pickle protocol is not tested.
+        """
         # 1. Graphify
         graph = self.graphify(pointed=pointed)
 
@@ -314,17 +382,36 @@ class GraphicalModel:
 
     @classmethod
     def deserialize(cls, obj_dict):
+        """
+        Constructs a graphical model from a serialized graph object. The node properties are deserialized as state
+        properties, the edge properties are deserialized as transition properties, and the graph properties are
+        deserialized as model properties. All the deserialized properties are represented as a function in the
+        GraphicalModel class. See example #todo.
+
+        The format is described in :py:meth:`GraphicalModel.serialize`.
+
+        :return: (Sub-class of GraphicalModel) An instance of the `cls` class. `cls` must be a sub-class of
+            `GraphicalModel`.
+        """
         # 1. Construct a graph from obj_dict.
         # 2. Define functions from graph
         # 3. Create cls() instance.
         # 4. Update __dir__ with new methods
         # 5. Return instance
-        pass
+        raise NotImplementedError
 
     @classmethod
-    def load(cls, fpath):
+    def load(cls, fpath, protocol="json"):
+        """
+        Loads the graphical model from file.
+
+        :param fpath: (str) Path to which the file should be saved. Must include an extension.
+        :param protocol: (str) The protocol to use to save the file. Options: {"json" [Default], "pickle"}.
+
+        .. note:: Pickle protocol is not tested.
+        """
         # Load game graph
-        graph = Graph.load(fpath)
+        graph = Graph.load(fpath, protocol=protocol)
 
         # Create object
         obj = cls()
@@ -388,10 +475,16 @@ class GraphicalModel:
 
     @register_property(GRAPH_PROPERTY)
     def init_state(self):
+        """
+        Returns the initial state of the graphical model.
+        """
         return self._init_state
 
     @register_property(GRAPH_PROPERTY)
     def is_deterministic(self):
+        """
+        Returns `True` if the graphical model is deterministic. Else, returns `False`.
+        """
         return self._is_deterministic
 
     @register_property(GRAPH_PROPERTY)
@@ -409,40 +502,82 @@ class GraphicalModel:
 # USER MODELS.
 # ==========================================================================
 class TSys(GraphicalModel):
+    """
+    Represents a Transition System [Principles of Model Checking, Def. 2.1].
+
+    The transition system can be either deterministic or non-deterministic or probabilistic depending on the inputs
+    given to the constructor.
+    - Deterministic: (is_deterministic = True)
+    - Non-deterministic: (is_deterministic = False, is_probabilistic = False)
+    - Probabilistic: (is_deterministic = False, is_probabilistic = True)
+
+    """
     NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_deterministic=True, is_probabilistic=False, **kwargs):
+        """
+        Constructs a transition system.
+
+        :param is_deterministic: (bool). If `True` then the transition system is deterministic. Otherwise,
+            it is either non-deterministic or probabilistic.
+        :param is_probabilistic: (bool). If `is_deterministic` is `False`, then if `is_probabilistic` is `True`
+            then the transition system is probabilistic. Otherwise, it is non-deterministic.
+        :param input_domain: (optional, function). A member function of TSys class that defines the inputs to the
+            transition system. [Default: TSys.actions]
+        :param input_name: (optional, str). The name of input property during graphify().
+        :param init_state: (optional, JSON-serializable object). The initial state of the transition system.
+        """
         super(TSys, self).__init__(input_domain=self.actions,
                                    is_deterministic=is_deterministic,
                                    is_probabilistic=is_probabilistic,
                                    **kwargs)
-
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     @register_property(GRAPH_PROPERTY)
     def actions(self):
+        """
+        Defines the actions component of the transition system.
+
+        :return: (list/tuple of str). List or tuple of action labels.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.actions() is not implemented.")
 
     def delta(self, state, act):
+        """
+        Defines the transition function of the transition system.
+
+        :param state: (object) A valid state.
+        :param act: (str) An action.
+        :return: (object/list(object)/util.Distribution object). Depending on the type of transition system, the return
+            type is different.
+            - Deterministic: returns a single state.
+            - Non-deterministic: returns a list/tuple of states.
+            - Probabilistic: returns a distribution over all state.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.delta() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
     def atoms(self):
+        """
+        Defines the atomic propositions component of the transition system.
+
+        :return: (list/tuple of str). List or tuple of atomic proposition labels.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
     @register_property(NODE_PROPERTY)
     def label(self, state):
-        raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
+        """
+        Defines the labeling function of the transition system.
 
-    @register_property(NODE_PROPERTY)
-    def turn(self, state):
+        :param state: (object) A valid state.
+        :return: (list/tuple of str). A list/tuple of atomic propositions that are true in the given state.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
-
-        return self._is_turn_based
 
 
 class Game(TSys):
