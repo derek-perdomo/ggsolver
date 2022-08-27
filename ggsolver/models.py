@@ -32,7 +32,7 @@ class GraphicalModel:
     EDGE_PROPERTY = set()
     GRAPH_PROPERTY = set()
 
-    def __init__(self, is_deterministic=True, is_quantitative=False, **kwargs):
+    def __init__(self, is_deterministic=True, is_probabilistic=False, **kwargs):
         """
         Types of Graphical Models. Acceptable values:
         - Deterministic: (det: True, quant: [don't care]),
@@ -41,7 +41,7 @@ class GraphicalModel:
         """
         # Types of Graphical Models. Acceptable values:
         self._is_deterministic = is_deterministic
-        self._is_quantitative = is_quantitative
+        self._is_probabilistic = is_probabilistic
 
         # Input domain (Expected value: A function that returns an Iterable object.)
         self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
@@ -112,7 +112,7 @@ class GraphicalModel:
                     property_inp[(uid, vid, key)] = inp
 
                 # If model is non-deterministic, next states is an Iterable of states.
-                elif not self.is_deterministic and not self.is_quantitative:
+                elif not self.is_deterministic and not self.is_probabilistic:
                     for next_state in next_states:
                         uid = self.__states.index(state)
                         vid = self.__states.index(next_state)
@@ -120,7 +120,7 @@ class GraphicalModel:
                         property_inp[(uid, vid, key)] = inp
 
                 # If model is stochastic, next states is a Distribution of states.
-                elif not self.is_deterministic and self.is_quantitative:
+                elif not self.is_deterministic and self.is_probabilistic:
                     for next_state in next_states.support():
                         uid = self.__states.index(state)
                         vid = self.__states.index(next_state)
@@ -131,7 +131,7 @@ class GraphicalModel:
                 else:
                     raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
                                     f"Check the values: is_deterministic: {self.is_deterministic}, "
-                                    f"self.is_quantitative:{self.is_quantitative}.")
+                                    f"self.is_quantitative:{self.is_probabilistic}.")
 
         # Update the properties with graph
         graph["inp_domain"] = inputs
@@ -395,8 +395,14 @@ class GraphicalModel:
         return self._is_deterministic
 
     @register_property(GRAPH_PROPERTY)
-    def is_quantitative(self):
-        return self._is_quantitative
+    def is_nondeterministic(self):
+        """ Returns `True` if the graphical model is non-deterministic. Else, returns `False`. """
+        return not self._is_deterministic and not self._is_probabilistic
+
+    @register_property(GRAPH_PROPERTY)
+    def is_probabilistic(self):
+        """ Returns `True` if the graphical model is probabilistic. Else, returns `False`. """
+        return self._is_probabilistic
 
 
 # ==========================================================================
@@ -407,14 +413,12 @@ class TSys(GraphicalModel):
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
-    def __init__(self, is_turn_based=True, is_deterministic=True, is_quantitative=False, **kwargs):
+    def __init__(self, is_deterministic=True, is_probabilistic=False, **kwargs):
         super(TSys, self).__init__(input_domain=self.actions,
                                    is_deterministic=is_deterministic,
-                                   is_quantitative=is_quantitative,
+                                   is_probabilistic=is_probabilistic,
                                    **kwargs)
 
-        # TSys can be turn-based or concurrent.
-        self._is_turn_based = is_turn_based
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -438,16 +442,14 @@ class TSys(GraphicalModel):
     def turn(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
 
-    @register_property(GRAPH_PROPERTY)
-    def is_turn_based(self):
         return self._is_turn_based
 
 
 class Game(TSys):
-    def __init__(self, is_turn_based=True, is_deterministic=True, is_quantitative=False, **kwargs):
+    def __init__(self, is_turn_based=True, is_deterministic=True, is_probabilistic=False, **kwargs):
         super(Game, self).__init__(is_turn_based=is_turn_based,
                                    is_deterministic=is_deterministic,
-                                   is_quantitative=is_quantitative,
+                                   is_probabilistic=is_probabilistic,
                                    **kwargs)
 
     # ==========================================================================
