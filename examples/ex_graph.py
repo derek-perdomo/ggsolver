@@ -85,7 +85,7 @@ if __name__ == '__main__':
     g["label"][(n0, n1, key0)] = "(n0, n1, 0)"
     print(f"g['label'][(n0, n1, key0)] -> {g['label'][(n0, n1, key0)]}  "
           f"... If property value is assigned, then the value is returned.")
-    print(f"g['name'][(n0, n1, key1)] -> {g['label'][(n0, n1, key1)]}  "
+    print(f"g['label'][(n0, n1, key1)] -> {g['label'][(n0, n1, key1)]}  "
           f"... If property value is NOT assigned, then default value is returned.")
 
     # Graph properties are assigned similarly, except we do not have GraphPropertyMap class.
@@ -110,5 +110,5 @@ if __name__ == '__main__':
     loaded_g = graph.Graph.load(fpath="mygraph.graph", protocol="json")
 
     # Draw graph
-    loaded_g.to_png("graph.png")
+    loaded_g.to_png("graph.png", nlabel=["name"], elabel=["label"])
     print("ok")
