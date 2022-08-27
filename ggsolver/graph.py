@@ -32,6 +32,15 @@ class IGraph:
             raise KeyError(f"{pname} is not a valid node/edge/graph property.")
 
     def __setitem__(self, pname, pmap):
+        # Check if the property exists
+        if pname in self._node_properties.keys():
+            assert isinstance(pmap, NodePropertyMap)
+        elif pname in self._edge_properties.keys():
+            assert isinstance(pmap, EdgePropertyMap)
+        else:
+            assert not isinstance(pmap, (NodePropertyMap, EdgePropertyMap))
+
+        # Update property value
         if isinstance(pmap, NodePropertyMap):
             pmap.graph = self
             self._node_properties[pname] = pmap
