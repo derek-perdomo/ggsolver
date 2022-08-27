@@ -6,6 +6,6 @@ API
     :caption: ggsolver Documentation:
     :maxdepth: 2
 
-    graph
-    models
+    modules/graph
+    modules/models
 

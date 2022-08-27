@@ -28,7 +28,7 @@ Indices and tables
    Home Page <self>
    install
    api
-
+   examples
 
 * :ref:`genindex`
 * :ref:`modindex`

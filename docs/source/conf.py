@@ -31,7 +31,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'recommonmark'
+    'recommonmark',
+    "nbsphinx",
 ]
 
 templates_path = ['_templates']
