@@ -35,10 +35,9 @@ class IGraph:
         # Check if the property exists
         if pname in self._node_properties.keys():
             assert isinstance(pmap, NodePropertyMap)
-        elif pname in self._edge_properties.keys():
+
+        if pname in self._edge_properties.keys():
             assert isinstance(pmap, EdgePropertyMap)
-        else:
-            assert not isinstance(pmap, (NodePropertyMap, EdgePropertyMap))
 
         # Update property value
         if isinstance(pmap, NodePropertyMap):
