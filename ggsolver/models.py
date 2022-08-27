@@ -240,8 +240,12 @@ class GraphicalModel:
     # PUBLIC FUNCTIONS.
     # ==========================================================================
     def initialize(self, state):
-        if state in self.states():
-            self._init_state = state
+        """
+        Sets the initial state of the graphical model.
+
+        .. note:: The function does NOT check if the given state is valid.
+        """
+        self._init_state = state
 
     def graphify(self, pointed=False):
         if pointed is True and self._init_state is None:
