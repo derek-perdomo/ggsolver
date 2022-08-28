@@ -526,13 +526,46 @@ class GraphicalModel:
 # ==========================================================================
 class TSys(GraphicalModel):
     """
-    Represents a Transition System [Principles of Model Checking, Def. 2.1].
+    Represents a transition system [Principles of Model Checking, Def. 2.1].
 
-    The transition system can be either deterministic or non-deterministic or probabilistic depending on the inputs
-    given to the constructor.
-    - Deterministic: (is_deterministic = True)
-    - Non-deterministic: (is_deterministic = False, is_probabilistic = False)
-    - Probabilistic: (is_deterministic = False, is_probabilistic = True)
+    .. math::
+        TSys = (S, A, T, AP, L)
+
+
+    In the `TSys` class, each component is represented as a function.
+
+    - The set of states :math:`S` is represented by `TSys.states` function,
+    - The set of actions :math:`A` is represented by `TSys.actions` function,
+    - The transition function :math:`T` is represented by `TSys.delta` function,
+    - The set of atomic propositions is represented by `TSys.atoms` function,
+    - The labeling function :math:`L` is represented by `TSys.label` function.
+
+    All of the above functions are marked abstract. The recommended way to use `TSys` class is by subclassing it and implementing its component functions.
+
+    A transition system can be either deterministic or non-deterministic or probabilistic. To define a **deterministic** transition system, provide a keyword argument `is_deterministic=True` to the constructor. To define a **nondeterministic** transition system, provide a keyword argument `is_deterministic=False` to the constructor. To define a **probabilistic** transition system, provide a keyword arguments `is_deterministic=False, is_probabilistic=True` to the constructor.
+
+    The design of `TSys` class closely follows its mathematical definition. Hence, the signatures of `delta` function for deterministic, nondeterministic, probabilistic  transition systems are different.
+
+    - **deterministic:**  `delta(state, act) -> single state`
+    - **non-deterministic:**  `delta(state, act) -> a list of states`
+    - **probabilistic:**  `delta(state, act) -> a distribution over states`
+
+    An important feature of `TSys` class is the `graphify()` function. It constructs a `Graph` object that is equivalent to the transition system. The nodes of the `Graph` represent the states of `TSys`, the edges of the `Graph` are defined by the set of `actions` and the `delta` function. The atomic propositions, labeling function are stored as `node, edge` and `graph` properties. By default, every `Graph` returned a `TSys.graphify()` function have the following (node/edge/graph) properties:
+
+    - `state`: (node property) A Map from every node to the state of transition system it represents.
+    - `actions`: (graph property) List of valid actions.
+    - `input`: (edge property) A map from every edge `(uid, vid, key)` to its associated action label.
+    - `prob`: (edge property) The probability associated with the edge `(uid, vid, key)`.
+    - `atoms`: (graph property) List of valid atomic propositions.
+    - `label`: (node property) A map every node to the list of atomic propositions true in the state represented by that node.
+    - `init_state`: (graph property) Initial state of transition system.
+    - `is_deterministic`: (graph property) Is the transition system deterministic?
+    - `is_probabilistic`: (graph property) Is the transition system probabilistic?
+
+    **Note:** Some features of probabilistic transition system are not tested. If you are trying to implement a probabilistic transition system, reach out to Abhishek Kulkarni (a.kulkarni2@ufl.edu).
+
+
+    Next, we demonstrate how to use `TSys` class to define a deterministic, non-deterministic and probabilistic transition system.
 
     """
     NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
