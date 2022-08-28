@@ -4,7 +4,7 @@ API
 
 ..  toctree::
     :caption: ggsolver Documentation:
-    :maxdepth: 2
+    :maxdepth: 3
 
     modules/graph
     modules/models
