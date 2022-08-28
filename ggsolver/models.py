@@ -897,65 +897,77 @@ class Automaton(GraphicalModel):
 
 
 class Solver:
+    """
+    Represents a game solver that computes the winning regions and strategies for the players
+    under a fixed solution concept.
+
+    It is recommended to implement a solver using the underlying graph of the game.
+    This helps speeding up the algorithms. Hence, a typical workflow would look like
+
+    .. code::
+        def __init__(self, game, ...):
+            super(Solver, self).__init__(game, ...)
+            self._graph = self.game.graphify()
+
+        def solver(self):
+            ... uses only self._graph.
+
+    """
     DETERMINISTIC = "deterministic"
     RANDOMIZED = "deterministic"
 
-    def __init__(self, graph, strategy_type=DETERMINISTIC, **kwargs):
-        self._graph = graph
+    def __init__(self, game, strategy_type=DETERMINISTIC, **kwargs):
+        self._game = game
+
+        # Type of strategy
+        self._strategy_type = strategy_type
 
         # Winning regions of the players
         self.win1 = None
         self.win2 = None
-        self.win3 = None
 
-    def reset(self):
-        # Winning regions of the players
-        self.win1 = None
-        self.win2 = None
-        self.win3 = None
-
-        # Winning strategies of the players
-        self.pi1 = None
-        self.pi2 = None
-        self.pi3 = None
-
-    def solve(self):
-        raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
-
-    def pi(self, state):
+    def validate(self):
         """
-        Implement only for concurrent games.
-
-        :param state:
-        :return:
+        Validates the input game.
+        Typically, this would involve checking if all necessary properties are well-defined.
         """
         raise NotImplementedError
 
+    def reset(self):
+        """ Resets the internal variables to default values. """
+        # Winning regions of the players
+        self.win1 = None
+        self.win2 = None
+
+    def solve(self):
+        """
+        Solves the game to compute winning regions as per the solution concept.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
+
     def pi1(self, state):
         """
-        Implement only for turn-based games for states of P1.
+        Player 1's strategy at the given state.
 
-        :param state:
-        :return:
+        :param state: A valid state in the game.
+        :return: A valid action.
         """
         raise NotImplementedError
 
     def pi2(self, state):
         """
-        Implement only for turn-based games for states of P2.
+        Player 2's strategy at the given state.
 
-        :param state:
-        :return:
+        :param state: A valid state in the game.
+        :return: A valid action.
         """
         raise NotImplementedError
 
-    def pi3(self, state):
-        """
-        Implement only for turn-based games for states of P3 (Nature).
+    def serialize(self):
+        pass
 
-        :param state:
-        :return:
-        """
+    @classmethod
+    def deserialize(cls, graph_dict):
         raise NotImplementedError
 
     def save(self, fpath, overwrite=False, protocol="json"):
