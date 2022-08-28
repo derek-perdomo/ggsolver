@@ -101,27 +101,48 @@ class GraphicalModel:
                 # There are three types of graphical models. Handle each separately.
                 # If model is deterministic, next states is a single state.
                 if self.is_deterministic:
-                    uid = self.__states.index(state)
-                    vid = self.__states.index(next_states)
-                    key = graph.add_edge(uid, vid)
-                    property_inp[(uid, vid, key)] = inp
+                    try:
+                        uid = self.__states.index(state)
+                        vid = self.__states.index(next_states)
+                        key = graph.add_edge(uid, vid)
+                        property_inp[(uid, vid, key)] = inp
+                    except ValueError:
+                        logging.warning(
+                            util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                                 f"No edge(s) added to graph for state={state}, input={inp}, "
+                                                 f"next_state={next_states}.")
+                        )
 
                 # If model is non-deterministic, next states is an Iterable of states.
                 elif not self.is_deterministic and not self.is_probabilistic:
                     for next_state in next_states:
-                        uid = self.__states.index(state)
-                        vid = self.__states.index(next_state)
-                        key = graph.add_edge(uid, vid)
-                        property_inp[(uid, vid, key)] = inp
+                        try:
+                            uid = self.__states.index(state)
+                            vid = self.__states.index(next_state)
+                            key = graph.add_edge(uid, vid)
+                            property_inp[(uid, vid, key)] = inp
+                        except ValueError:
+                            logging.warning(
+                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
+                                                     f"next_state={next_state}.")
+                            )
 
                 # If model is stochastic, next states is a Distribution of states.
                 elif not self.is_deterministic and self.is_probabilistic:
                     for next_state in next_states.support():
-                        uid = self.__states.index(state)
-                        vid = self.__states.index(next_state)
-                        key = graph.add_edge(uid, vid)
-                        property_inp[(uid, vid, key)] = inp
-                        property_prob[(uid, vid, key)] = next_states.pmf(next_state)
+                        try:
+                            uid = self.__states.index(state)
+                            vid = self.__states.index(next_state)
+                            key = graph.add_edge(uid, vid)
+                            property_inp[(uid, vid, key)] = inp
+                            property_prob[(uid, vid, key)] = next_states.pmf(next_state)
+                        except ValueError:
+                            logging.warning(
+                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
+                                                     f"next_state={next_state}.")
+                            )
 
                 else:
                     raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
