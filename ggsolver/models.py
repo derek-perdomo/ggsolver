@@ -497,6 +497,10 @@ class GraphicalModel:
         # Return reconstructed object
         return obj
 
+    def is_nondeterministic(self):
+        """ Returns `True` if the graphical model is non-deterministic. Else, returns `False`. """
+        return not self._is_deterministic and not self._is_probabilistic
+
     @register_property(GRAPH_PROPERTY)
     def init_state(self):
         """
@@ -510,11 +514,6 @@ class GraphicalModel:
         Returns `True` if the graphical model is deterministic. Else, returns `False`.
         """
         return self._is_deterministic
-
-    @register_property(GRAPH_PROPERTY)
-    def is_nondeterministic(self):
-        """ Returns `True` if the graphical model is non-deterministic. Else, returns `False`. """
-        return not self._is_deterministic and not self._is_probabilistic
 
     @register_property(GRAPH_PROPERTY)
     def is_probabilistic(self):
