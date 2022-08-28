@@ -540,11 +540,18 @@ class TSys(GraphicalModel):
     - The set of atomic propositions is represented by `TSys.atoms` function,
     - The labeling function :math:`L` is represented by `TSys.label` function.
 
-    All of the above functions are marked abstract. The recommended way to use `TSys` class is by subclassing it and implementing its component functions.
+    All of the above functions are marked abstract.
+    The recommended way to use `TSys` class is by subclassing it and implementing its component functions.
 
-    A transition system can be either deterministic or non-deterministic or probabilistic. To define a **deterministic** transition system, provide a keyword argument `is_deterministic=True` to the constructor. To define a **nondeterministic** transition system, provide a keyword argument `is_deterministic=False` to the constructor. To define a **probabilistic** transition system, provide a keyword arguments `is_deterministic=False, is_probabilistic=True` to the constructor.
+    A transition system can be either deterministic or non-deterministic or probabilistic.
+    To define a **deterministic** transition system, provide a keyword argument `is_deterministic=True`
+    to the constructor. To define a **nondeterministic** transition system, provide a keyword argument
+    `is_deterministic=False` to the constructor. To define a **probabilistic** transition system, provide
+    a keyword arguments `is_deterministic=False, is_probabilistic=True` to the constructor.
 
-    The design of `TSys` class closely follows its mathematical definition. Hence, the signatures of `delta` function for deterministic, nondeterministic, probabilistic  transition systems are different.
+    The design of `TSys` class closely follows its mathematical definition.
+    Hence, the signatures of `delta` function for deterministic, nondeterministic, probabilistic
+    transition systems are different.
 
     - **deterministic:**  `delta(state, act) -> single state`
     - **non-deterministic:**  `delta(state, act) -> a list of states`
@@ -637,18 +644,129 @@ class TSys(GraphicalModel):
 
 
 class Game(TSys):
+    """
+    Represents a game transition system, hereafter referred simply as a game.
+    A `Game` can represent two mathematical structures commonly used in literature, namely
+
+    .. math::
+        G = (S, A, T, AP, L, formula)
+
+    .. math::
+        G = (S, A, T, F, WinCond)
+
+    In the `Game` class, each component is represented as a function. By defining the relevant functions, a `Game`
+    class may represent either of the two mathematical structures.
+
+    - The set of states :math:`S` is represented by `Game.states` function,
+    - The set of actions :math:`A` is represented by `Game.actions` function,
+    - The transition function :math:`T` is represented by `Game.delta` function,
+    - The set of atomic propositions :math:`AP` is represented by `Game.atoms` function,
+    - The labeling function :math:`L` is represented by `Game.label` function.
+    - When the winning condition is represented by a logic formula :math:`formula`, we define `Game.formula` function.
+    - When the winning condition is represented by a final states :math:`F`, we define `Game.final` function.
+      In this case, we must also specify the acceptance condition.
+    - The winning condition :math:`WinCond` is represented by `Game.win_cond` function.
+
+    All of the above functions are marked abstract.
+    The recommended way to use `Game` class is by subclassing it and implementing the relevant component functions.
+
+    **Categorization of a Game:** A game is categorized by three types:
+
+    -   A game can be either deterministic or non-deterministic or probabilistic.
+        To define a **deterministic** transition system, provide a keyword argument `is_deterministic=True` to the
+        constructor. To define a **nondeterministic** transition system, provide a keyword argument `is_deterministic=False`
+        to the constructor. To define a **probabilistic** transition system, provide a keyword arguments
+        `is_deterministic=False, is_probabilistic=True` to the constructor.
+
+        The design of `Game` class closely follows its mathematical definition.
+        Hence, the signatures of `delta` function for deterministic, nondeterministic, probabilistic games are different.
+
+        - **deterministic:**  `delta(state, act) -> single state`
+        - **non-deterministic:**  `delta(state, act) -> a list of states`
+        - **probabilistic:**  `delta(state, act) -> a distribution over states`
+
+    -   A game can be turn-based or concurrent. To define a **concurrent** game, provide a keyword argument
+        `is_turn_based=False`. The game is `turn_based` by default.
+
+    -   A game can be a 1/1.5/2/2.5-player game. A one-player game models a deterministic motion planning-type problem in
+        a static environment. A 1.5-player game is an MDP. A two-player game models a deterministic interaction between
+        two strategic players. And, a 2.5-player game models a stochastic interaction between two strategic players.
+
+        If a game is one or two player, then the :py:meth:`Game.delta` is `deterministic`.
+        If a game is 1.5 or 2.5 player, then the :py:meth:`Game.delta` is either `non-deterministic` (when
+        transition probabilities are unknown), and `probabilistic` (when transition probabilities are known).
+
+    Every state in a turn-based game is controlled by a player. To define which player controls which state, define
+    a game component :py:meth:`Game.turn` which takes in a state and returns a value between 0 and 3 to indicate
+    which player controls the state.
+
+    An important feature of `Game` class is the `graphify()` function. It constructs a `Graph` object that is
+    equivalent to the game. The nodes of the `Graph` represent the states of `Game`,
+    the edges of the `Graph` are defined by the set of `actions` and the `delta` function.
+    The atomic propositions, labeling function are stored as `node, edge` and `graph` properties.
+    By default, every `Graph` returned a `Game.graphify()` function have the following (node/edge/graph) properties:
+
+    - `state`: (node property) A Map from every node to the state of transition system it represents.
+    - `actions`: (graph property) List of valid actions.
+    - `input`: (edge property) A map from every edge `(uid, vid, key)` to its associated action label.
+    - `prob`: (edge property) The probability associated with the edge `(uid, vid, key)`.
+    - `atoms`: (graph property) List of valid atomic propositions.
+    - `label`: (node property) A map every node to the list of atomic propositions true in the state represented by that node.
+    - `init_state`: (graph property) Initial state of transition system.
+    - `is_deterministic`: (graph property) Is the transition system deterministic?
+    - `is_probabilistic`: (graph property) Is the transition system probabilistic?
+    - `is_turn_based`: (graph property) Is the transition system turn-based?
+    - `final`: (node property) Returns an integer denoting the acceptance set the state belongs to.
+    - `win_cond`: (graph property) The winning condition of the game.
+    - `formula`: (graph property) A logic formula representing the winning condition of the game.
+    - `turn`: (node property) A map from every node to an integer (0/1/2) that denotes which player controls the node.
+    - `p1_acts`: (graph property) A subset of actions accessible to P1.
+    - `p2_acts`: (graph property) A subset of actions accessible to P2.
+
+    **Note:** Some features of probabilistic transition system are not tested.
+    If you are trying to implement a probabilistic transition system, reach out to Abhishek Kulkarni
+    (a.kulkarni2@ufl.edu).
+    """
+    NODE_PROPERTY = TSys.NODE_PROPERTY.copy()
+    EDGE_PROPERTY = TSys.EDGE_PROPERTY.copy()
+    GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
+
     def __init__(self, is_turn_based=True, is_deterministic=True, is_probabilistic=False, **kwargs):
-        super(Game, self).__init__(is_turn_based=is_turn_based,
-                                   is_deterministic=is_deterministic,
+        super(Game, self).__init__(is_deterministic=is_deterministic,
                                    is_probabilistic=is_probabilistic,
                                    **kwargs)
+        self._is_turn_based = is_turn_based
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    @register_property(TSys.NODE_PROPERTY)
+    @register_property(NODE_PROPERTY)
     def final(self, state):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
+
+    @register_property(GRAPH_PROPERTY)
+    def is_turn_based(self, state):
+        return self._is_turn_based
+
+    @register_property(NODE_PROPERTY)
+    def turn(self, state):
+        raise NotImplementedError
+
+    @register_property(GRAPH_PROPERTY)
+    def p1_acts(self):
+        raise NotImplementedError
+
+    @register_property(GRAPH_PROPERTY)
+    def p2_acts(self):
+        raise NotImplementedError
+
+    @register_property(GRAPH_PROPERTY)
+    def win_cond(self):
+        raise NotImplementedError
+
+    @register_property(GRAPH_PROPERTY)
+    def formula(self):
+        raise NotImplementedError
 
 
 class Automaton(GraphicalModel):
