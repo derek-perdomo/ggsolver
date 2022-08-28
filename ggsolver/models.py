@@ -742,30 +742,52 @@ class Game(TSys):
     # ==========================================================================
     @register_property(NODE_PROPERTY)
     def final(self, state):
+        """
+        Defines whether the given state is a final state.
+        The structure of final state is based on the winning condition
+        [See Automata, Logics and Infinite Games (Ch. 2)].
+
+        :param state: (object) A valid state.
+        :return: (int or a list of ints). The integer denotes the acceptance set the state belongs to.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
-    def is_turn_based(self, state):
+    def is_turn_based(self):
+        """ Is the game turn based? """
         return self._is_turn_based
 
     @register_property(NODE_PROPERTY)
     def turn(self, state):
+        """
+        Defines the player who controls the given state.
+
+        :param state: (object) A valid state.
+        :return: (int). In turn-based game, turn can be 1 for player 1 or 2 for player 2.
+            In concurrent games, the turn must be 0.
+
+        .. note:: For concurrent games, the turn function can be left unimplemented.
+        """
         raise NotImplementedError
 
     @register_property(GRAPH_PROPERTY)
     def p1_acts(self):
+        """ A subset of actions accessible to P1. """
         raise NotImplementedError
 
     @register_property(GRAPH_PROPERTY)
     def p2_acts(self):
+        """ A subset of actions accessible to P2. """
         raise NotImplementedError
 
     @register_property(GRAPH_PROPERTY)
     def win_cond(self):
+        """ Winning condition of the game. """
         raise NotImplementedError
 
     @register_property(GRAPH_PROPERTY)
     def formula(self):
+        """ A logic formula representing the winning condition of the game. """
         raise NotImplementedError
 
 
