@@ -55,6 +55,21 @@ class SpotAutomaton(Automaton):
         print(f"[INFO] Translating {self._formula} with options={options} ...")
         self.spot_aut = spot.translate(formula, *options)
 
+        # Set the acceptance condition (in ggsolver terms)
+        name = self.spot_aut.acc().name()
+        if name == "Büchi" and spot.mp_class(formula).upper() in ["B", "S"]:
+            self._acc_cond = Automaton.ACC_SAFETY
+        elif name == "Büchi" and spot.mp_class(formula).upper() in ["G"]:
+            self._acc_cond = Automaton.ACC_REACH
+        elif name == "Büchi" and spot.mp_class(formula).upper() in ["O", "R"]:
+            self._acc_cond = Automaton.ACC_REACH
+        elif name == "co-Büchi":
+            self._acc_cond = Automaton.ACC_COBUCHI
+        elif name == "all":
+            self._acc_cond = Automaton.ACC_SAFETY
+        else:  # name contains "parity":
+            self._acc_cond = Automaton.ACC_PARITY
+
     def sigma(self):
         if len(self.atoms()) > 16:
             raise ValueError("To many atoms. Currently support up to 16 atoms.")
@@ -126,11 +141,20 @@ class SpotAutomaton(Automaton):
     def acc_name(self):
         return self.spot_aut.acc().name()
 
-    @register_property(Automaton.GRAPH_PROPERTY)
     def acc_cond(self):
-        return str(self.spot_aut.get_acceptance())
+        """
+        Returns acceptance condition according to ggsolver definitions.
+        See :meth:`SpotAutomaton.spot_acc_cond` for acceptance condition in spot's nomenclature.
+        """
+        return self._acc_cond
 
     @register_property(Automaton.GRAPH_PROPERTY)
+    def spot_acc_cond(self):
+        """
+        Acceptance condition in spot's nomenclature.
+        """
+        return str(self.spot_aut.get_acceptance())
+
     def num_acc_sets(self):
         return self.spot_aut.num_sets()
 
@@ -138,11 +162,9 @@ class SpotAutomaton(Automaton):
     def formula(self):
         return self._formula
 
-    @register_property(Automaton.GRAPH_PROPERTY)
     def is_deterministic(self):
         return bool(self.spot_aut.prop_universal() and self.spot_aut.is_existential())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
     def is_unambiguous(self):
         return bool(self.spot_aut.prop_unambiguous())
 
@@ -150,7 +172,6 @@ class SpotAutomaton(Automaton):
     def is_state_based_acc(self):
         return bool(self.spot_aut.prop_state_acc())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
     def is_terminal(self):
         return bool(self.spot_aut.prop_terminal())
 
@@ -162,6 +183,5 @@ class SpotAutomaton(Automaton):
     def is_inherently_weak(self):
         return bool(self.spot_aut.prop_inherently_weak())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
     def is_stutter_invariant(self):
         return bool(self.spot_aut.prop_stutter_invariant())

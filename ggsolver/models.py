@@ -799,24 +799,15 @@ class Automaton(GraphicalModel):
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
-    REACHABILITY = "Reach"
-    BUCHI = "Buchi"
+    ACC_REACH = "Reach"
+    ACC_SAFETY = "Safety"
+    ACC_BUCHI = "Buchi"
+    ACC_COBUCHI = "co-Buchi"
+    ACC_PARITY = "parity"
+    ACC_UNDEFINED = "undefined"
 
-    def __init__(self, acc_cond, **kwargs):
+    def __init__(self, acc_cond=ACC_UNDEFINED, **kwargs):
         super(Automaton, self).__init__(**kwargs)
-
-        # If user provides direct definition of automaton
-        if "states" in kwargs:
-            self.states = lambda: list(kwargs["states"])
-
-        if "atoms" in kwargs:
-            self.atoms = lambda: list(kwargs["atoms"])
-
-        if "init_state" in kwargs:
-            self._init_state = lambda: list(kwargs["init_state"])
-
-        if "final" in kwargs:
-            self.final = lambda st: st in kwargs["final"]
 
         # Default properties (will be treated as graph properties during serialization)
         self._acc_cond = acc_cond
@@ -825,33 +816,6 @@ class Automaton(GraphicalModel):
         self._is_stutter_invariant = kwargs["is_stutter_invariant"] if "is_stutter_invariant" in kwargs else None
         self._is_unambiguous = kwargs["is_unambiguous"] if "is_unambiguous" in kwargs else None
         self._is_terminal = kwargs["is_terminal"] if "is_terminal" in kwargs else None
-
-    # ==========================================================================
-    # PRIVATE FUNCTIONS.
-    # ==========================================================================
-    def _add_edges_to_graph(self, graph):
-        """
-        TODO. post process edges to merge parallel edges.
-        No merging of parallel edges performed right now.
-        # TODO. Merge parallel edges to compress DFA.
-        """
-        edge_label = EdgePropertyMap(graph)
-        states = self.states()
-        for st in states:
-            for inp in util.powerset(self.atoms()):
-                next_state = self.delta(st, inp)
-                if next_state is None:
-                    print(util.BColors.WARNING + f"[WARN] Automaton transition undefined on state:{st}, inp:{inp}")
-                    continue
-                uid = states.index(st)
-                vid = states.index(next_state)
-                key = graph.add_edge(uid, vid)
-                edge_label[(uid, vid, key)] = inp
-
-        graph["edge_label"] = edge_label
-        print(util.BColors.OKCYAN, f"[INFO] Processing edge property: edge_label.", util.BColors.ENDC)
-
-        return graph
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
