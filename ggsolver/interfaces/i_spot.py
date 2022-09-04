@@ -14,33 +14,41 @@ class SpotAutomaton(Automaton):
     `spot` (https://spot.lrde.epita.fr/) with customizations for `ggsolver`.
 
     **Customizations:** Since `ggsolver` contains several algorithms for reactive/controller synthesis,
-        we prefer to construct deterministic automata. Given an LTL formula, `SpotAutomaton` automatically
-        determines the best acceptance condition that would result in a deterministic automaton.
+    we prefer to construct deterministic automata. Given an LTL formula, `SpotAutomaton` automatically
+    determines the best acceptance condition that would result in a deterministic automaton.
 
-    **Default translation options:** While constructing an automaton using `spot`, we use the following
+    Programmer's note: The graphified version of automaton does not use PL formulas as edge labels.
+    This is intentionally done to be able to run our codes on robots that may not have logic libraries installed.
+    """
+    def __init__(self, formula=None, options=None):
+        """
+        Given an LTL formula, SpotAutomaton determines the best options for spot.translate() function
+        to generate a deterministic automaton in ggsolver.Automaton format.
+
+        :param formula: (str) LTL formula.
+        :param options: (List/Tuple of str) Valid options for spot.translate() function. By default, the
+            value is `None`, in which case, the options are determined automatically. See description below.
+
+        **Default translation options:** While constructing an automaton using `spot`, we use the following
         options: `deterministic, high, complete, unambiguous, SBAcc`. If selected acceptance condition
         is parity, then we use `colored` option as well.
 
-    The default options can be overriden. For quick reference, the following description is copied from
-    `spot` documentation (spot.lrde.epita.fr/doxygen).
+        The default options can be overriden. For quick reference, the following description is copied from
+        `spot` documentation (spot.lrde.epita.fr/doxygen).
 
-    The optional arguments should be strings among the following:
-    - at most one in 'GeneralizedBuchi', 'Buchi', or 'Monitor',
-      'generic', 'parity', 'parity min odd', 'parity min even',
-      'parity max odd', 'parity max even', 'coBuchi'
-      (type of acceptance condition to build)
-    - at most one in 'Small', 'Deterministic', 'Any'
-      (preferred characteristics of the produced automaton)
-    - at most one in 'Low', 'Medium', 'High'
-      (optimization level)
-    - any combination of 'Complete', 'Unambiguous',
-      'StateBasedAcceptance' (or 'SBAcc' for short), and
-      'Colored' (only for parity acceptance)
-
-    Programmer's note: The graphified version of automaton does not use PL formulas as edge labels.
-        This is intentionally done to be able to run our codes on robots that may not have logic libraries installed.
-    """
-    def __init__(self, formula=None, options=None):
+        The optional arguments should be strings among the following:
+        - at most one in 'GeneralizedBuchi', 'Buchi', or 'Monitor',
+          'generic', 'parity', 'parity min odd', 'parity min even',
+          'parity max odd', 'parity max even', 'coBuchi'
+          (type of acceptance condition to build)
+        - at most one in 'Small', 'Deterministic', 'Any'
+          (preferred characteristics of the produced automaton)
+        - at most one in 'Low', 'Medium', 'High'
+          (optimization level)
+        - any combination of 'Complete', 'Unambiguous',
+          'StateBasedAcceptance' (or 'SBAcc' for short), and
+          'Colored' (only for parity acceptance)
+        """
         # Construct the automaton
         super(SpotAutomaton, self).__init__(input_domain=self.sigma)
 
@@ -70,12 +78,10 @@ class SpotAutomaton(Automaton):
         else:  # name contains "parity":
             self._acc_cond = Automaton.ACC_PARITY
 
-    def sigma(self):
-        if len(self.atoms()) > 16:
-            raise ValueError("To many atoms. Currently support up to 16 atoms.")
-        return list(powerset(self.atoms()))
-
     def _determine_options(self):
+        """
+        Determines the options based on where the given LTL formula lies in Manna-Pnueli hierarchy.
+        """
         mp_cls = spot.mp_class(self.formula())
         if mp_cls.upper() == "B" or mp_cls.upper() == "S":
             return 'Monitor', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
@@ -86,15 +92,29 @@ class SpotAutomaton(Automaton):
         else:  # cls.upper() == "T":
             return 'parity', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
 
+    def sigma(self):
+        """
+        Set of symbols for automaton. Follows mathematical definition of automaton.
+        """
+        if len(self.atoms()) > 16:
+            raise ValueError("To many atoms. Currently support up to 16 atoms.")
+        return list(powerset(self.atoms()))
+
     def states(self):
+        """ States of automaton. """
         return list(range(self.spot_aut.num_states()))
 
     def atoms(self):
+        """ Atomic propositions appearing in LTL formula. """
         return [str(ap) for ap in self.spot_aut.ap()]
 
     def delta(self, state, inp):
         """
-        :param inp: (list) List of atoms that are true.
+        Transition function of automaton. For a deterministic automaton, returns a single state. Otherwise,
+        returns a list/tuple of states.
+
+        :param state: (object) A valid state.
+        :param inp: (list) List of atoms that are true (an element of sigma).
         """
         # Preprocess inputs
         inp_dict = {p: True for p in inp} | {p: False for p in self.atoms() if p not in inp}
@@ -130,23 +150,70 @@ class SpotAutomaton(Automaton):
             return next_states
 
     def init_state(self):
+        """ Initial state of automaton. """
         return int(self.spot_aut.get_init_state_number())
 
     def final(self, state):
+        """ Maps every state to its acceptance set. """
         if not self.is_state_based_acc():
             raise NotImplementedError
         return list(self.spot_aut.state_acc_sets(state).sets())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
-    def acc_name(self):
-        return self.spot_aut.acc().name()
-
     def acc_cond(self):
         """
-        Returns acceptance condition according to ggsolver definitions.
+        Returns acceptance condition according to ggsolver definitions:
+        See `ACC_REACH, ...` variables in Automaton class.
         See :meth:`SpotAutomaton.spot_acc_cond` for acceptance condition in spot's nomenclature.
         """
         return self._acc_cond
+
+    def num_acc_sets(self):
+        """ Number of acceptance sets. """
+        return self.spot_aut.num_sets()
+
+    def is_deterministic(self):
+        """ Is the automaton deterministic? """
+        return bool(self.spot_aut.prop_universal() and self.spot_aut.is_existential())
+
+    def is_unambiguous(self):
+        """
+        There is at most one run accepting a word (but it might be recognized several time).
+        See https://spot.lrde.epita.fr/concepts.html.
+        """
+        return bool(self.spot_aut.prop_unambiguous())
+
+    def is_terminal(self):
+        """
+        Automaton is weak, accepting SCCs are complete, accepting edges may not go to rejecting SCCs.
+        An automaton is weak if the transitions of an SCC all belong to the same acceptance sets.
+
+        See https://spot.lrde.epita.fr/concepts.html
+        """
+        return bool(self.spot_aut.prop_terminal())
+
+    def is_stutter_invariant(self):
+        """
+        The property recognized by the automaton is stutter-invariant
+        (see https://www.lrde.epita.fr/~adl/dl/adl/michaud.15.spin.pdf)
+        """
+        return bool(self.spot_aut.prop_stutter_invariant())
+
+    def is_complete(self):
+        """ Is the automaton complete? """
+        return bool(spot.is_complete(self.spot_aut))
+
+    @register_property(Automaton.GRAPH_PROPERTY)
+    def is_semi_deterministic(self):
+        """
+        Is the automaton semi-deterministic?
+        See https://spot.lrde.epita.fr/doxygen/namespacespot.html#a56b3f00b7b93deafb097cad595998783
+        """
+        return bool(spot.is_semi_deterministic()(self.spot_aut))
+
+    @register_property(Automaton.GRAPH_PROPERTY)
+    def acc_name(self):
+        """ Name of acceptance condition as per spot's nomenclature. """
+        return self.spot_aut.acc().name()
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def spot_acc_cond(self):
@@ -155,33 +222,24 @@ class SpotAutomaton(Automaton):
         """
         return str(self.spot_aut.get_acceptance())
 
-    def num_acc_sets(self):
-        return self.spot_aut.num_sets()
-
     @register_property(Automaton.GRAPH_PROPERTY)
     def formula(self):
+        """ The LTL Formula. """
         return self._formula
-
-    def is_deterministic(self):
-        return bool(self.spot_aut.prop_universal() and self.spot_aut.is_existential())
-
-    def is_unambiguous(self):
-        return bool(self.spot_aut.prop_unambiguous())
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def is_state_based_acc(self):
+        """ Is the acceptance condition state-based? """
         return bool(self.spot_aut.prop_state_acc())
-
-    def is_terminal(self):
-        return bool(self.spot_aut.prop_terminal())
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def is_weak(self):
+        """
+        Are transitions of an SCC all belong to the same acceptance sets?
+        """
         return bool(self.spot_aut.prop_weak())
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def is_inherently_weak(self):
+        """ Is it the case that accepting and rejecting cycles cannot be mixed in the same SCC? """
         return bool(self.spot_aut.prop_inherently_weak())
-
-    def is_stutter_invariant(self):
-        return bool(self.spot_aut.prop_stutter_invariant())
