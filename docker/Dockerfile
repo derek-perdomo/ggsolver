@@ -49,3 +49,4 @@ RUN pip3 install jupyterlab
 RUN pip3 install sphinx
 RUN pip3 install myst-parser
 RUN pip3 install sphinx_rtd_theme recommonmark
+RUN pip3 install dd
