@@ -10,6 +10,32 @@ from dd.autoref import BDD
 
 class SpotAutomaton(Automaton):
     """
+    `SpotAutomaton` constructs an :class:`Automaton` from an LTL specification string using
+    `spot` (https://spot.lrde.epita.fr/) with customizations for `ggsolver`.
+
+    **Customizations:** Since `ggsolver` contains several algorithms for reactive/controller synthesis,
+        we prefer to construct deterministic automata. Given an LTL formula, `SpotAutomaton` automatically
+        determines the best acceptance condition that would result in a deterministic automaton.
+
+    **Default translation options:** While constructing an automaton using `spot`, we use the following
+        options: `deterministic, high, complete, unambiguous, SBAcc`. If selected acceptance condition
+        is parity, then we use `colored` option as well.
+
+    The default options can be overriden. For quick reference, the following description is copied from
+    `spot` documentation (spot.lrde.epita.fr/doxygen).
+
+    The optional arguments should be strings among the following:
+    - at most one in 'GeneralizedBuchi', 'Buchi', or 'Monitor',
+      'generic', 'parity', 'parity min odd', 'parity min even',
+      'parity max odd', 'parity max even', 'coBuchi'
+      (type of acceptance condition to build)
+    - at most one in 'Small', 'Deterministic', 'Any'
+      (preferred characteristics of the produced automaton)
+    - at most one in 'Low', 'Medium', 'High'
+      (optimization level)
+    - any combination of 'Complete', 'Unambiguous',
+      'StateBasedAcceptance' (or 'SBAcc' for short), and
+      'Colored' (only for parity acceptance)
 
     Programmer's note: The graphified version of automaton does not use PL formulas as edge labels.
         This is intentionally done to be able to run our codes on robots that may not have logic libraries installed.
@@ -30,7 +56,7 @@ class SpotAutomaton(Automaton):
         self.spot_aut = spot.translate(formula, *options)
 
     def sigma(self):
-        if len(self.atoms()) >= 16:
+        if len(self.atoms()) > 16:
             raise ValueError("To many atoms. Currently support up to 16 atoms.")
         return list(powerset(self.atoms()))
 
