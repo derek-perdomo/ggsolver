@@ -52,7 +52,7 @@ class SpotAutomaton(Automaton):
         if options is None:
             options = self._determine_options()
 
-        print(f"[INFO] Translating {self._formula} with options={options} ...")
+        print(f"[INFO] Translating {self._formula} with options={options}.")
         self.spot_aut = spot.translate(formula, *options)
 
         # Set the acceptance condition (in ggsolver terms)
