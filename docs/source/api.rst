@@ -8,4 +8,5 @@ API
 
     modules/graph
     modules/models
+    modules/interfaces
 
