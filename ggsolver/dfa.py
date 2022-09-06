@@ -8,7 +8,7 @@ logger.setLevel(logging.INFO)
 class Dfa(Automaton):
     def __init__(self, states, atoms, delta, init_state, final):
         super(Dfa, self).__init__(states=states, atoms=atoms, init_state=init_state, final=final,
-                                  acc_cond=Automaton.REACHABILITY)
+                                  acc_cond=Automaton.ACC_REACH)
         self.delta = delta
 
 

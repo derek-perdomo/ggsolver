@@ -1,4 +1,4 @@
-# TODO. Try implementing zlk package.
+# TODO. Try implementing dtptb package.
 # TODO. Add logging statements.
 # TODO. Make note that user will not be warned of any private attributes that are unserialized.
 # TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
@@ -45,11 +45,20 @@ class GraphicalModel:
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
 
         # Caching variables during serializing and deserializing the model.
+        self.__graph = None
+        self.__is_graphified = False
         self.__states = list()
         self.__state2node = dict()
 
     def __str__(self):
         return f"<{self.__class__.__name__} object at {id(self)}>"
+
+    def __setattr__(self, key, value):
+        # If key is any non "__xxx" variable, set `is_graphified` to False.
+        if key != "__is_graphified" and hasattr(self, "__is_graphified"):
+            if key[0:2] != "__":
+                self.__is_graphified = False
+        super(GraphicalModel, self).__setattr__(key, value)
 
     # ==========================================================================
     # PRIVATE FUNCTIONS.
@@ -445,6 +454,74 @@ class GraphicalModel:
             func_code = f"""def {gprop}():\n\treturn {gprop_value}"""
             exec(func_code)
             func = locals()[gprop]
+            setattr(obj, gprop, func)
+
+        # Construct inverse state mapping
+        for node in graph.nodes():
+            state = graph["state"][node]
+            if isinstance(state, list):
+                state = tuple(state)
+            obj.__state2node[state] = node
+
+        # Add node properties
+        def get_node_property(state, name):
+            return graph.node_properties[name][obj.__state2node[state]]
+
+        for nprop, nprop_value in graph.node_properties.items():
+            setattr(obj, nprop, partial(get_node_property, name=nprop))
+
+        # TODO. Add edge properties (How to handle them is unclear).
+
+        # Reconstruct delta function
+        def delta(state, act):
+            # Get node from state
+            node = obj.__state2node[state]
+
+            # Get out_edges from node in graph
+            out_edges = graph.out_edges(node)
+
+            # Iterate over each out edge to match action.
+            successors = set()
+            for uid, vid, key in out_edges:
+                action_label = graph["act"][(uid, vid, key)]
+                if action_label == act:
+                    successors.add(vid)
+
+            # If model is deterministic, then return single state.
+            if not graph["is_stochastic"]:
+                return graph["state"][successors.pop()]
+
+            # If model is stochastic and NOT quantitative, then return list of states.
+            elif graph["is_stochastic"] and not graph["is_quantitative"]:
+                return [graph["state"][vid] for vid in successors]
+
+            # If model is stochastic and quantitative, then return distribution.
+            else:
+                successors = [graph["state"][vid] for vid in successors]
+                prob = [graph["prob"][uid] for uid in successors]
+                return util.Distribution(successors, prob)
+
+        obj.delta = delta
+
+        # Return reconstructed object
+        return obj
+
+    @classmethod
+    def from_graph(cls, graph):
+        # Create object
+        obj = cls()
+
+        # Save graph
+        # TODO. This is inefficent because we are storing `__states` and `__graph`. Remove redundancy.
+        obj.__graph = graph
+        obj.__is_graphified = True
+
+        # Add graph properties
+        for gprop, gprop_value in graph.graph_properties.items():
+            # func_code = f"""def {gprop}():\n\treturn {gprop_value}"""
+            func = lambda: obj.__graph.graph_properties[gprop]
+            # exec(func_code)
+            # func = locals()[gprop]
             setattr(obj, gprop, func)
 
         # Construct inverse state mapping
