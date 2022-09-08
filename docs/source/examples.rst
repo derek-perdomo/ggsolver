@@ -7,4 +7,5 @@ Examples
 
     examples/graphs
     examples/models_tsys
+    examples/i_spot
 
