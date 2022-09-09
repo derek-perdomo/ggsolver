@@ -955,24 +955,29 @@ class Solver:
 
     """
     DETERMINISTIC = "deterministic"
-    RANDOMIZED = "deterministic"
+    RANDOMIZED = "randomized"
 
-    def __init__(self, game, strategy_type=DETERMINISTIC, **kwargs):
-        self._game = game
+    def __init__(self, graph, strategy_type=DETERMINISTIC, **kwargs):
+        # Load and validate graph
+        self._graph = graph
+        self.validate()
 
         # Type of strategy
         self._strategy_type = strategy_type
 
         # Winning regions of the players
-        self.win1 = None
-        self.win2 = None
+        self._win1 = None
+        self._win2 = None
+
+        # Cache variables
+        self.__state2node = dict()
 
     def validate(self):
         """
         Validates the input game.
         Typically, this would involve checking if all necessary properties are well-defined.
         """
-        raise NotImplementedError
+        pass
 
     def reset(self):
         """ Resets the internal variables to default values. """
@@ -986,23 +991,32 @@ class Solver:
         """
         raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
 
-    def pi1(self, state):
+    def pi1(self, node):
         """
         Player 1's strategy at the given state.
 
-        :param state: A valid state in the game.
+        :param node: A valid state in the game.
         :return: A valid action.
         """
         raise NotImplementedError
 
-    def pi2(self, state):
+    def pi2(self, node):
         """
         Player 2's strategy at the given state.
 
-        :param state: A valid state in the game.
+        :param node: A valid state in the game.
         :return: A valid action.
         """
         raise NotImplementedError
+
+    def win1(self):
+        return self._win1
+
+    def win2(self):
+        return self._win1
+
+    def enabled_acts(self, node):
+        pass
 
     def serialize(self):
         pass
@@ -1018,3 +1032,6 @@ class Solver:
 
     def load(self, fpath, protocol="json"):
         pass
+
+    def strategy_type(self):
+        return self._strategy_type

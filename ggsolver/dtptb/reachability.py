@@ -1,110 +1,53 @@
 from ggsolver.graph import Graph
+from ggsolver.models import Solver
 from functools import reduce
 
 
-class SureWinReach:
-    def __init__(self, graph: Graph, player=1):
+class SWinReach(Solver):
+    # TODO (MC). See the documentation for Graph class to understand the input.
+
+    def __init__(self, graph, final=None, player=1, **kwargs):
         """
-        Game graph that represents a deterministic two-player turn-based game.
+        Instantiates a sure winning reachability game solver.
+
+        :param graph: (Graph instance)
+        :param final: (iterable) A list/tuple/set of final nodes in graph.
+        :param player: (int) Either 1 or 2.
+        :param kwargs: SureWinReach accepts no keyword arguments.
         """
-        assert player in [1, 2]
-        assert graph["is_turn_based"] and not graph["is_stochastic"]
+        super(SWinReach, self).__init__(graph, **kwargs)
         self._player = player
-        self._graph = graph
-        self._turn = self._graph["turn"]    # Get the "turn" property map
-        self._final = set()
-        self._attr = list()                 # list of sets
-
-    def set_final(self, final=None):
-        self._final = set()
-        if final is None:
-            final = self._graph["final"]
-
-            for node in self._graph.nodes():
-                is_final = final[node]
-                if is_final is None:
-                    raise ValueError(f'Node property `final` is not defined for node '
-                                     f'{node}:{self._graph["state"][node]}.')
-
-                if is_final:
-                    self._final.add(node)
-
-        else:
-            self._final = set(final)
+        self._turn = self._graph["turn"]
+        self._final = set(final) if final is not None else {n for n in graph.nodes() if self._graph["final"][n]}
+        self._attr = list()         # list of sets
 
     def solve(self):
-        if len(self._final) == 0:
-            raise ValueError("The set of final states is empty. Did you forget to call set_final()?")
+        # TODO (MC). Implement the sure winning algorithm. Feel free to define helper functions, if necessary.
+        #   Use `self._attr` which is a list of sets to construct the attractor level sets.
+        #   Use `self._attr` to construct the set of winning nodes of P1. Update value of self._win1.
+        #   Use `self._attr` to construct the set of winning nodes of P2. Update value of self._win2.
+        self._win1 = set()
+        self._win2 = set()
 
-        self._attr = [self._final]
-        iter_count = 0
-        while True:
-            print(f"[INFO] solve():: iter_count:{iter_count}")
-            iter_count += 1
-            print(f"[INFO] pre_exists():: win:{set(reduce(set.union, self._attr))}")
-
-            pre1 = self._pre_exists()
-            pre2 = self._pre_forall()
-            next_level = set.union(pre1, pre2)
-            if next_level == self._attr[-1]:
-                break
-            self._attr.append(next_level)
-
-        print(f"[INFO] -------------------------------------------------")
-        print(f"[INFO] solve():: win:{set(reduce(set.union, self._attr))}")
-
-    def _pre_exists(self):
-        win = set(reduce(set.union, self._attr))
-        pred = set()
-        for vid in win:
-            pred_vid = self._graph.predecessors(vid)
-            for uid in pred_vid:
-                if self._turn[uid] == self._player:
-                    pred.add(uid)
-        print(f"[INFO] pre_exists():: pred:{pred - win}")
-        return pred - win
-
-    def _pre_forall(self):
-        win = set(reduce(set.union, self._attr))
-        pred = set()
-        for vid in win:
-            pred_vid = self._graph.predecessors(vid)
-            for uid in pred_vid:
-                if set(self._graph.successors(uid)).issubset(win) and self._turn[uid] != self._player:
-                    pred.add(uid)
-        print(f"[INFO] pre_forall():: pred:{pred - win}")
-        return pred - win
-
-    def p1_win(self, state=None):
-        """
-        If state is None, the complete winning region of P1 is returned.
-        """
-        if state is None and self._player == 1:
-            return [self._graph["states"][node] for node in reduce(set.union, self._attr)]
-        elif state is None and self._player == 2:
-            return [
-                self._graph["states"][node]
-                for node in self._graph.nodes()
-                if node not in reduce(set.union, self._attr)
-            ]
-
-        if self._player == 1:
-            return any(state in (self._graph["states"][node] for node in level) for level in self._attr)
-        else:
-            return all(state not in (self._graph["states"][node] for node in level) for level in self._attr)
-
-    def p2_win(self, state=None):
-        if state is None:
-            return [self._graph["states"][node] for node in reduce(set.union, self._attr)]
-
-        if self._player == 2:
-            return any(state in (self._graph["states"][node] for node in level) for level in self._attr)
-        else:
-            return all(state not in (self._graph["states"][node] for node in level) for level in self._attr)
-
-    def pi1(self, state):
-        # TODO. Make state2node property default in graphical models.
+    def pi1(self, node):
+        # TODO (MC). Use self._attr to construct strategy of P1.
+        #   If self.type_strategy() is "deterministic" then return the function should return the same action
+        #       when called with the same input.
+        #   Otherwise, you must choose a random winning action of P1 from self.win1_act.
         pass
 
-    def pi2(self, state):
+    def pi2(self, node):
         pass
+
+    def win1_act(self, node):
+        # TODO (MC). Use self._attr to return a list of all winning actions at given node.
+        pass
+
+    def win2_act(self, node):
+        # TODO (MC). Use self._attr to return a list of all winning actions at given node.
+        pass
+
+
+ASWinReach = SWinReach
+
+
