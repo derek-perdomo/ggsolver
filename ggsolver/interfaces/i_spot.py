@@ -15,7 +15,7 @@ class SpotAutomaton(Automaton):
 
     **Customizations:** Since `ggsolver` contains several algorithms for reactive/controller synthesis,
     we prefer to construct deterministic automata. Given an LTL formula, `SpotAutomaton` automatically
-    determines the best acceptance condition that would result in a deterministic automaton.
+    determines the best acceptance condition that would result in a deterministic automaton..
 
     Programmer's note: The graphified version of automaton does not use PL formulas as edge labels.
     This is intentionally done to be able to run our codes on robots that may not have logic libraries installed.
@@ -38,9 +38,10 @@ class SpotAutomaton(Automaton):
 
         The optional arguments should be strings among the following:
         - at most one in 'GeneralizedBuchi', 'Buchi', or 'Monitor',
-          'generic', 'parity', 'parity min odd', 'parity min even',
-          'parity max odd', 'parity max even', 'coBuchi'
-          (type of acceptance condition to build)
+        'generic', 'parity', 'parity min odd', 'parity min even',
+        'parity max odd', 'parity max even', 'coBuchi'
+        (type of acceptance condition to build)
+
         - at most one in 'Small', 'Deterministic', 'Any'
           (preferred characteristics of the produced automaton)
         - at most one in 'Low', 'Medium', 'High'

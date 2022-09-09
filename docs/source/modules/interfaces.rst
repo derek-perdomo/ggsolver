@@ -25,5 +25,4 @@ Interfaces
                 is_weak,
                 is_inherently_weak,
                 serialize,
-                deserialize,
-                to_png
+                deserialize
