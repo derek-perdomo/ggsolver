@@ -1,11 +1,13 @@
+import random
+
 from ggsolver.graph import Graph
+from ggsolver.graph import NodePropertyMap
 from ggsolver.models import Solver
+
 from functools import reduce
 
 
 class SWinReach(Solver):
-    # TODO (MC). See the documentation for Graph class to understand the input.
-
     def __init__(self, graph, final=None, player=1, **kwargs):
         """
         Instantiates a sure winning reachability game solver.
@@ -19,35 +21,131 @@ class SWinReach(Solver):
         self._player = player
         self._turn = self._graph["turn"]
         self._final = set(final) if final is not None else {n for n in graph.nodes() if self._graph["final"][n]}
-        self._attr = list()         # list of sets
+        self._attr = list()
 
     def solve(self):
-        # TODO (MC). Implement the sure winning algorithm. Feel free to define helper functions, if necessary.
-        #   Use `self._attr` which is a list of sets to construct the attractor level sets.
-        #   Use `self._attr` to construct the set of winning nodes of P1. Update value of self._win1.
-        #   Use `self._attr` to construct the set of winning nodes of P2. Update value of self._win2.
-        self._win1 = set()
-        self._win2 = set()
+        # Create initial attractor list with final states
+        self._attr.append(self._final)
+        while True:
+            current_win = set(self._attr[-1])
+            # Check predecessors
+            pre_1 = set()
+            pre_2 = set()
+            for node in current_win:
+                predecessors = graph.predecessors(node)
+                # Check all predecessors of nodes in current winning region
+                for pred in predecessors:
+                    # Add all nodes where turn=1
+                    if graph["turn"][pred] == "1":
+                        pre_1.add(pred)
+                    # Add all nodes where turn=2 and edges only point to winning region
+                    if graph["turn"][pred] == "2":
+                        successors = graph.successors(pred)
+                        if set(successors).union(current_win) == current_win:
+                            pre_2.add(pred)
+            # Add a new attractor that is the union of these two sets and last attractor
+            new_attr = current_win.union(pre_1).union(pre_2)
+            # Break if this new attractor is the same as the last one
+            if new_attr == self._attr[-1]:
+                break
+            else:
+                self._attr.append(new_attr)
+        self._win1 = set(self._attr[-1])
+        self._win2 = set(graph.nodes()).difference(set(self._attr[-1]))
 
     def pi1(self, node):
-        # TODO (MC). Use self._attr to construct strategy of P1.
-        #   If self.type_strategy() is "deterministic" then return the function should return the same action
-        #       when called with the same input.
-        #   Otherwise, you must choose a random winning action of P1 from self.win1_act.
-        pass
+        winning_actions = self.win1_act(node)
+        allowable_nodes = graph.successors(node)
+        allowable_actions = self.get_actions_from_nodes(node, allowable_nodes)
+
+        # If there are winning actions
+        if len(winning_actions) > 0 and self.strategy_type() == "deterministic":
+            return winning_actions[0]
+        elif len(winning_actions) > 0 and self.strategy_type() != "deterministic":
+            return random.choice(winning_actions)
+        # If there are no winning actions
+        elif len(winning_actions) == 0 and self.strategy_type() == "deterministic":
+            return allowable_actions[0]
+        elif len(winning_actions) == 0 and self.strategy_type() != "deterministic":
+            return random.choice(allowable_actions)
 
     def pi2(self, node):
-        pass
+        winning_actions = self.win2_act(node)
+        allowable_nodes = graph.successors(node)
+        allowable_actions = self.get_actions_from_nodes(node, allowable_nodes)
+
+        # If there are winning actions
+        if len(winning_actions) > 0 and self.strategy_type() == "deterministic":
+            return winning_actions[0]
+        elif len(winning_actions) > 0 and self.strategy_type() != "deterministic":
+            return random.choice(winning_actions)
+        # If there are no winning actions
+        elif len(winning_actions) == 0 and self.strategy_type() == "deterministic":
+            return allowable_actions[0]
+        elif len(winning_actions) == 0 and self.strategy_type() != "deterministic":
+            return random.choice(allowable_actions)
 
     def win1_act(self, node):
-        # TODO (MC). Use self._attr to return a list of all winning actions at given node.
-        pass
+        target_nodes = list()
+        successors = set(graph.successors(node))
+        # Check if we are in the winning region, if so use the attractors to find the best action
+        if node in self._win1:
+            for attractor in self._attr:
+                if set(attractor).intersection(successors) != set():
+                    target_nodes = list(set(attractor).intersection(successors))
+                    break
+        # If we are not in the winning region pick an action to enter it
+        else:
+            target_nodes = self._win1.intersection(successors)
+        # TODO What to do when we are not in the winning region and no actions take us there ie p2 is sure winning?
+        winning_actions = self.get_actions_from_nodes(node, target_nodes)
+        return winning_actions
 
     def win2_act(self, node):
-        # TODO (MC). Use self._attr to return a list of all winning actions at given node.
-        pass
+        winning_nodes = list()
+        successors = set(graph.successors(node))
+        # Winning moves are going to any node that is in the winning region
+        winning_nodes = self._win2.intersection(successors)
 
+        winning_actions = self.get_actions_from_nodes(node, winning_nodes)
+        return winning_actions
+
+    def get_actions_from_nodes(self, origin_node, target_nodes):
+        actions = list()
+        for target in target_nodes:
+            actions.append((origin_node, target))
+        return actions
 
 ASWinReach = SWinReach
 
+if __name__ == '__main__':
+    # Create the graph from richmodels example
+    graph = Graph()
+    s0, s1, s2, s3, s4, s5, s6, s7 = graph.add_nodes(num_nodes=8)
 
+    graph["turn"] = NodePropertyMap(graph, default="3")
+    graph["turn"][s0] = "1"
+    graph["turn"][s1] = "2"
+    graph["turn"][s2] = "2"
+    graph["turn"][s3] = "2"
+    graph["turn"][s4] = "1"
+    graph["turn"][s5] = "2"
+    graph["turn"][s6] = "1"
+    graph["turn"][s7] = "2"
+
+    graph.add_edges([
+                    (s0, s1), (s0, s3),
+                    (s1, s0), (s1, s2), (s1, s4),
+                    (s2, s2), (s2, s4),
+                    (s3, s0), (s3, s4), (s3, s5),
+                    (s4, s3), (s4, s1),
+                    (s5, s3), (s5, s6),
+                    (s6, s6), (s6, s7),
+                    (s7, s0), (s7, s3)
+                    ])
+    final_states = (s3, s4)
+
+    # Test solver
+    solver = SWinReach(graph, final=final_states)
+    solver.solve()
+    print(solver.pi1(s0))
