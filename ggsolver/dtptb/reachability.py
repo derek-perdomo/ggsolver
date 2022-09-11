@@ -76,7 +76,6 @@ class SWinReach(Solver):
         return winning_actions
 
     def win2_act(self, node):
-        winning_nodes = list()
         successors = set(graph.successors(node))
         # Winning moves are going to any node that is in the winning region
         winning_nodes = self._win2.intersection(successors)
