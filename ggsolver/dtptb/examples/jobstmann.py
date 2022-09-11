@@ -38,7 +38,7 @@ if __name__ == '__main__':
     graph = game.graphify()
     win = SWinReach(graph)
     win.solve()
-    print(win.win1_act(5))
+    print(win.win1())
 
     # # Print the generated graph
     # print(f"Printing {graph}")
