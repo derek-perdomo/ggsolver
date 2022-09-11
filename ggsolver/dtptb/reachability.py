@@ -71,7 +71,6 @@ class SWinReach(Solver):
         # If we are not in the winning region pick an action to enter it
         else:
             target_nodes = self._win1.intersection(successors)
-        # TODO What to do when we are not in the winning region and no actions take us there ie p2 is sure winning?
         winning_actions = self.get_actions_from_nodes(node, target_nodes)
         return winning_actions
 
