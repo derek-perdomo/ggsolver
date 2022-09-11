@@ -54,36 +54,10 @@ class SWinReach(Solver):
         self._win2 = set(graph.nodes()).difference(set(self._attr[-1]))
 
     def pi1(self, node):
-        winning_actions = self.win1_act(node)
-        allowable_nodes = graph.successors(node)
-        allowable_actions = self.get_actions_from_nodes(node, allowable_nodes)
-
-        # If there are winning actions
-        if len(winning_actions) > 0 and self.strategy_type() == "deterministic":
-            return winning_actions[0]
-        elif len(winning_actions) > 0 and self.strategy_type() != "deterministic":
-            return random.choice(winning_actions)
-        # If there are no winning actions
-        elif len(winning_actions) == 0 and self.strategy_type() == "deterministic":
-            return allowable_actions[0]
-        elif len(winning_actions) == 0 and self.strategy_type() != "deterministic":
-            return random.choice(allowable_actions)
+        return self.pick_action(self.win1_act, node)
 
     def pi2(self, node):
-        winning_actions = self.win2_act(node)
-        allowable_nodes = graph.successors(node)
-        allowable_actions = self.get_actions_from_nodes(node, allowable_nodes)
-
-        # If there are winning actions
-        if len(winning_actions) > 0 and self.strategy_type() == "deterministic":
-            return winning_actions[0]
-        elif len(winning_actions) > 0 and self.strategy_type() != "deterministic":
-            return random.choice(winning_actions)
-        # If there are no winning actions
-        elif len(winning_actions) == 0 and self.strategy_type() == "deterministic":
-            return allowable_actions[0]
-        elif len(winning_actions) == 0 and self.strategy_type() != "deterministic":
-            return random.choice(allowable_actions)
+        return self.pick_action(self.win2_act, node)
 
     def win1_act(self, node):
         target_nodes = list()
@@ -115,6 +89,23 @@ class SWinReach(Solver):
         for target in target_nodes:
             actions.append((origin_node, target))
         return actions
+
+    def pick_action(self, winning_function, node):
+        winning_actions = winning_function(node)
+        allowable_nodes = graph.successors(node)
+        allowable_actions = self.get_actions_from_nodes(node, allowable_nodes)
+
+        # If there are winning actions
+        if len(winning_actions) > 0 and self.strategy_type() == "deterministic":
+            return winning_actions[0]
+        elif len(winning_actions) > 0 and self.strategy_type() != "deterministic":
+            return random.choice(winning_actions)
+        # If there are no winning actions
+        elif len(winning_actions) == 0 and self.strategy_type() == "deterministic":
+            return allowable_actions[0]
+        elif len(winning_actions) == 0 and self.strategy_type() != "deterministic":
+            return random.choice(allowable_actions)
+
 
 ASWinReach = SWinReach
 
@@ -148,4 +139,4 @@ if __name__ == '__main__':
     # Test solver
     solver = SWinReach(graph, final=final_states)
     solver.solve()
-    print(solver.pi1(s0))
+    print(solver.pi2(s0))
