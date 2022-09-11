@@ -32,15 +32,16 @@ class SWinReach(Solver):
             pre_1 = set()
             pre_2 = set()
             for node in current_win:
-                predecessors = graph.predecessors(node)
+                # TODO (MC). You need to use self._graph here.
+                predecessors = self._graph.predecessors(node)
                 # Check all predecessors of nodes in current winning region
                 for pred in predecessors:
                     # Add all nodes where turn=1
-                    if graph["turn"][pred] == "1":
+                    if self._graph["turn"][pred] == 1:
                         pre_1.add(pred)
                     # Add all nodes where turn=2 and edges only point to winning region
-                    if graph["turn"][pred] == "2":
-                        successors = graph.successors(pred)
+                    if self._graph["turn"][pred] == 2:
+                        successors = self._graph.successors(pred)
                         if set(successors).union(current_win) == current_win:
                             pre_2.add(pred)
             # Add a new attractor that is the union of these two sets and last attractor
@@ -51,7 +52,7 @@ class SWinReach(Solver):
             else:
                 self._attr.append(new_attr)
         self._win1 = set(self._attr[-1])
-        self._win2 = set(graph.nodes()).difference(set(self._attr[-1]))
+        self._win2 = set(self._graph.nodes()).difference(set(self._attr[-1]))
 
     def pi1(self, node):
         return self.pick_action(self.win1_act, node)
@@ -61,7 +62,7 @@ class SWinReach(Solver):
 
     def win1_act(self, node):
         target_nodes = list()
-        successors = set(graph.successors(node))
+        successors = set(self._graph.successors(node))
         # Check if we are in the winning region, if so use the attractors to find the best action
         if node in self._win1:
             for attractor in self._attr:
