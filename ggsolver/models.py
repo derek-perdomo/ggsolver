@@ -982,8 +982,8 @@ class Solver:
     def reset(self):
         """ Resets the internal variables to default values. """
         # Winning regions of the players
-        self.win1 = None
-        self.win2 = None
+        self._win1 = None
+        self._win2 = None
 
     def solve(self):
         """
@@ -1013,7 +1013,7 @@ class Solver:
         return self._win1
 
     def win2(self):
-        return self._win1
+        return self._win2
 
     def enabled_acts(self, node):
         pass
