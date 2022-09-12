@@ -56,7 +56,7 @@ with open("ggsolver/__init__.py") as fid:
 
 packages = [
     "ggsolver",
-    "ggsolver.spotaut",
+    "ggsolver.interfaces",
     "ggsolver.dtptb",
 ]
 
