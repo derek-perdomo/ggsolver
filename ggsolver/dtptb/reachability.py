@@ -60,27 +60,27 @@ class SWinReach(Solver):
         return self.pick_action(self.win2_act, node)
 
     def win1_act(self, node):
+        if node in final_states:
+            return list()
         target_nodes = list()
         successors = set(graph.successors(node))
         # Check if we are in the winning region, if so use the attractors to find the best action
-        if node in self._win1:
+        if node in self._win1 and graph["turn"][node] == "1":
             for attractor in self._attr:
                 if set(attractor).intersection(successors) != set():
                     target_nodes = list(set(attractor).intersection(successors))
                     break
-        # If we are not in the winning region pick an action to enter it
-        else:
-            target_nodes = self._win1.intersection(successors)
         winning_actions = self.get_actions_from_nodes(node, target_nodes)
         return winning_actions
 
     def win2_act(self, node):
-        successors = set(graph.successors(node))
-        # Winning moves are going to any node that is in the winning region
-        winning_nodes = self._win2.intersection(successors)
-
-        winning_actions = self.get_actions_from_nodes(node, winning_nodes)
-        return winning_actions
+        if node in self._win2 and graph["turn"][node] == "2":
+            successors = set(graph.successors(node))
+            target_nodes = self._win2.intersection(successors)
+            winning_actions = self.get_actions_from_nodes(node, target_nodes)
+            return winning_actions
+        else:
+            return list()
 
     def get_actions_from_nodes(self, origin_node, target_nodes):
         actions = list()
@@ -137,4 +137,8 @@ if __name__ == '__main__':
     # Test solver
     solver = SWinReach(graph, final=final_states)
     solver.solve()
-    print(solver.pi2(s0))
+    # print(solver.pi2(s4))
+    # solver.pi2(s0)
+    for n in graph.nodes():
+        print(n, " win1_acts: ", solver.win1_act(n))
+        print(n, " win2_acts: ", solver.win2_act(n))
