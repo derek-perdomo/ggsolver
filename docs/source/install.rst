@@ -29,7 +29,7 @@ images with an Python IDE such as `PyCharm <https://www.jetbrains.com/pycharm/>`
 Note that using PyCharm is not necessary, but it makes life easy!!
 
 
-Assuming Docker client is already installed on your OS, `abhibp1993:ggsolver:v0.1` docker image can be
+Assuming Docker client is already installed on your OS, `abhibp1993:ggsolver:latest` docker image can be
 downloaded by running::
 
     $ docker pull abhibp1993/ggsolver:v0.1
@@ -38,3 +38,9 @@ downloaded by running::
 The instructions to set up remote interpreter are given at
 `Configure a Remote Interpreter using Docker
 <https://www.jetbrains.com/help/pycharm/using-docker-as-a-remote-interpreter.html>`_.
+
+
+.. note::
+
+    The image `abhibp1993/ggsolver:latest` comes preinstalled with the latest version of ggsolver.
+    For the development, use `abhibp1993/ggsolver:devel` image.
