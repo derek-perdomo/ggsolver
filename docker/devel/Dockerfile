@@ -1,7 +1,9 @@
 FROM debian:bullseye
+
+# The version is the same as ggsolver version. It is updated automatically by rebuild.py
 LABEL maintainer="Abhishek N. Kulkarni" \
         email="abhi.bp1993@gmail.com" \
-        version="0.1"
+		version="0.1.2"
 
 
 # Install python

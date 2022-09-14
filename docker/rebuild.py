@@ -1,4 +1,17 @@
+"""
+This file should be run outside a docker image. Preferably from within top level `ggsolver` folder.
+"""
+
+from datetime import datetime
+import logging
 import os
+
+logging.basicConfig(
+    filename='docker/logs/rebuild.log',
+    encoding='utf-8',
+    level=logging.DEBUG,
+    format="[%(levelname)s] %(message)s"
+)
 
 
 class BColors:
@@ -38,31 +51,65 @@ class ColoredMsg:
         return f"{BColors.HEADER}{msg}{BColors.ENDC}"
 
 
+def get_ggsolver_version():
+    with open("ggsolver/__init__.py") as fid:
+        for line in fid:
+            if line.startswith("__version__"):
+                version_ = line.strip().split()[-1][1:-1]
+                break
+    return version_
+
+
+def update_dockerfile(fpath, version):
+    with open(fpath, "r") as file:
+        lines = file.readlines()
+        lines[5] = f'\t\tversion="{version}"\n'
+
+    with open(fpath, "w") as file:
+        file.writelines(lines)
+
+    logging.info(f"Updated {fpath} with version {version}.")
+
+
+def build_docker_image(image, fpath):
+    cmd = f"docker build -t {image} {fpath}"
+    print(ColoredMsg.ok(f"Running {cmd}"))
+    logging.info(f"Running {cmd}")
+
+    code = os.system(cmd)
+    if code == 0:
+        print(ColoredMsg.success(f"SUCCESS!! Updated {image} image."))
+        logging.info(f"SUCCESS!! Updated {image} image.")
+    else:
+        print(ColoredMsg.error(f"PROBLEMS!! Did NOT update {image} image."))
+        logging.error(f"PROBLEMS!! Did NOT update {image} image.")
+
+
+def push_docker_image(image):
+    cmd = f"docker push {image}"
+    print(ColoredMsg.ok(f"Running {cmd}"))
+    logging.info(f"Running {cmd}")
+
+    code = os.system(cmd)
+    if code == 0:
+        print(ColoredMsg.success(f"SUCCESS!! Pushed {image} image."))
+        logging.info(f"SUCCESS!! Pushed {image} image.")
+    else:
+        print(ColoredMsg.error(f"PROBLEMS!! Did NOT push {image} image."))
+        logging.info(f"PROBLEMS!! Did NOT push {image} image.")
+
+
 if __name__ == '__main__':
-    # Update ggsolver:latest image.
-    code = os.system(f"docker build -t abhibp1993/ggsolver:latest docker\latest")
-    if code == 0:
-        print(ColoredMsg.success(f"SUCCESS!! updated ggsolver:latest image"))
-    else:
-        print(ColoredMsg.error(f"PROBLEMS!! Did NOT update ggsolver:latest image"))
+    version = get_ggsolver_version()
+    logging.info(f"\n\n\t\t********** Running dockerfile rebuild script on {datetime.now()} ********** \n\n")
 
-    # Update ggsolver:devel image.
-    print(os.system(f"docker build -t abhibp1993/ggsolver:devel docker\devel"))
-    if code == 0:
-        print(ColoredMsg.success(f"SUCCESS!! updated ggsolver:devel image"))
-    else:
-        print(ColoredMsg.error(f"PROBLEMS!! Did NOT update ggsolver:devel image"))
+    # Update dockerfiles
+    update_dockerfile(fpath="docker/devel/Dockerfile", version=version)
+    update_dockerfile(fpath="docker/latest/Dockerfile", version=version)
 
-    # Push ggsolver:latest image.
-    print(os.system(f"docker push abhibp1993/ggsolver:devel"))
-    if code == 0:
-        print(ColoredMsg.success(f"SUCCESS!! Pushed ggsolver:latest image"))
-    else:
-        print(ColoredMsg.error(f"PROBLEMS!! Did NOT push ggsolver:latest image"))
+    # It's important to build `devel` first since `latest` is based on it.
+    build_docker_image(image="abhibp1993/ggsolver:devel", fpath="docker\devel")
+    push_docker_image(image="abhibp1993/ggsolver:devel")
 
-    # Push ggsolver:devel image.
-    print(os.system(f"docker push abhibp1993/ggsolver:latest"))
-    if code == 0:
-        print(ColoredMsg.success(f"SUCCESS!! Pushed ggsolver:devel image"))
-    else:
-        print(ColoredMsg.error(f"PROBLEMS!! Did NOT push ggsolver:devel image"))
+    build_docker_image(image="abhibp1993/ggsolver:latest", fpath="docker\latest")
+    push_docker_image(image="abhibp1993/ggsolver:latest")
