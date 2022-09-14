@@ -617,3 +617,12 @@ class Graph(IGraph):
         dot_graph = nx.nx_agraph.to_agraph(g)
         dot_graph.layout("dot")
         dot_graph.draw(fpath)
+
+    def is_isomorphic_to(self, other: 'Graph'):
+        """
+        Checks if the graph is isomorphic to the `other` graph.
+
+        :param other: (:class:`Graph` object) Graph to be checked for isomorphism with current graph.
+        :return: (bool) `True`, if graphs are isomorphic. Else, `False`.
+        """
+        return nx.is_isomorphic(self._graph, other._graph)
