@@ -91,7 +91,7 @@ class SpotAutomaton(Automaton):
         elif mp_cls.upper() == "P":
             return 'coBuchi', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
         else:  # cls.upper() == "T":
-            return 'parity', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
+            return 'parity min even', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
 
     def sigma(self):
         """

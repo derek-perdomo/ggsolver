@@ -5,11 +5,22 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 
 
-class Dfa(Automaton):
+class DFA(Automaton):
     def __init__(self, states, atoms, delta, init_state, final):
-        super(Dfa, self).__init__(states=states, atoms=atoms, init_state=init_state, final=final,
+        super(DFA, self).__init__(states=states, atoms=atoms, init_state=init_state, final=final,
                                   acc_cond=Automaton.ACC_REACH)
         self.delta = delta
+
+    def acc_cond(self):
+        pass
+
+
+class DBA(Automaton):
+    pass
+
+
+class DPA(Automaton):
+    pass
 
 
 if __name__ == '__main__':
@@ -36,11 +47,11 @@ if __name__ == '__main__':
     init_state_ = [1]
     final_ = [0]
 
-    dfa1 = Dfa(states_, atoms_, delta1, init_state_, final_)
+    dfa1 = DFA(states_, atoms_, delta1, init_state_, final_)
     dfa1_graph = dfa1.graphify()
     pprint(list(dfa1_graph["edge_label"].items()))
 
-    dfa2 = Dfa(states_, atoms_, delta2, init_state_, final_)
+    dfa2 = DFA(states_, atoms_, delta2, init_state_, final_)
     dfa2_graph = dfa2.graphify()
     pprint(list(dfa2_graph["edge_label"].items()))
 
