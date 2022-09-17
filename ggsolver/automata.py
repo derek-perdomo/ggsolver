@@ -1,8 +1,4 @@
 from ggsolver.models import Automaton
-import logging, sys
-logger = logging.getLogger()
-logger.addHandler(logging.StreamHandler(sys.stdout))
-logger.setLevel(logging.INFO)
 
 
 class DFA(Automaton):
@@ -58,5 +54,3 @@ class DPA(Automaton):
                                   final=final,
                                   is_deterministic=True,
                                   acc_cond=(Automaton.ACC_PARITY, 0))
-
-
