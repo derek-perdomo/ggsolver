@@ -871,20 +871,52 @@ class Game(TSys):
 
 class Automaton(GraphicalModel):
     """
-    Alphabet is powerset(atoms).
+    Represents an Automaton.
+
+    .. math::
+        \\mathcal{A} = (Q, \\Sigma := 2^{AP}, \\delta, q_0, F)
+
+    In the `Automaton` class, each component is represented as a function.
+
+    - The set of states :math:`Q` is represented by `Automaton.states` function,
+    - The set of atomic propositions :math:`AP` is represented by `Automaton.atoms` function,
+    - The set of symbols :math:`\\Sigma` is represented by `Automaton.sigma` function,
+    - The transition function :math:`\\delta` is represented by `Automaton.delta` function,
+    - The initial state :math:`q_0` is represented by `Automaton.init_state` function.
+
+    An automaton may have one of the following acceptance conditions:
+
+    - (:class:`Automaton.ACC_REACH`, 0)
+    - (:class:`Automaton.ACC_SAFETY`, 0)
+    - (:class:`Automaton.ACC_BUCHI`, 0)
+    - (:class:`Automaton.ACC_COBUCHI`, 0)
+    - (:class:`Automaton.ACC_PARITY`, 0)
+    - (:class:`Automaton.ACC_PREF_LAST`, None)
+    - (:class:`Automaton.ACC_ACC_PREF_MP`, None)
+
     """
     NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
-    ACC_REACH = "Reach"
-    ACC_SAFETY = "Safety"
-    ACC_BUCHI = "Buchi"
-    ACC_COBUCHI = "co-Buchi"
-    ACC_PARITY = "Parity Min Even"
-    ACC_PREF_LAST = "Preference Last"
-    ACC_PREF_MP = "Preference MostPreferred"
+    ACC_REACH = "Reach"                                 #:
+    ACC_SAFETY = "Safety"                               #:
+    ACC_BUCHI = "Buchi"                                 #:
+    ACC_COBUCHI = "co-Buchi"                            #:
+    ACC_PARITY = "Parity Min Even"                      #:
+    ACC_PREF_LAST = "Preference Last"                   #:
+    ACC_PREF_MP = "Preference MostPreferred"            #:
     ACC_UNDEFINED = "undefined"
+    ACC_TYPES = [
+        ACC_UNDEFINED,
+        ACC_REACH,
+        ACC_SAFETY,
+        ACC_BUCHI,
+        ACC_COBUCHI,
+        ACC_PARITY,
+        ACC_PREF_LAST,
+        ACC_PREF_MP
+    ]                                   #: Acceptance conditions supported by Automaton.
 
     def __init__(self, **kwargs):
         """
@@ -953,26 +985,55 @@ class Automaton(GraphicalModel):
     # ==========================================================================
     @register_property(GRAPH_PROPERTY)
     def atoms(self):
+        """
+        Returns a list/tuple of atomic propositions.
+
+        :return: (list of str) A list of atomic proposition.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
     @register_property(NODE_PROPERTY)
     def final(self, state):
+        """
+        Returns the acceptance set associated with the given state.
+
+        :param state: (an element of `self.states()`) A valid state.
+        :return: (int) Acceptance set associated with the given state.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
     def acc_type(self):
+        """
+        Acceptance type of the automaton.
+
+        :return: A value from :class:`Automaton.ACC_TYPES`.
+        """
         return self.acc_cond()[0]
 
     @register_property(GRAPH_PROPERTY)
     def acc_cond(self):
+        """
+        Acceptance condition of the automaton.
+
+        :return: (2-tuple) A value of type (acc_type, acc_set) where acc_type is from :class:`Automaton.ACC_TYPES`
+                 and acc_set is either an integer or a list of integer.
+        """
         return self.ACC_UNDEFINED, None
 
     @register_property(GRAPH_PROPERTY)
     def num_acc_sets(self):
+        """
+        Number of acceptance sets.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.num_acc_sets() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
     def is_complete(self):
+        """
+        Is the automaton complete? That is, is transition function well-defined at every state for any
+        input symbol?
+        """
         raise NotImplementedError
 
     # ==========================================================================
