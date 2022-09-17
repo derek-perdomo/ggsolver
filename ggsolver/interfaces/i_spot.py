@@ -4,7 +4,6 @@ Defines an interface from spot automaton to ggsolver automaton.
 
 import spot
 from ggsolver.models import Automaton, register_property
-from ggsolver.util import powerset
 from dd.autoref import BDD
 
 
@@ -92,14 +91,6 @@ class SpotAutomaton(Automaton):
             return 'coBuchi', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
         else:  # cls.upper() == "T":
             return 'parity min even', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
-
-    def sigma(self):
-        """
-        Set of symbols for automaton. Follows mathematical definition of automaton.
-        """
-        if len(self.atoms()) > 16:
-            raise ValueError("To many atoms. Currently support up to 16 atoms.")
-        return list(powerset(self.atoms()))
 
     def states(self):
         """ States of automaton. """
