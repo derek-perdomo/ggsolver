@@ -6,52 +6,57 @@ logger.setLevel(logging.INFO)
 
 
 class DFA(Automaton):
-    def __init__(self, states, atoms, delta, init_state, final):
-        super(DFA, self).__init__(states=states, atoms=atoms, init_state=init_state, final=final,
-                                  acc_cond=Automaton.ACC_REACH)
-        self.delta = delta
+    def __init__(self, states, atoms, trans_dict, init_state, final):
+        super(DFA, self).__init__(states=states,
+                                  atoms=atoms,
+                                  trans_dict=trans_dict,
+                                  init_state=init_state,
+                                  final=final,
+                                  is_deterministic=True,
+                                  acc_cond=(Automaton.ACC_REACH, 0))
 
-    def acc_cond(self):
-        pass
+
+class Monitor(Automaton):
+    def __init__(self, states, atoms, trans_dict, init_state, final):
+        super(Monitor, self).__init__(states=states,
+                                      atoms=atoms,
+                                      trans_dict=trans_dict,
+                                      init_state=init_state,
+                                      final=final,
+                                      is_deterministic=True,
+                                      acc_cond=(Automaton.ACC_SAFETY, 0))
 
 
 class DBA(Automaton):
-    pass
+    def __init__(self, states, atoms, trans_dict, init_state, final):
+        super(DBA, self).__init__(states=states,
+                                  atoms=atoms,
+                                  trans_dict=trans_dict,
+                                  init_state=init_state,
+                                  final=final,
+                                  is_deterministic=True,
+                                  acc_cond=(Automaton.ACC_BUCHI, 0))
+
+
+class DCBA(Automaton):
+    def __init__(self, states, atoms, trans_dict, init_state, final):
+        super(DCBA, self).__init__(states=states,
+                                   atoms=atoms,
+                                   trans_dict=trans_dict,
+                                   init_state=init_state,
+                                   final=final,
+                                   is_deterministic=True,
+                                   acc_cond=(Automaton.ACC_COBUCHI, 0))
 
 
 class DPA(Automaton):
-    pass
+    def __init__(self, states, atoms, trans_dict, init_state, final):
+        super(DPA, self).__init__(states=states,
+                                  atoms=atoms,
+                                  trans_dict=trans_dict,
+                                  init_state=init_state,
+                                  final=final,
+                                  is_deterministic=True,
+                                  acc_cond=(Automaton.ACC_PARITY, 0))
 
-
-if __name__ == '__main__':
-    from pprint import pprint
-
-    def delta1(state, inp):
-        # raise NotImplementedError(f"{self}.delta() function is not implemented.")
-        if state == 0:
-            return 0
-        if state == 1 and 'a' in inp:
-            return 0
-
-    def delta2(state, inp):
-        # raise NotImplementedError(f"{self}.delta() function is not implemented.")
-        if state == 0:
-            return 0
-        if state == 1 and 'b' in inp:
-            return 0
-        else:
-            return state
-
-    states_ = list(range(2))
-    atoms_ = ['a', 'b']
-    init_state_ = [1]
-    final_ = [0]
-
-    dfa1 = DFA(states_, atoms_, delta1, init_state_, final_)
-    dfa1_graph = dfa1.graphify()
-    pprint(list(dfa1_graph["edge_label"].items()))
-
-    dfa2 = DFA(states_, atoms_, delta2, init_state_, final_)
-    dfa2_graph = dfa2.graphify()
-    pprint(list(dfa2_graph["edge_label"].items()))
 
