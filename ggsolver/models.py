@@ -9,6 +9,7 @@ import logging
 import typing
 from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
+from ggsolver.logic import pl
 from functools import partial
 
 
@@ -880,27 +881,76 @@ class Automaton(GraphicalModel):
     ACC_SAFETY = "Safety"
     ACC_BUCHI = "Buchi"
     ACC_COBUCHI = "co-Buchi"
-    ACC_PARITY = "parity"
+    ACC_PARITY = "Parity Min Even"
+    ACC_PREF_LAST = "Preference Last"
+    ACC_PREF_MP = "Preference MostPreferred"
     ACC_UNDEFINED = "undefined"
 
-    def __init__(self, acc_cond=ACC_UNDEFINED, **kwargs):
+    def __init__(self, **kwargs):
+        """
+        Supported keyword arguments:
+
+        :param states: (Iterable) An iterable over states in the automaton.
+        :param atoms: (Iterable[str]) An iterable over atomic propositions in the automaton.
+        :param trans_dict: (dict) A dictionary defining the (deterministic) transition function of automaton.
+                      Format of dictionary: {state: {logic.PLFormula: state}}
+        :param init_state: (object) The initial state, a member of states iterable.
+        :param final: (Iterable[states]) The set of final states, a subset of states iterable.
+        :param acc_cond: (tuple) A tuple of automaton acceptance type and an acceptance set.
+            For example, DFA has an acceptance condition of `(Automaton.ACC_REACH, 0)`.
+        :param is_deterministic: (bool) Whether the Automaton is deterministic.
+        """
         super(Automaton, self).__init__(**kwargs)
 
-        # Default properties (will be treated as graph properties during serialization)
-        self._acc_cond = acc_cond
-        self._is_sbacc = kwargs["is_sbacc"] if "is_sbacc" in kwargs else None
-        self._is_complete = kwargs["is_complete"] if "is_complete" in kwargs else None
-        self._is_stutter_invariant = kwargs["is_stutter_invariant"] if "is_stutter_invariant" in kwargs else None
-        self._is_unambiguous = kwargs["is_unambiguous"] if "is_unambiguous" in kwargs else None
-        self._is_terminal = kwargs["is_terminal"] if "is_terminal" in kwargs else None
+        # Process keyword arguments
+        if "states" in kwargs:
+            def states_():
+                return list(kwargs["states"])
+            self.states = states_
+
+        if "atoms" in kwargs:
+            def atoms_():
+                return list(kwargs["atoms"])
+            self.atoms = atoms_
+
+        if "trans_dict" in kwargs:
+            def delta_(state, inp):
+                next_states = set()
+                for formula, n_state in kwargs["trans_dict"][state].items():
+                    if pl.evaluate(formula, inp):
+                        next_states.add(n_state)
+
+                if self.is_deterministic():
+                    if len(next_states) > 1:
+                        raise ValueError("Non-determinism detected in a deterministic automaton. " +
+                                         f"delta({state}, {inp}) -> {next_states}.")
+                    return next(iter(next_states), None) if len(next_states) == 1 else None
+
+                return next_states
+
+            self.delta = delta_
+
+        if "init_state" in kwargs:
+            self.initialize(kwargs["init_state"])
+
+        if "final" in kwargs:
+            def final_(state):
+                return 0 if state in kwargs["final"] else -1
+            self.final = final_
+
+        if "acc_cond" in kwargs:
+            def acc_cond_():
+                return kwargs["acc_cond"]
+            self.acc_cond = acc_cond_
+
+        if "is_deterministic" in kwargs:
+            def is_deterministic_():
+                return kwargs["is_deterministic"]
+            self.is_deterministic = is_deterministic_
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
-    @register_property(GRAPH_PROPERTY)
-    def acc_cond(self):
-        return self._acc_cond
-
     @register_property(GRAPH_PROPERTY)
     def atoms(self):
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
@@ -910,31 +960,29 @@ class Automaton(GraphicalModel):
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
+    def acc_type(self):
+        return self.acc_cond()[0]
+
+    @register_property(GRAPH_PROPERTY)
+    def acc_cond(self):
+        return self.ACC_UNDEFINED, None
+
+    @register_property(GRAPH_PROPERTY)
     def num_acc_sets(self):
         raise NotImplementedError(f"{self.__class__.__name__}.num_acc_sets() is not implemented.")
 
-    # ==========================================================================
-    # PUBLIC FUNCTIONS.
-    # ==========================================================================
-    @register_property(GRAPH_PROPERTY)
-    def is_sbacc(self):
-        return self._is_sbacc
-
     @register_property(GRAPH_PROPERTY)
     def is_complete(self):
-        return self._is_complete
+        raise NotImplementedError
 
-    @register_property(GRAPH_PROPERTY)
-    def is_stutter_invariant(self):
-        return self._is_stutter_invariant
-
-    @register_property(GRAPH_PROPERTY)
-    def is_unambiguous(self):
-        return self._is_unambiguous
-
-    @register_property(GRAPH_PROPERTY)
-    def is_terminal(self):
-        return self._is_terminal
+    # ==========================================================================
+    # FUNCTIONS TO BE IMPLEMENTED BY USER.
+    # ==========================================================================
+    def sigma(self):
+        """
+        Returns the set of alphabet of automaton. It is the powerset of atoms().
+        """
+        return list(util.powerset(self.atoms()))
 
 
 class Solver:
