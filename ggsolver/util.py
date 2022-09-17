@@ -55,6 +55,11 @@ class Distribution:
         return self.prob[self.domain.index(element)]
 
 
+def apply_atoms_limit(atoms):
+    if len(atoms) > 16:
+        raise ValueError("ggsolver supports atoms set up to size 16.")
+
+
 def powerset(iterable):
     s = list(iterable)
     return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
