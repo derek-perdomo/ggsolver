@@ -66,17 +66,17 @@ class SpotAutomaton(Automaton):
         # Set the acceptance condition (in ggsolver terms)
         name = self.spot_aut.acc().name()
         if name == "Büchi" and spot.mp_class(formula).upper() in ["B", "S"]:
-            self._acc_cond = Automaton.ACC_SAFETY
+            self._acc_cond = (Automaton.ACC_SAFETY, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["G"]:
-            self._acc_cond = Automaton.ACC_REACH
+            self._acc_cond = (Automaton.ACC_REACH, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["O", "R"]:
-            self._acc_cond = Automaton.ACC_REACH
+            self._acc_cond = (Automaton.ACC_BUCHI, 0)
         elif name == "co-Büchi":
-            self._acc_cond = Automaton.ACC_COBUCHI
+            self._acc_cond = (Automaton.ACC_COBUCHI, 0)
         elif name == "all":
-            self._acc_cond = Automaton.ACC_SAFETY
+            self._acc_cond = (Automaton.ACC_SAFETY, 0)
         else:  # name contains "parity":
-            self._acc_cond = Automaton.ACC_PARITY
+            self._acc_cond = (Automaton.ACC_PARITY, 0)
 
     def _determine_options(self):
         """
