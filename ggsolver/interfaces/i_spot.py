@@ -200,7 +200,7 @@ class SpotAutomaton(Automaton):
         Is the automaton semi-deterministic?
         See https://spot.lrde.epita.fr/doxygen/namespacespot.html#a56b3f00b7b93deafb097cad595998783
         """
-        return bool(spot.is_semi_deterministic()(self.spot_aut))
+        return bool(spot.is_semi_deterministic(self.spot_aut))
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def acc_name(self):
