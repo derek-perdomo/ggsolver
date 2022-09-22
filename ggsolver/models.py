@@ -4,6 +4,7 @@
 # TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
 # TODO. Instead of registering property function, register just name and then use getattr to
 #  find the appropriate function during serialization. This will allow rebinding functions.
+import copy
 import inspect
 import logging
 import typing
@@ -1044,6 +1045,27 @@ class Automaton(GraphicalModel):
         Returns the set of alphabet of automaton. It is the powerset of atoms().
         """
         return list(util.powerset(self.atoms()))
+
+    def from_automaton(self, aut: 'Automaton'):
+        """
+        Constructs a DFA from another Automaton instance.
+        The input automaton's acceptance condition must match that of a DFA.
+        """
+        assert aut.acc_cond() == self.acc_cond(), f"aut.acc_cond(): {aut.acc_cond()}, self.acc_cond(): {self.acc_cond()}"
+
+        # Copy all functions from automaton.
+        self.states = aut.states
+        self.delta = aut.delta
+        self._inp_domain = self.sigma
+
+        for gp in aut.GRAPH_PROPERTY:
+            setattr(self, gp, getattr(aut, gp))
+
+        for np in aut.NODE_PROPERTY:
+            setattr(self, np, getattr(aut, np))
+
+        for ep in aut.EDGE_PROPERTY:
+            setattr(self, ep, getattr(aut, ep))
 
 
 class Solver:
