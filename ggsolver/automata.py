@@ -1,6 +1,26 @@
 from ggsolver.models import Automaton
 
 
+def filter_kwargs(states=None, atoms=None, trans_dict=None, init_state=None, final=None):
+    kwargs = dict()
+    if states is not None:
+        kwargs["states"] = states
+
+    if atoms is not None:
+        kwargs["atoms"] = atoms
+
+    if trans_dict is not None:
+        kwargs["trans_dict"] = trans_dict
+
+    if init_state is not None:
+        kwargs["init_state"] = init_state
+
+    if final is not None:
+        kwargs["final"] = final
+
+    return kwargs
+
+
 class DFA(Automaton):
     """
     Represents a Deterministic Finite-state Automaton.
@@ -15,7 +35,7 @@ class DFA(Automaton):
     - `final(state)` function returns either `-1` to indicate that the state is not accepting or `0` to
       indicate that the state is accepting with acceptance set `0`.
     """
-    def __init__(self, states, atoms, trans_dict, init_state, final):
+    def __init__(self, states=None, atoms=None, trans_dict=None, init_state=None, final=None):
         """
         Constructs a DFA.
 
@@ -26,11 +46,8 @@ class DFA(Automaton):
         :param init_state: (object) The initial state, a member of states iterable.
         :param final: (Iterable[states]) The set of final states, a subset of states iterable.
         """
-        super(DFA, self).__init__(states=states,
-                                  atoms=atoms,
-                                  trans_dict=trans_dict,
-                                  init_state=init_state,
-                                  final=final,
+        kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
+        super(DFA, self).__init__(**kwargs,
                                   is_deterministic=True,
                                   acc_cond=(Automaton.ACC_REACH, 0))
 
@@ -49,7 +66,7 @@ class Monitor(Automaton):
     - `final(state)` function returns either `-1` to indicate that the state is not accepting or `0` to
       indicate that the state is accepting with acceptance set `0`.
     """
-    def __init__(self, states, atoms, trans_dict, init_state, final):
+    def __init__(self, states=None, atoms=None, trans_dict=None, init_state=None, final=None):
         """
         Constructs a Monitor.
 
@@ -60,11 +77,8 @@ class Monitor(Automaton):
         :param init_state: (object) The initial state, a member of states iterable.
         :param final: (Iterable[states]) The set of final states, a subset of states iterable.
         """
-        super(Monitor, self).__init__(states=states,
-                                      atoms=atoms,
-                                      trans_dict=trans_dict,
-                                      init_state=init_state,
-                                      final=final,
+        kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
+        super(Monitor, self).__init__(**kwargs,
                                       is_deterministic=True,
                                       acc_cond=(Automaton.ACC_SAFETY, 0))
 
@@ -83,7 +97,7 @@ class DBA(Automaton):
     - `final(state)` function returns either `-1` to indicate that the state is not accepting or `0` to
       indicate that the state is accepting with acceptance set `0`.
     """
-    def __init__(self, states, atoms, trans_dict, init_state, final):
+    def __init__(self, states=None, atoms=None, trans_dict=None, init_state=None, final=None):
         """
         Constructs a DBA.
 
@@ -94,11 +108,8 @@ class DBA(Automaton):
         :param init_state: (object) The initial state, a member of states iterable.
         :param final: (Iterable[states]) The set of final states, a subset of states iterable.
         """
-        super(DBA, self).__init__(states=states,
-                                  atoms=atoms,
-                                  trans_dict=trans_dict,
-                                  init_state=init_state,
-                                  final=final,
+        kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
+        super(DBA, self).__init__(**kwargs,
                                   is_deterministic=True,
                                   acc_cond=(Automaton.ACC_BUCHI, 0))
 
@@ -117,7 +128,7 @@ class DCBA(Automaton):
     - `final(state)` function returns either `-1` to indicate that the state is not accepting or `0` to
       indicate that the state is accepting with acceptance set `0`.
     """
-    def __init__(self, states, atoms, trans_dict, init_state, final):
+    def __init__(self, states=None, atoms=None, trans_dict=None, init_state=None, final=None):
         """
         Constructs a DCBA.
 
@@ -128,11 +139,8 @@ class DCBA(Automaton):
         :param init_state: (object) The initial state, a member of states iterable.
         :param final: (Iterable[states]) The set of final states, a subset of states iterable.
         """
-        super(DCBA, self).__init__(states=states,
-                                   atoms=atoms,
-                                   trans_dict=trans_dict,
-                                   init_state=init_state,
-                                   final=final,
+        kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
+        super(DCBA, self).__init__(**kwargs,
                                    is_deterministic=True,
                                    acc_cond=(Automaton.ACC_COBUCHI, 0))
 
@@ -149,8 +157,10 @@ class DPA(Automaton):
 
     - Number of Acceptance Sets: `k`, where `k` is a positive integer.
     - `final(state)` a value between `0` and `k-1` to indicate that the color of a state.
+
+    .. note:: The DPA definition is not stable. DO NOT USE IT!
     """
-    def __init__(self, states, atoms, trans_dict, init_state, final):
+    def __init__(self, states=None, atoms=None, trans_dict=None, init_state=None, final=None):
         """
         Constructs a DPA.
 
@@ -161,9 +171,7 @@ class DPA(Automaton):
         :param init_state: (object) The initial state, a member of states iterable.
         :param final: (dict[state: int]) A state to color mapping.
         """
-        super(DPA, self).__init__(states=states,
-                                  atoms=atoms,
-                                  trans_dict=trans_dict,
-                                  init_state=init_state,
+        kwargs = filter_kwargs(states, atoms, trans_dict, init_state, None)
+        super(DPA, self).__init__(**kwargs,
                                   is_deterministic=True,
                                   acc_cond=(Automaton.ACC_PARITY, 0))
