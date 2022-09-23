@@ -627,6 +627,9 @@ class Graph(IGraph):
         """
         return nx.is_isomorphic(self._graph, other._graph)
 
+    def base_graph(self):
+        return self._graph
+
 
 class SubGraph(Graph):
     """
