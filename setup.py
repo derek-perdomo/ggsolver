@@ -57,7 +57,6 @@ with open("ggsolver/__init__.py") as fid:
 packages = [
     "ggsolver",
     "ggsolver.interfaces",
-    "ggsolver.dtptb",
 ]
 
 install_requires = []
