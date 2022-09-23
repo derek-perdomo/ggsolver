@@ -655,11 +655,43 @@ class SubGraph(Graph):
     def show_node(self, uid):
         self._hidden_nodes.discard(uid)
 
+    def hide_nodes(self, ulist):
+        self._hidden_nodes.update(set(ulist))
+
+    def show_nodes(self, ulist):
+        for uid in ulist:
+            self._hidden_nodes.discard(uid)
+
+    def hidden_nodes(self):
+        return self._hidden_nodes
+
+    def visible_nodes(self):
+        return list(set(self._graph.nodes()) - set(self.hidden_nodes()))
+
+    def number_of_visible_nodes(self):
+        return self.number_of_nodes() - len(self._hidden_nodes)
+
     def hide_edge(self, uid, vid, key):
         self._hidden_edges.add((uid, vid, key))
 
+    def hide_edges(self, elist):
+        self._hidden_edges.update(set(elist))
+
     def show_edge(self, uid, vid, key):
         self._hidden_edges.discard((uid, vid, key))
+
+    def show_edges(self, elist):
+        for uid, vid, key in elist:
+            self._hidden_edges.discard((uid, vid, key))
+
+    def hidden_edges(self):
+        return self._hidden_edges
+
+    def visible_edges(self):
+        return list(set(self._graph.edges()) - set(self.hidden_edges()))
+
+    def number_of_visible_edges(self):
+        return self.number_of_edges() - len(self._hidden_edges)
 
     def add_node(self):
         """
