@@ -816,6 +816,34 @@ class Game(TSys):
                                    **kwargs)
         self._is_turn_based = is_turn_based
 
+        # Process keyword arguments
+        if "states" in kwargs:
+            def states_():
+                return list(kwargs["states"])
+
+            self.states = states_
+
+        if "actions" in kwargs:
+            def actions_():
+                return list(kwargs["actions"])
+
+            self.actions = actions_
+
+        if "trans_dict" in kwargs:
+            def delta_(state, inp):
+                return kwargs["trans_dict"][state][inp]
+
+            self.delta = delta_
+
+        if "init_state" in kwargs:
+            self.initialize(kwargs["init_state"])
+
+        if "final" in kwargs:
+            def final_(state):
+                return 0 if state in kwargs["final"] else -1
+
+            self.final = final_
+
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
