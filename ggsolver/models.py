@@ -1076,8 +1076,8 @@ class Automaton(GraphicalModel):
 
     def from_automaton(self, aut: 'Automaton'):
         """
-        Constructs a DFA from another Automaton instance.
-        The input automaton's acceptance condition must match that of a DFA.
+        Constructs an Automaton from another Automaton instance.
+        The input automaton's acceptance condition must match that of a current Automaton.
         """
         assert aut.acc_cond() == self.acc_cond(), f"aut.acc_cond(): {aut.acc_cond()}, self.acc_cond(): {self.acc_cond()}"
 
