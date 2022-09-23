@@ -638,63 +638,84 @@ class SubGraph(Graph):
     """
     def __init__(self, graph, hidden_nodes=None, hidden_edges=None):
         super(SubGraph, self).__init__()
-        self._graph = nx.subgraph_view(graph._graph, self.is_node_visible, self.is_edge_visible)
-        self._hidden_nodes = set() if hidden_nodes is None else set(hidden_nodes)
-        self._hidden_edges = set() if hidden_edges is None else set(hidden_edges)
+        # Internal representation
+        self._base_graph = graph
+        self._graph = nx.subgraph_view(self._base_graph.base_graph(), self.is_node_visible, self.is_edge_visible)
+        # self._hidden_nodes = set() if hidden_nodes is None else set(hidden_nodes)
+        # self._hidden_edges = set() if hidden_edges is None else set(hidden_edges)
+        self._hidden_nodes = NodePropertyMap(self._base_graph, default=False)
+        self._hidden_edges = EdgePropertyMap(self._base_graph, default=False)
+        self._base_graph["hidden_nodes"] = self._hidden_nodes
+        self._base_graph["hidden_edges"] = self._hidden_edges
+
+        # Initialize hidden nodes and edges
+        if hidden_nodes is not None:
+            for uid in hidden_nodes:
+                self._hidden_nodes[uid] = True
+
+        if hidden_edges is not None:
+            for edge in hidden_edges:
+                self._hidden_edges[edge] = True
+
+        # Map node, edge and graph properties
+        self._node_properties = graph._node_properties
+        self._edge_properties = graph._edge_properties
+        self._graph_properties = graph._graph_properties
 
     def __str__(self):
         return f"<SubGraph of {self._graph}>"
 
     def is_node_visible(self, uid):
-        return uid not in self._hidden_nodes
+        return not self._hidden_nodes[uid]
 
     def is_edge_visible(self, uid, vid, key):
         # print(f"Checking {uid, vid, key} not in {self._hidden_edges}")
-        return (uid, vid, key) not in self._hidden_edges
+        return not self._hidden_edges[(uid, vid, key)]
 
     def hide_node(self, uid):
-        self._hidden_nodes.add(uid)
+        self._hidden_nodes[uid] = True
 
     def show_node(self, uid):
-        self._hidden_nodes.discard(uid)
+        self._hidden_nodes[uid] = False
 
     def hide_nodes(self, ulist):
-        self._hidden_nodes.update(set(ulist))
+        map(self.hide_node, ulist)
+        # self._hidden_nodes.update(set(ulist))
 
     def show_nodes(self, ulist):
-        for uid in ulist:
-            self._hidden_nodes.discard(uid)
+        map(self.show_node, ulist)
+        # for uid in ulist:
+        #     self._hidden_nodes.discard(uid)
 
     def hidden_nodes(self):
-        return self._hidden_nodes
+        return [uid for uid, value in self._hidden_nodes.items() if value is True]
 
     def visible_nodes(self):
-        return list(set(self._graph.nodes()) - set(self.hidden_nodes()))
+        return [uid for uid, value in self._hidden_nodes.items() if value is False]
 
     def number_of_visible_nodes(self):
-        return self.number_of_nodes() - len(self._hidden_nodes)
+        return self.number_of_nodes() - len(self.hidden_nodes())
 
     def hide_edge(self, uid, vid, key):
-        self._hidden_edges.add((uid, vid, key))
-
-    def hide_edges(self, elist):
-        self._hidden_edges.update(set(elist))
+        self._hidden_edges[(uid, vid, key)] = True
 
     def show_edge(self, uid, vid, key):
-        self._hidden_edges.discard((uid, vid, key))
+        self._hidden_edges[(uid, vid, key)] = False
+
+    def hide_edges(self, elist):
+        map(self.hide_edge, elist)
 
     def show_edges(self, elist):
-        for uid, vid, key in elist:
-            self._hidden_edges.discard((uid, vid, key))
+        map(self.show_edge, elist)
 
     def hidden_edges(self):
-        return self._hidden_edges
+        return [edge for edge, value in self._hidden_edges.items() if value is True]
 
     def visible_edges(self):
-        return list(set(self._graph.edges()) - set(self.hidden_edges()))
+        return [edge for edge, value in self._hidden_edges.items() if value is False]
 
     def number_of_visible_edges(self):
-        return self.number_of_edges() - len(self._hidden_edges)
+        return self.number_of_edges() - len(self.hidden_edges())
 
     def add_node(self):
         """
@@ -886,48 +907,7 @@ class SubGraph(Graph):
 
         :return: (dict) Serialized graph
         """
-        # Initialize a graph dictionary
-        graph = dict()
-
-        # Add nodes
-        graph["nodes"] = self.number_of_nodes()
-
-        # Add edges
-        graph["edges"] = dict()
-        for uid in range(self.number_of_nodes()):
-            successors = list(self.successors(uid))
-            if len(list(successors)) == 0:
-                continue
-
-            graph["edges"][uid] = dict()
-            for vid in successors:
-                graph["edges"][uid].update({vid: self._graph.number_of_edges(uid, vid)})
-
-        # Add node properties
-        # graph["node_properties"] = self._node_properties
-        # graph["edge_properties"] = {
-        #     prop_name: [
-        #         {
-        #             "edge": edge,
-        #             "pvalue": pvalue
-        #         }
-        #         for edge, pvalue in prop_value.items()
-        #     ]
-        #     for prop_name, prop_value in self._edge_properties.items()
-        # }
-        graph["node_properties"] = {p_name: prop.serialize() for p_name, prop in self._node_properties.items()}
-        graph["edge_properties"] = {p_name: prop.serialize() for p_name, prop in self._edge_properties.items()}
-        graph["graph_properties"] = self._graph_properties
-
-        # # Warn about any properties that were ignored.
-        # ignored_attr = set(self.__dict__.keys()) - set(self._graph_properties.keys())
-        # print(util.BColors.WARNING, f"[WARN] Attributes {ignored_attr} were not serialized because they are not "
-        #                             f"node/edge/graph properties.", util.BColors.ENDC)
-
-        # TODO. Add metadata such as time of serialization, serializer version etc.
-        obj_dict = {"graph": graph}
-
-        # Return serialized object
+        obj_dict = self._base_graph.serialize()
         return obj_dict
 
     @classmethod
