@@ -1,4 +1,4 @@
-# TODO. Try implementing dtptb package.
+ # TODO. Try implementing dtptb package.
 # TODO. Add logging statements.
 # TODO. Make note that user will not be warned of any private attributes that are unserialized.
 # TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
@@ -39,9 +39,8 @@ class GraphicalModel:
         self._is_deterministic = is_deterministic
         self._is_probabilistic = is_probabilistic
 
-        # Input domain (Expected value: A function that returns an Iterable object.)
-        self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
-        self._inp_name = kwargs["input_name"] if "input_name" in kwargs else None
+        # Input domain (Expected value: Name of the function that returns an Iterable object.)
+        self._input = kwargs["inputs"] if "inputs" in kwargs else None
 
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
@@ -91,8 +90,8 @@ class GraphicalModel:
         Assumes: self._add_nodes_to_graph() is called before and self.__states is cached.
         """
         try:
-            inputs = self._inp_domain()
-            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.inp_domain must be a list/tuple."
+            inputs = getattr(self, self._input)()
+            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.{self._input}() must be a list/tuple."
         except TypeError:
             logging.error(util.ColoredMsg.error(f"[ERROR] Input domain of {self} is not set. No edges were added."))
             return
@@ -161,14 +160,17 @@ class GraphicalModel:
                                     f"self.is_quantitative:{self.is_probabilistic}.")
 
         # Update the properties with graph
-        graph["inp_domain"] = inputs
+        if self._input not in self.GRAPH_PROPERTY:
+            graph["inp_domain"] = inputs
+            graph["input_name"] = self._input
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
+        else:
+            logging.info(util.ColoredMsg.ok(f"[INFO] Queuing graph property: {self._input} instead of inp_domain. OK"))
+
         graph["prob"] = property_prob
         graph["input"] = property_inp
-        if self._inp_name is not None:
-            graph[self._inp_name] = property_inp
 
         # Logging and printing
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. OK."))
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: prob. OK."))
 
@@ -671,10 +673,10 @@ class TSys(GraphicalModel):
         :param input_name: (optional, str). The name of input property during graphify().
         :param init_state: (optional, JSON-serializable object). The initial state of the transition system.
         """
-        super(TSys, self).__init__(input_domain=self.actions,
-                                   is_deterministic=is_deterministic,
-                                   is_probabilistic=is_probabilistic,
-                                   **kwargs)
+        kwargs["inputs"] = "actions" if "inputs" not in kwargs else kwargs["inputs"]
+        kwargs["is_deterministic"] = is_deterministic
+        kwargs["is_probabilistic"] = is_probabilistic
+        super(TSys, self).__init__(**kwargs)
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -811,9 +813,9 @@ class Game(TSys):
     GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_turn_based=True, is_deterministic=True, is_probabilistic=False, **kwargs):
-        super(Game, self).__init__(is_deterministic=is_deterministic,
-                                   is_probabilistic=is_probabilistic,
-                                   **kwargs)
+        kwargs["is_deterministic"] = is_deterministic
+        kwargs["is_probabilistic"] = is_probabilistic
+        super(Game, self).__init__(**kwargs)
         self._is_turn_based = is_turn_based
 
         # Process keyword arguments
@@ -961,6 +963,7 @@ class Automaton(GraphicalModel):
             For example, DFA has an acceptance condition of `(Automaton.ACC_REACH, 0)`.
         :param is_deterministic: (bool) Whether the Automaton is deterministic.
         """
+        kwargs["inputs"] = "sigma" if "inputs" not in kwargs else kwargs["inputs"]
         super(Automaton, self).__init__(**kwargs)
 
         # Process keyword arguments
