@@ -22,11 +22,13 @@ def filter_kwargs(states=None, actions=None, trans_dict=None, init_state=None, f
 
 
 class QualitativeMDP(Game):
+    """
+    delta(s, a) -> [s]
+    """
     def __init__(self, states=None, actions=None, trans_dict=None, init_state=None, final=None):
         kwargs = filter_kwargs(states, actions, trans_dict, init_state, final)
         super(QualitativeMDP, self).__init__(
             **kwargs,
-            input_domain=self.actions,
             is_deterministic=False,
             is_probabilistic=False,
             is_turn_based=False
