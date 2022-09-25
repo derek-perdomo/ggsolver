@@ -6,7 +6,7 @@ from ggsolver.mdp.models import QualitativeMDP
 
 if __name__ == '__main__':
     mdp = QualitativeMDP(
-        states=[f"s{i}" for i in range(8)],
+        states=[f"s{i}" for i in range(8)] + ["sink"],
         actions=['alpha', 'beta'],
         trans_dict={
             "s0": {'alpha': ["s1"], 'beta': ["s2", "s4"]},
