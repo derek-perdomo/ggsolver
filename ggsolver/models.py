@@ -245,7 +245,10 @@ class GraphicalModel:
                 graph[p_name] = p_func()
                 logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
             elif inspect.isfunction(p_func):
-                graph[p_name] = p_func(self)
+                if len(inspect.signature(p_func).parameters) == 0:
+                    graph[p_name] = p_func()
+                else:
+                    graph[p_name] = p_func(self)
                 logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
             # elif inspect.ismethod(p_func):
             #     graph[p_name] = p_func()
