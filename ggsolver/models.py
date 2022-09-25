@@ -110,7 +110,7 @@ class GraphicalModel:
 
                 # There are three types of graphical models. Handle each separately.
                 # If model is deterministic, next states is a single state.
-                if self.is_deterministic:
+                if self.is_deterministic():
                     try:
                         uid = self.__states.index(state)
                         vid = self.__states.index(next_states)
@@ -124,7 +124,7 @@ class GraphicalModel:
                         )
 
                 # If model is non-deterministic, next states is an Iterable of states.
-                elif not self.is_deterministic and not self.is_probabilistic:
+                elif not self.is_deterministic() and not self.is_probabilistic():
                     for next_state in next_states:
                         try:
                             uid = self.__states.index(state)
@@ -139,7 +139,7 @@ class GraphicalModel:
                             )
 
                 # If model is stochastic, next states is a Distribution of states.
-                elif not self.is_deterministic and self.is_probabilistic:
+                elif not self.is_deterministic() and self.is_probabilistic():
                     for next_state in next_states.support():
                         try:
                             uid = self.__states.index(state)
@@ -156,8 +156,8 @@ class GraphicalModel:
 
                 else:
                     raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
-                                    f"Check the values: is_deterministic: {self.is_deterministic}, "
-                                    f"self.is_quantitative:{self.is_probabilistic}.")
+                                    f"Check the values: is_deterministic: {self.is_deterministic()}, "
+                                    f"self.is_quantitative:{self.is_probabilistic()}.")
 
         # Update the properties with graph
         if self._input not in self.GRAPH_PROPERTY:
