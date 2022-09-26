@@ -630,6 +630,9 @@ class Graph(IGraph):
     def base_graph(self):
         return self._graph
 
+    def reverse(self):
+        return self._graph.reverse(copy=False)
+
 
 class SubGraph(Graph):
     """
