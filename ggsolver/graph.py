@@ -6,6 +6,7 @@ License goes here...
 import json
 import os
 import pickle
+from functools import reduce
 
 import networkx as nx
 from ggsolver import util
@@ -631,7 +632,18 @@ class Graph(IGraph):
         return self._graph
 
     def reverse(self):
+        """
+        Return a SubGraph.
+        """
         return self._graph.reverse(copy=False)
+
+    def bfs_layers(self, sources):
+        return nx.bfs_layers(self._graph, sources)
+
+    def reverse_bfs(self, sources):
+        rev_graph = self._graph.reverse()
+        reachable_nodes = set(reduce(set.union, list(map(set, nx.bfs_layers(rev_graph, sources)))))
+        return reachable_nodes
 
 
 class SubGraph(Graph):
@@ -694,7 +706,8 @@ class SubGraph(Graph):
         return [uid for uid, value in self._hidden_nodes.items() if value is True]
 
     def visible_nodes(self):
-        return [uid for uid, value in self._hidden_nodes.items() if value is False]
+        # return [uid for uid, value in self._hidden_nodes.items() if value is False]
+        return list(set(self.nodes()) - set(self.hidden_nodes()))
 
     def number_of_visible_nodes(self):
         return self.number_of_nodes() - len(self.hidden_nodes())
@@ -715,7 +728,8 @@ class SubGraph(Graph):
         return [edge for edge, value in self._hidden_edges.items() if value is True]
 
     def visible_edges(self):
-        return [edge for edge, value in self._hidden_edges.items() if value is False]
+        # return [edge for edge, value in self._hidden_edges.items() if value is False]
+        return list(set(self.edges()) - set(self.hidden_edges()))
 
     def number_of_visible_edges(self):
         return self.number_of_edges() - len(self.hidden_edges())
