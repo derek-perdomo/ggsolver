@@ -62,7 +62,7 @@ class SpecDFA(models.Automaton):
         return state == 1
 
     def acc_cond(self):
-        return models.Automaton.REACHABILITY
+        return models.Automaton.ACC_REACH
 
 
 if __name__ == '__main__':

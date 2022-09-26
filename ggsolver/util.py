@@ -17,6 +17,28 @@ class BColors:
     UNDERLINE = '\033[4m'
 
 
+class ColoredMsg:
+    @staticmethod
+    def ok(msg):
+        return f"{BColors.OKCYAN}{msg}{BColors.ENDC}"
+
+    @staticmethod
+    def warn(msg):
+        return f"{BColors.WARNING}{msg}{BColors.ENDC}"
+
+    @staticmethod
+    def success(msg):
+        return f"{BColors.OKGREEN}{msg}{BColors.ENDC}"
+
+    @staticmethod
+    def error(msg):
+        return f"{BColors.FAIL}{msg}{BColors.ENDC}"
+
+    @staticmethod
+    def header(msg):
+        return f"{BColors.HEADER}{msg}{BColors.ENDC}"
+
+
 class Distribution:
     def __init__(self, domain, prob):
         assert all(isinstance(element, int) for element in domain)
@@ -31,6 +53,11 @@ class Distribution:
 
     def pmf(self, element):
         return self.prob[self.domain.index(element)]
+
+
+def apply_atoms_limit(atoms):
+    if len(atoms) > 16:
+        raise ValueError("ggsolver supports atoms set up to size 16.")
 
 
 def powerset(iterable):

@@ -14,3 +14,6 @@ cmake-build-debug/
 */__pycache__/*
 
 *.pyc
+examples/.ipynb_checkpoints/
+
+examples/interfaces/.ipynb_checkpoints/

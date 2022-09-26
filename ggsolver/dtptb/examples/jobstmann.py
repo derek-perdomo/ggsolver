@@ -1,5 +1,5 @@
 from ggsolver.models import *
-from ggsolver.zlk.reachability import *
+from ggsolver.dtptb.reachability import *
 from pprint import pprint
 
 
@@ -36,10 +36,9 @@ class JobstmannGame(Game):
 if __name__ == '__main__':
     game = JobstmannGame(final={3, 4})
     graph = game.graphify()
-    win = SureWinReach(graph)
-    win.set_final()
+    win = SWinReach(graph)
     win.solve()
-    print(win.p1_win(5))
+    print(win.win1_act(5))
 
     # # Print the generated graph
     # print(f"Printing {graph}")
