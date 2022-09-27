@@ -37,6 +37,7 @@ class SASIReach(Solver):
             set_w = ASWinReach(self._graph, final=set_r)
             set_w.solve()
             set_w = set_w.win1()
+            print(f"set_r={[self._graph['state'][node] for node in set_r]}")
             print(f"set_w={[self._graph['state'][node] for node in set_w]}")
 
             set_r = set()
@@ -46,7 +47,6 @@ class SASIReach(Solver):
                     set_r.add((si, 1))
 
             set_r = {node for node in self._graph.nodes() if self._graph["state"][node] in set_r}
-            print(f"set_r={[self._graph['state'][node] for node in set_r]}")
 
             if iter_count == 0:
                 set_cal_w.insert(0, set(self._graph.nodes()) - set_w)
@@ -57,4 +57,9 @@ class SASIReach(Solver):
             iter_count += 1
 
         self._win1 = set_cal_w
-        print(f"win1={[[self._graph['state'][node] for node in level] for level in self._win1]}")
+        print("------ win ---------")
+        iter_count = 0
+        for level in set_cal_w:
+            print(iter_count, [self._graph['state'][node] for node in level])
+            iter_count += 1
+        # print(f"win1={[[self._graph['state'][node] for node in level] for level in self._win1]}")
