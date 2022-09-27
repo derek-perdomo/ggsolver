@@ -1200,3 +1200,6 @@ class Solver:
 
     def strategy_type(self):
         return self._strategy_type
+
+    def graph(self):
+        return self._graph
