@@ -1,5 +1,7 @@
 import itertools
 
+from ggsolver.inc_pbp.models import PrefModel, ImprovementMDP
+from ggsolver.inc_pbp.reachability import SASIReach
 from ggsolver.models import register_property
 from ggsolver.mdp.models import QualitativeMDP
 from ggsolver.gridworld import util
@@ -59,7 +61,7 @@ class MDPGridworld(QualitativeMDP):
 
         # Manage battery constraint
         if batt == 0:
-            return state
+            return [state]
         else:
             n_batt = batt - 1
 
@@ -118,6 +120,22 @@ if __name__ == '__main__':
         goals=[(0, 0), (1, 1)],
         accessibility_trans={(0, 0): [(1, 1)]}
     )
+
     pprint(len(gw.states()))
     pprint(gw.actions())
     pprint(gw.delta((0, 1, 1, (True, False)), util.GW_ACT_W))
+    pprint(gw.delta((0, 0, 0, (False, False)), util.GW_ACT_W))
+
+    outcome_1 = [st for st in gw.states() if tuple(st[0:2]) == (0, 0)]
+    outcome_2 = [st for st in gw.states() if tuple(st[0:2]) == (0, 0)]
+
+    pref = PrefModel(
+        outcomes={1: outcome_1, 2: outcome_2},
+        pref=[(2, 1)]
+    )
+
+    imdp = ImprovementMDP(gw, pref)
+    imdp_graph = imdp.graphify()
+    final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
+    sasi = SASIReach(imdp_graph, final=final_nodes)
+    sasi.solve()
