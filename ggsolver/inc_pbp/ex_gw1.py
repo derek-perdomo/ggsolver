@@ -10,7 +10,7 @@ from ggsolver.gridworld import util
 class MDPGridworld(QualitativeMDP):
     GRAPH_PROPERTY = QualitativeMDP.GRAPH_PROPERTY.copy()
 
-    def __init__(self, dim, batt, obstacles, goals, accessibility_trans):
+    def __init__(self, dim, batt, obstacles, goals, accessibility_trans, restrict_acts=None):
         """
         dim: (ROWS, COLS) of gridworld
         batt: maximum charge of robot battery
@@ -28,6 +28,7 @@ class MDPGridworld(QualitativeMDP):
         self._obs = obstacles
         self._goals = goals
         self._accessibility_trans = accessibility_trans
+        self._restrict_acts = restrict_acts if restrict_acts is not None else dict()
 
         # Helper variable (stochasticity of actions)
         self._stochasticity = {
@@ -66,6 +67,12 @@ class MDPGridworld(QualitativeMDP):
             n_batt = batt - 1
 
         # Cell transition
+        # 1. Handle restricted actions
+        if (row, col) in self._restrict_acts:
+            if act not in self._restrict_acts[row, col]:
+                act = util.GW_ACT_STAY
+
+        # 2. Apply cell transition
         next_cells = self._apply_non_det_actions((row, col), act)
         next_cells = util.bouncy_wall((row, col), next_cells, self.dim())
         next_cells = util.bouncy_obstacle((row, col), next_cells, self.obs())
@@ -112,26 +119,68 @@ class MDPGridworld(QualitativeMDP):
 
 if __name__ == '__main__':
     from pprint import pprint
-    # gw = MDPGridworld(dim=(3, 3), batt=3, goals=[(0, 0), (1, 1)])
+
+    outcomes = {
+        0: (0, 0),
+        1: (2, 3),
+        2: (0, 4),
+        3: (2, 0),
+        4: (5, 0),
+        5: (3, 0),
+        6: (5, 5),
+
+    }
+
     gw = MDPGridworld(
-        dim=(3, 3),
-        batt=3,
+        dim=(6, 6),
+        batt=10,
         obstacles=[],
-        goals=[(0, 0), (1, 1)],
-        accessibility_trans={(0, 0): [(1, 1)]}
+        goals=list(outcomes.values()),
+        accessibility_trans={
+            outcomes[0]: [],                                # 0 (E)
+            outcomes[1]: [outcomes[2], outcomes[3]],        # 1
+            outcomes[2]: [outcomes[4], outcomes[5]],        # 2
+            outcomes[3]: [outcomes[6]],                     # 3
+            outcomes[4]: [],                                # 4
+            outcomes[5]: [],                                # 5
+            outcomes[6]: []                                 # 6
+        }
     )
+    gw.initialize((0, 1, 1, (True, True, False, False, False, False, False)))
+    graph = gw.graphify()
+    print(graph.number_of_nodes(), graph.number_of_edges())
+    graph = gw.graphify(True)
+    print(graph.number_of_nodes(), graph.number_of_edges())
 
     pprint(len(gw.states()))
     pprint(gw.actions())
-    pprint(gw.delta((0, 1, 1, (True, False)), util.GW_ACT_W))
-    pprint(gw.delta((0, 0, 0, (False, False)), util.GW_ACT_W))
+    # pprint(gw.delta((0, 1, 1, (True, False)), util.GW_ACT_W))
+    # pprint(gw.delta((0, 0, 0, (False, False)), util.GW_ACT_W))
 
-    outcome_1 = [st for st in gw.states() if tuple(st[0:2]) == (0, 0)]
-    outcome_2 = [st for st in gw.states() if tuple(st[0:2]) == (0, 0)]
+    outcome_0 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[0]]
+    outcome_1 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[1]]
+    outcome_2 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[2]]
+    outcome_3 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[3]]
+    outcome_4 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[4]]
+    outcome_5 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[5]]
+    outcome_6 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[6]]
 
     pref = PrefModel(
-        outcomes={1: outcome_1, 2: outcome_2},
-        pref=[(2, 1)]
+        outcomes={
+            0: outcome_0,
+            1: outcome_1,
+            2: outcome_2,
+            3: outcome_3,
+            4: outcome_4,
+            5: outcome_5,
+            6: outcome_6,
+        },
+        pref=[
+            (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0),
+            (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
+            (4, 2), (5, 2),
+            (6, 3)
+        ]
     )
 
     imdp = ImprovementMDP(gw, pref)
@@ -139,3 +188,4 @@ if __name__ == '__main__':
     final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
     sasi = SASIReach(imdp_graph, final=final_nodes)
     sasi.solve()
+    print(len(sasi.win1()))

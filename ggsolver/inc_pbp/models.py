@@ -1,5 +1,8 @@
+import logging
 from ggsolver.mdp.models import QualitativeMDP
 from ggsolver.mdp.reachability import ASWinReach
+from tqdm import tqdm
+logging.basicConfig(level=logging.INFO)
 
 
 class PrefModel:
@@ -71,6 +74,9 @@ class ImprovementMDP(QualitativeMDP):
 
         return next_states
 
+    def init_state(self):
+        return self._mdp.init_state(), 0
+
     def final(self, state):
         return [(st, 1) for st in self._mdp.states()]
 
@@ -86,7 +92,7 @@ class ImprovementMDP(QualitativeMDP):
         for idx, win in winning_regions.items():
             for node in win.win1():
                 outcomes[win.graph()["state"][node]].add(idx)
-        print(outcomes)
+        # print(outcomes)
 
         # Compute MP(v).
         for st, out_st in outcomes.items():
@@ -96,9 +102,10 @@ class ImprovementMDP(QualitativeMDP):
 
     def _compute_winning_regions(self):
         graph = self._mdp.graphify()
+        print(f"solving for winning regions")
         win = {idx: ASWinReach(graph, final={node for node in graph.nodes() if graph["state"][node] in final})
                for idx, final in self._pref.outcomes_dict().items()}
-        for idx in win:
+        for idx in tqdm(win):
             win[idx].solve()
         return win
 

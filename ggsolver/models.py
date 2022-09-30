@@ -12,6 +12,7 @@ from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
 from ggsolver.logic import pl
 from functools import partial
+from tqdm import tqdm
 
 
 # ==========================================================================
@@ -82,7 +83,7 @@ class GraphicalModel:
         # Logging and printing
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: states. Added {len(node_ids)} states."))
 
-    def _add_edges_to_graph(self, graph):
+    def _add_edges_to_graph(self, graph, pointed=False):
         """
         Adds edges to the input graph and sets the "input" property.
         Each edge is unique identified by a triple (state, input, next_state).
@@ -104,13 +105,22 @@ class GraphicalModel:
         property_prob = EdgePropertyMap(graph=self, default=None)
 
         # Generate edges by applying each input to every state.
-        for state in self.__states:
+        if pointed:
+            assert self.init_state() is not None
+            states = [self.init_state()]
+        else:
+            states = self.__states
+
+        for state in tqdm(states):
             for inp in inputs:
                 next_states = self.delta(state, inp)
 
                 # There are three types of graphical models. Handle each separately.
                 # If model is deterministic, next states is a single state.
                 if self.is_deterministic():
+                    if pointed:
+                        states.append(next_states)
+
                     try:
                         uid = self.__states.index(state)
                         vid = self.__states.index(next_states)
@@ -126,6 +136,9 @@ class GraphicalModel:
                 # If model is non-deterministic, next states is an Iterable of states.
                 elif not self.is_deterministic() and not self.is_probabilistic():
                     for next_state in next_states:
+                        if pointed:
+                            states.append(next_states)
+
                         try:
                             uid = self.__states.index(state)
                             vid = self.__states.index(next_state)
@@ -141,6 +154,9 @@ class GraphicalModel:
                 # If model is stochastic, next states is a Distribution of states.
                 elif not self.is_deterministic() and self.is_probabilistic():
                     for next_state in next_states.support():
+                        if pointed:
+                            states.append(next_states)
+
                         try:
                             uid = self.__states.index(state)
                             vid = self.__states.index(next_state)
@@ -312,7 +328,41 @@ class GraphicalModel:
 
         :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
         """
-        raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
+        graph = Graph()
+
+        # Glob node, edge and graph properties
+        state_props = self.NODE_PROPERTY
+        trans_props = self.EDGE_PROPERTY
+        graph_props = self.GRAPH_PROPERTY
+
+        # Warn about duplication
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
+                                            f"{set.intersection(state_props, trans_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
+                                            f"{set.intersection(trans_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
+                                            f"{set.intersection(graph_props, state_props)}"))
+
+        # Add nodes and edges to the graph
+        self._add_nodes_to_graph(graph)
+        self._add_edges_to_graph(graph, pointed=True)
+
+        # Add node properties
+        for p_name in state_props:
+            self._add_node_prop_to_graph(graph, p_name)
+
+        # Add edge properties
+        for p_name in trans_props:
+            self._add_edge_prop_to_graph(graph, p_name)
+
+        # Add graph properties
+        for p_name in graph_props:
+            self._add_graph_prop_to_graph(graph, p_name)
+
+        return graph
 
     def graphify_unpointed(self):
         """
