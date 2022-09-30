@@ -6,8 +6,11 @@ from datetime import datetime
 import logging
 import os
 
+dir_ = os.path.dirname(os.path.realpath(__file__))
+
+
 logging.basicConfig(
-    filename='docker/logs/rebuild.log',
+    filename=os.path.join(dir_, 'logs', 'rebuild.log'),
     encoding='utf-8',
     level=logging.DEBUG,
     format="[%(levelname)s] %(message)s"
@@ -52,7 +55,8 @@ class ColoredMsg:
 
 
 def get_ggsolver_version():
-    with open("ggsolver/__init__.py") as fid:
+    ggsolver_path = os.path.dirname(dir_)
+    with open(os.path.join(ggsolver_path, "ggsolver/__init__.py")) as fid:
         for line in fid:
             if line.startswith("__version__"):
                 version_ = line.strip().split()[-1][1:-1]
@@ -71,8 +75,12 @@ def update_dockerfile(fpath, version):
     logging.info(f"Updated {fpath} with version {version}.")
 
 
-def build_docker_image(image, fpath):
-    cmd = f"docker build -t {image} {fpath}"
+def build_docker_image(image, fpath, nocache=False):
+    if nocache:
+        cmd = f"docker build --no-cache -t {image} {fpath}"
+    else:
+        cmd = f"docker build -t {image} {fpath}"
+
     print(ColoredMsg.ok(f"Running {cmd}"))
     logging.info(f"Running {cmd}")
 
@@ -104,12 +112,12 @@ if __name__ == '__main__':
     logging.info(f"\n\n\t\t********** Running dockerfile rebuild script on {datetime.now()} ********** \n\n")
 
     # Update dockerfiles
-    update_dockerfile(fpath="docker/devel/Dockerfile", version=version)
-    update_dockerfile(fpath="docker/latest/Dockerfile", version=version)
+    update_dockerfile(fpath=os.path.join(dir_, "devel/Dockerfile"), version=version)
+    update_dockerfile(fpath=os.path.join(dir_, "latest/Dockerfile"), version=version)
 
     # It's important to build `devel` first since `latest` is based on it.
-    build_docker_image(image="abhibp1993/ggsolver:devel", fpath="docker\devel")
+    build_docker_image(image="abhibp1993/ggsolver:devel", fpath=os.path.join(dir_, "devel"))
     push_docker_image(image="abhibp1993/ggsolver:devel")
 
-    build_docker_image(image="abhibp1993/ggsolver:latest", fpath="docker\latest")
+    build_docker_image(image="abhibp1993/ggsolver:latest", fpath=os.path.join(dir_, "latest"), nocache=True)
     push_docker_image(image="abhibp1993/ggsolver:latest")

@@ -45,4 +45,4 @@ RUN pip3 install jupyterlab
 
 # Install dd (binary decision diagram tool)
 RUN pip3 install dd
-
+RUN pip3 install tqdm
