@@ -57,6 +57,7 @@ with open("ggsolver/__init__.py") as fid:
 packages = [
     "ggsolver",
     "ggsolver.interfaces",
+    "ggsolver.logic",
 ]
 
 install_requires = []
