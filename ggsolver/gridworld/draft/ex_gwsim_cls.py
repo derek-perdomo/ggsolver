@@ -1,5 +1,5 @@
 from ggsolver.graph import Graph
-from ggsolver.gridworld.viz import GWSim
+from ggsolver.gridworld.draft.viz import GWSim
 
 
 if __name__ == '__main__':
