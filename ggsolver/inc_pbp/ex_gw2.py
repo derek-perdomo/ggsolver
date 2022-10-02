@@ -158,37 +158,38 @@ if __name__ == '__main__':
     # pprint(gw.delta((0, 1, 1, (True, False)), util.GW_ACT_W))
     # pprint(gw.delta((0, 0, 0, (False, False)), util.GW_ACT_W))
 
-    # outcome_0 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[0]]
-    # outcome_1 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[1]]
-    # outcome_2 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[2]]
-    # outcome_3 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[3]]
-    # outcome_4 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[4]]
-    # outcome_5 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[5]]
-    # outcome_6 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[6]]
-    #
-    # pref = PrefModel(
-    #     outcomes={
-    #         0: outcome_0,
-    #         1: outcome_1,
-    #         2: outcome_2,
-    #         3: outcome_3,
-    #         4: outcome_4,
-    #         5: outcome_5,
-    #         6: outcome_6,
-    #     },
-    #     pref=[
-    #         (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0),
-    #         (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
-    #         (4, 2), (5, 2),
-    #         (6, 3)
-    #     ]
-    # )
-    #
-    # imdp = ImprovementMDP(gw, pref)
-    # imdp_graph = imdp.graphify()
+    outcome_0 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[0]]
+    outcome_1 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[1]]
+    outcome_2 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[2]]
+    outcome_3 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[3]]
+    outcome_4 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[4]]
+    outcome_5 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[5]]
+    outcome_6 = [st for st in gw.states() if tuple(st[0:2]) == outcomes[6]]
+
+    pref = PrefModel(
+        outcomes={
+            0: outcome_0,
+            1: outcome_1,
+            2: outcome_2,
+            3: outcome_3,
+            4: outcome_4,
+            5: outcome_5,
+            6: outcome_6,
+        },
+        pref=[
+            (1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0),
+            (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
+            (4, 2), (5, 2),
+            (6, 3)
+        ]
+    )
+
+    imdp = ImprovementMDP(gw, pref)
+    imdp_graph = imdp.graphify()
+    print("Graphify done.")
     # graph.save(fpath="imdp_5_5.model", overwrite=True)
-    # final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
-    # sasi = SASIReach(imdp_graph, final=final_nodes)
-    # sasi.solve()
-    #
-    # pprint(sasi.win1())
+    final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
+    sasi = SASIReach(imdp_graph, final=final_nodes)
+    sasi.solve()
+
+    pprint(sasi.win1())

@@ -102,6 +102,10 @@ class GraphicalModel:
         if len(inputs) == 0:
             logging.warning(util.ColoredMsg.warn(f"[WARN] Input domain of {self} is empty. No edges were added."))
 
+        # PATCH #1: The following patch will raise error for non-hashable state objects.
+        # Generate a state: uid dictionary for accelerating iteration.
+        state2id = {self.__states[i]: i for i in range(len(self.__states))}
+
         # Create an edge property called input
         property_inp = EdgePropertyMap(graph=self)
         property_prob = EdgePropertyMap(graph=self, default=None)
@@ -124,8 +128,8 @@ class GraphicalModel:
                         states.append(next_states)
 
                     try:
-                        uid = self.__states.index(state)
-                        vid = self.__states.index(next_states)
+                        uid = state2id[state]
+                        vid = state2id[next_states]
                         key = graph.add_edge(uid, vid)
                         property_inp[(uid, vid, key)] = inp
                     except ValueError:
@@ -142,8 +146,8 @@ class GraphicalModel:
                             states.append(next_states)
 
                         try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
+                            uid = state2id[state]
+                            vid = state2id[next_state]
                             key = graph.add_edge(uid, vid)
                             property_inp[(uid, vid, key)] = inp
                         except ValueError:
@@ -160,8 +164,8 @@ class GraphicalModel:
                             states.append(next_states)
 
                         try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
+                            uid = state2id[state]
+                            vid = state2id[next_state]
                             key = graph.add_edge(uid, vid)
                             property_inp[(uid, vid, key)] = inp
                             property_prob[(uid, vid, key)] = next_states.pmf(next_state)

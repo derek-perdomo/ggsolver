@@ -105,8 +105,10 @@ class ImprovementMDP(QualitativeMDP):
         graph = self._mdp.graphify()
         win = {idx: ASWinReach(graph, final={node for node in graph.nodes() if graph["state"][node] in final})
                for idx, final in self._pref.outcomes_dict().items()}
-        for idx in tqdm(win):
-            print(f"Solving for winning regions {idx}/{len(win)} ")
+
+        pbar = tqdm(win)
+        for idx in pbar:
+            pbar.set_description(f"Solving for winning regions {idx}/{len(win)}")
             win[idx].solve()
         return win
 
