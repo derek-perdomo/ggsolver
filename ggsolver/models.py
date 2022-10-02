@@ -307,7 +307,7 @@ class GraphicalModel:
         """
         self._init_state = state
 
-    def graphify(self, pointed=False):
+    def graphify(self, pointed=False, base_only=False):
         """
         Constructs the underlying graph of the graphical model.
 
@@ -322,7 +322,7 @@ class GraphicalModel:
         elif pointed is True and self._init_state is not None:
             graph = self.graphify_pointed()
         else:
-            graph = self.graphify_unpointed()
+            graph = self.graphify_unpointed(base_only)
 
         print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
         return graph
@@ -370,7 +370,7 @@ class GraphicalModel:
 
         return graph
 
-    def graphify_unpointed(self):
+    def graphify_unpointed(self, base_only):
         """
         Constructs the underlying graph of the graphical model. The constructed graph contains all possible states in
         the model.
@@ -399,17 +399,18 @@ class GraphicalModel:
         self._add_nodes_to_graph(graph)
         self._add_edges_to_graph(graph)
 
-        # Add node properties
-        for p_name in state_props:
-            self._add_node_prop_to_graph(graph, p_name)
+        if not base_only:
+            # Add node properties
+            for p_name in state_props:
+                self._add_node_prop_to_graph(graph, p_name)
 
-        # Add edge properties
-        for p_name in trans_props:
-            self._add_edge_prop_to_graph(graph, p_name)
+            # Add edge properties
+            for p_name in trans_props:
+                self._add_edge_prop_to_graph(graph, p_name)
 
-        # Add graph properties
-        for p_name in graph_props:
-            self._add_graph_prop_to_graph(graph, p_name)
+            # Add graph properties
+            for p_name in graph_props:
+                self._add_graph_prop_to_graph(graph, p_name)
 
         return graph
 

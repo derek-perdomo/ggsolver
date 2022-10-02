@@ -1,4 +1,6 @@
 import itertools
+import json
+
 from ggsolver.inc_pbp.models import PrefModel, ImprovementMDP
 from ggsolver.inc_pbp.reachability import SASIReach
 from ggsolver.models import register_property
@@ -185,11 +187,15 @@ if __name__ == '__main__':
     )
 
     imdp = ImprovementMDP(gw, pref)
-    imdp_graph = imdp.graphify()
+    imdp_graph = imdp.graphify(base_only=True)
+    with open("mp_outcomes.json", "w") as file:
+
+        json.dump({str(st): str(val) for st, val in imdp._mp_outcomes.items()}, file)
     print("Graphify done.")
     # graph.save(fpath="imdp_5_5.model", overwrite=True)
     final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
     sasi = SASIReach(imdp_graph, final=final_nodes)
     sasi.solve()
 
-    pprint(sasi.win1())
+
+    # pprint(sasi.win1())

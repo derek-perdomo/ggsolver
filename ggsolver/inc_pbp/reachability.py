@@ -27,18 +27,18 @@ class SASIReach(Solver):
         iter_count = 0
 
         set_r = set(self._final)
-        print(f"set_r={[self._graph['state'][node] for node in set_r]}")
+        # print(f"set_r={[self._graph['state'][node] for node in set_r]}")
 
         set_cal_w = []
-        print(f"set_cal_w={set_cal_w}")
+        # print(f"set_cal_w={set_cal_w}")
 
         while len(set_r) > 0:
             print(f"--------- {iter_count + 1}-th iteration -----------")
             set_w = ASWinReach(self._graph, final=set_r)
             set_w.solve()
             set_w = set_w.win1()
-            print(f"set_r={[self._graph['state'][node] for node in set_r]}")
-            print(f"set_w={[self._graph['state'][node] for node in set_w]}")
+            # print(f"set_r={[self._graph['state'][node] for node in set_r]}")
+            # print(f"set_w={[self._graph['state'][node] for node in set_w]}")
 
             set_r = set()
             for uid in set_w:
@@ -52,14 +52,15 @@ class SASIReach(Solver):
                 set_cal_w.insert(0, set(self._graph.nodes()) - set_w)
 
             set_cal_w.append(set_w)
-            print(f"set_cal_w={[{self._graph['state'][node] for node in level} for level in set_cal_w]}")
+            # print(f"set_cal_w={[{self._graph['state'][node] for node in level} for level in set_cal_w]}")
 
             iter_count += 1
 
         self._win1 = set_cal_w
-        print("------ win ---------")
-        iter_count = 0
-        for level in set_cal_w:
-            print(iter_count, [self._graph['state'][node] for node in level])
-            iter_count += 1
+        print("Num levels: ", len(self._win1))
+        # print("------ win ---------")
+        # iter_count = 0
+        # for level in set_cal_w:
+        #     # print(iter_count, [self._graph['state'][node] for node in level])
+        #     iter_count += 1
         # print(f"win1={[[self._graph['state'][node] for node in level] for level in self._win1]}")
