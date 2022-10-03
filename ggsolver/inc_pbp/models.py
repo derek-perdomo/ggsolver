@@ -67,7 +67,8 @@ class ImprovementMDP(QualitativeMDP):
             # Condition 3
             if any(self._pref.is_strictly_preferred(r2, r1)
                    for r1 in self._mp_outcomes[si]
-                   for r2 in self._mp_outcomes[n_state]):
+                   for r2 in self._mp_outcomes[n_state]) or \
+                    (len(self._mp_outcomes[si]) == 0 and len(self._mp_outcomes[n_state]) > 0):
                 next_states.add((n_state, 1))
 
             # Condition 4
@@ -107,7 +108,9 @@ class ImprovementMDP(QualitativeMDP):
     def _compute_winning_regions(self):
         print(f"Computing winning regions ... ")
         graph = self._mdp.graphify()
-        win = {idx: ASWinReach(graph, final={node for node in graph.nodes() if graph["state"][node] in final})
+        # PATCH (in general final states should be determined in model)
+        win = {idx: ASWinReach(graph, final={node for node in graph.nodes()
+                                             if graph["state"][node] in final and graph["state"][node][3][idx] == 1})
                for idx, final in self._pref.outcomes_dict().items()}
 
         pbar = tqdm(win)
