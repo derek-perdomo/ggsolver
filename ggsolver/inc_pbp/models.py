@@ -38,6 +38,8 @@ class ImprovementMDP(QualitativeMDP):
         super(ImprovementMDP, self).__init__()
         self._mdp = mdp
         self._pref = pref_model
+        self._outcomes = dict()
+        self._winning_regions = dict()
         self._mp_outcomes = self._compute_mp_outcomes()
 
     def states(self):
@@ -86,12 +88,14 @@ class ImprovementMDP(QualitativeMDP):
 
         # Compute winning region for all outcomes.
         winning_regions = self._compute_winning_regions()
-        
+        self._winning_regions = winning_regions
+
         # For each state, v, identify outcomes(v).
         outcomes = {st: set() for st in self._mdp.states()}
         for idx, win in winning_regions.items():
             for node in win.win1():
                 outcomes[win.graph()["state"][node]].add(idx)
+        self._outcomes = outcomes
         # print(outcomes)
 
         # Compute MP(v).

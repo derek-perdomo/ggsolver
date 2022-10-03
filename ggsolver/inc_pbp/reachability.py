@@ -21,6 +21,7 @@ class SASIReach(Solver):
         super(SASIReach, self).__init__(graph, **kwargs)
         self._final = final
         self._strategy_graph = None
+        self._state2id = {self._graph["state"][uid]: uid for uid in self._graph.nodes()}
 
     def solve(self):
         print(f"Initialize iter_count=0")
@@ -64,3 +65,10 @@ class SASIReach(Solver):
         #     # print(iter_count, [self._graph['state'][node] for node in level])
         #     iter_count += 1
         # print(f"win1={[[self._graph['state'][node] for node in level] for level in self._win1]}")
+
+    def rank(self, state):
+        uid = self._state2id[state]
+        for rank in range(len(self._win1) - 1, -1, -1):
+            if uid in self._win1[rank]:
+                return rank
+

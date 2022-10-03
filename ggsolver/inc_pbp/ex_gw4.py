@@ -232,6 +232,9 @@ if __name__ == '__main__':
     with open("mp_outcomes.json", "w") as file:
         json.dump({str(st): str(value) for st, value in imdp._mp_outcomes.items()}, file, indent=2)
 
+    with open("outcomes.json", "w") as file:
+        json.dump({str(st): str(value) for st, value in imdp._outcomes.items()}, file, indent=2)
+
     print("Graphify done.")
     # graph.save(fpath="imdp_5_5.model", overwrite=True)
     final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
@@ -239,7 +242,19 @@ if __name__ == '__main__':
     sasi = SASIReach(imdp_graph, final=final_nodes)
     sasi.solve()
 
-    import pickle
-    with open("sasi.model", "w") as file:
-        pickle.dump(sasi, file=file)
+    with open("rank.json", "w") as file:
+        json.dump({str(st): str(sasi.rank(st)) for st in imdp.states()}, file, indent=2)
+
+    print(f"level 2 has {len(sasi.win1()[2])} states, i_state=0: ",
+          len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
+               if uid in sasi.win1()[2] and imdp_graph["state"][uid][1] == 0]))
+
+    print(f"level 1 has {len(sasi.win1()[1])} states, i_state=0: ",
+          len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
+               if uid in sasi.win1()[1] and imdp_graph["state"][uid][1] == 0]))
+
+    print()
+    # import pickle
+    # with open("sasi.model", "w") as file:
+    #     pickle.dump(sasi, file=file)
     # pprint(sasi.win1())
