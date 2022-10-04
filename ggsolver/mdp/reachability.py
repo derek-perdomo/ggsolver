@@ -100,3 +100,51 @@ class ASWinReach(Solver):
                 graph.hide_edge(uid, vid, key)
 
 
+class PWinReach(Solver):
+    def __init__(self, graph, final=None, player=1, **kwargs):
+        """
+        Instantiates a sure winning reachability game solver.
+
+        :param graph: (Graph instance)
+        :param final: (iterable) A list/tuple/set of final nodes in graph.
+        :param player: (int) Either 1 or 2.
+        :param kwargs: SureWinReach accepts no keyword arguments.
+        """
+        super(PWinReach, self).__init__(graph, **kwargs)
+        self._player = player
+        self._final = set(final) if final is not None else {n for n in graph.nodes() if self._graph["final"][n] == 0}
+        self._strategy_graph = None
+
+    def solve(self):
+        """
+        Alg. 45 from Principles of Model Checking.
+        Using the same variable names as Alg. 45.
+        """
+        # Initialize algorithm variables
+        graph = SubGraph(self._graph)
+        b = self._final
+
+        # Make B absorbing
+        for uid in b:
+            for _, vid, key in graph.out_edges(uid):
+                graph.hide_edge(uid, vid, key)
+
+        reachable_nodes = graph.reverse_bfs(b)
+        for uid in graph.nodes():
+            if uid not in reachable_nodes:
+                graph.hide_node(uid)
+
+        self._win1 = set(reachable_nodes)
+        self._strategy_graph = graph
+
+    def pi1(self, node):
+        return random.choice(self.win1_act(node))
+
+    def win1_act(self, node):
+        if self._strategy_graph.has_node(node):
+            acts = set()
+            for uid, vid, key in self._strategy_graph.out_edges(node):
+                acts.add(self._graph["input"][uid, vid, key])
+            return list(acts)
+        return []
+

@@ -44,10 +44,10 @@ class MDPGridworld(QualitativeMDP):
         #     "W": ["W", "NW", "SW", "STAY"],
         # }
         self._stochasticity = {
-            "N": ["N", "NW"],  # "STAY"],
+            "N": ["N", "NE", "NW"],  # "STAY"],
             "E": ["E"],  # "STAY"],
             "S": ["S"],  # "STAY"],
-            "W": ["W"],  # "STAY"],
+            "W": ["W", "N"],  # "STAY"],
         }
 
     def states(self):
@@ -63,7 +63,7 @@ class MDPGridworld(QualitativeMDP):
             [0, 1, 2],  # Outcome 5 can become active and then deactive.
             [0, 1]      # Outcome 6 once active, is always active.
         )
-        return list(itertools.product(
+        states = list(itertools.product(
             range(self.dim()[0]),
             range(self.dim()[1]),
             range(self.batt()),
@@ -71,6 +71,8 @@ class MDPGridworld(QualitativeMDP):
             # list(itertools.product([0, 1, 2], repeat=len(self.roi())))
             list(accessibility)
         ))
+        # states = [st for st in states if st[0:2] not in self._obs]
+        return states
 
     def actions(self):
         return [
@@ -157,7 +159,7 @@ class MDPGridworld(QualitativeMDP):
             if accessibility[j] == 0 or accessibility[j] == 1:
                 n_accessibility[j] = 1
             else:   # if accessibility[j] == 2:
-                n_accessibility[j] = 1
+                n_accessibility[j] = 2
 
         for j in block:
             if accessibility[j] == 1 or accessibility[j] == 2:
@@ -173,19 +175,26 @@ if __name__ == '__main__':
 
     outcomes = {
         0: (1, 4),
-        1: (1, 1),
-        2: (3, 3),
-        3: (3, 4),
+        1: (0, 0),
+        2: (1, 1),
+        3: (2, 2),
         4: (4, 3),
         5: (4, 4),
         6: (3, 0),
 
     }
 
+    obs = [
+        (1, 0),
+        (2, 1),
+        (2, 3),
+        (1, 3)
+    ]
+
     gw = MDPGridworld(
         dim=(5, 5),
         batt=6,
-        obstacles=[],
+        obstacles=obs,
         goals=list(outcomes.values()),
         batt_cell=(0, 4),
         accessibility_trans={
@@ -229,10 +238,10 @@ if __name__ == '__main__':
     imdp = ImprovementMDP(gw, pref)
     imdp_graph = imdp.graphify(base_only=True)
 
-    with open("mp_outcomes.json", "w") as file:
+    with open("out/mp_outcomes.json", "w") as file:
         json.dump({str(st): str(value) for st, value in imdp._mp_outcomes.items()}, file, indent=2)
 
-    with open("outcomes.json", "w") as file:
+    with open("out/outcomes.json", "w") as file:
         json.dump({str(st): str(value) for st, value in imdp._outcomes.items()}, file, indent=2)
 
     print("Graphify done.")
@@ -242,8 +251,20 @@ if __name__ == '__main__':
     sasi = SASIReach(imdp_graph, final=final_nodes)
     sasi.solve()
 
-    with open("rank.json", "w") as file:
+    with open("out/rank.json", "w") as file:
         json.dump({str(st): str(sasi.rank(st)) for st in imdp.states()}, file, indent=2)
+
+    with open("out/win0.json", "w") as file:
+        win = imdp._winning_regions[0]
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
+
+    with open("out/win1.json", "w") as file:
+        win = imdp._winning_regions[1]
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
+
+    with open("out/win2.json", "w") as file:
+        win = imdp._winning_regions[2]
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
 
     print(f"level 2 has {len(sasi.win1()[2])} states, i_state=0: ",
           len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()

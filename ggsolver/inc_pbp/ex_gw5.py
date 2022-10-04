@@ -3,7 +3,7 @@ import itertools
 import json
 
 from ggsolver.inc_pbp.models import PrefModel, ImprovementMDP
-from ggsolver.inc_pbp.reachability import SASIReach
+from ggsolver.inc_pbp.reachability import SASIReach, SPIReach
 from ggsolver.models import register_property
 from ggsolver.mdp.models import QualitativeMDP
 from ggsolver.gridworld import util
@@ -100,8 +100,12 @@ class MDPGridworld(QualitativeMDP):
         # 2. Apply cell transition (stochasticity specialized!)
         # PATCH: HARD CODED.
         next_cell = util.move((row, col), act)
-        if next_cell in [(1, 1), (3, 1), (1, 3), (3, 3)]:
+        if next_cell in [(1, 1), (3, 1), (1, 3)]:
             next_cells = [next_cell, util.move(next_cell, util.GW_ACT_N), util.move(next_cell, util.GW_ACT_S)]
+        elif next_cell in [(3, 3)]:
+            next_cells = [next_cell, util.move(next_cell, util.GW_ACT_N), util.move(next_cell, util.GW_ACT_W), 
+                          util.move(next_cell, util.GW_ACT_S)]
+
         else:
             next_cells = [next_cell]
         next_cells = util.bouncy_wall((row, col), next_cells, self.dim())
@@ -259,15 +263,15 @@ if __name__ == '__main__':
 
     with open("out/win0.json", "w") as file:
         win = imdp._winning_regions[0]
-        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file)
 
     with open("out/win1.json", "w") as file:
         win = imdp._winning_regions[1]
-        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file)
 
     with open("out/win2.json", "w") as file:
         win = imdp._winning_regions[2]
-        json.dump([win.graph()["state"][uid] for uid in win.win1()], file, indent=2)
+        json.dump([win.graph()["state"][uid] for uid in win.win1()], file)
 
     print(f"level 3 has {len(sasi.win1()[3])} states, i_state=0: ",
           len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
@@ -280,6 +284,22 @@ if __name__ == '__main__':
     print(f"level 1 has {len(sasi.win1()[1])} states, i_state=0: ",
           len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
                if uid in sasi.win1()[1] and imdp_graph["state"][uid][1] == 0]))
+
+    spi = SPIReach(imdp_graph, final=final_nodes)
+    spi.solve()
+
+    print("--------- ")
+    print(f"level 3 has {len(spi.win1()[3])} states, i_state=0: ",
+          len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
+               if uid in spi.win1()[3] and imdp_graph["state"][uid][1] == 0]))
+
+    print(f"level 2 has {len(spi.win1()[2])} states, i_state=0: ",
+          len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
+               if uid in spi.win1()[2] and imdp_graph["state"][uid][1] == 0]))
+
+    print(f"level 1 has {len(spi.win1()[1])} states, i_state=0: ",
+          len([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
+               if uid in spi.win1()[1] and imdp_graph["state"][uid][1] == 0]))
 
     # pprint([imdp_graph["state"][uid] for uid in imdp_graph.nodes()
     #            if uid in sasi.win1()[1] and imdp_graph["state"][uid][1] == 0])
