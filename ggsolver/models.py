@@ -1,9 +1,3 @@
- # TODO. Try implementing dtptb package.
-# TODO. Add logging statements.
-# TODO. Make note that user will not be warned of any private attributes that are unserialized.
-# TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
-# TODO. Instead of registering property function, register just name and then use getattr to
-#  find the appropriate function during serialization. This will allow rebinding functions.
 import copy
 import inspect
 import logging
