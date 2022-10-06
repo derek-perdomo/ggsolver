@@ -666,116 +666,128 @@ class SubGraph(Graph):
         return f"<SubGraph of {self._graph}>"
 
     def is_node_visible(self, uid):
+        """
+        Is the node included in the subgraph?
+        """
         return not self._hidden_nodes[uid]
 
     def is_edge_visible(self, uid, vid, key):
-        # print(f"Checking {uid, vid, key} not in {self._hidden_edges}")
+        """
+        Is the node included in the subgraph?
+        """
         return not self._hidden_edges[(uid, vid, key)]
 
     def hide_node(self, uid):
+        """
+        Removes the node from subgraph.
+        Raises error if `uid` is not in base graph.
+        If `uid` was hidden then no change is made.
+        """
         self._hidden_nodes[uid] = True
 
     def show_node(self, uid):
+        """
+        Adds the node back to subgraph.
+        Raises error if `uid` is not in base graph.
+        If `uid` was already visible, then no change is made.
+        """
         self._hidden_nodes[uid] = False
 
     def hide_nodes(self, ulist):
+        """
+        Removes multiples nodes from subgraph.
+        """
         map(self.hide_node, ulist)
-        # self._hidden_nodes.update(set(ulist))
 
     def show_nodes(self, ulist):
+        """ Adds multiple nodes to subgraph. """
         map(self.show_node, ulist)
-        # for uid in ulist:
-        #     self._hidden_nodes.discard(uid)
 
     def hidden_nodes(self):
+        """ Gets the list of nodes in base graph that are not in subgraph. """
         return [uid for uid, value in self._hidden_nodes.items() if value is True]
 
     def visible_nodes(self):
+        """ Gets the list of nodes in subgraph. """
         return [uid for uid, value in self._hidden_nodes.items() if value is False]
 
     def number_of_visible_nodes(self):
+        """ Gets the number of nodes in subgraph. """
         return self.number_of_nodes() - len(self.hidden_nodes())
 
     def hide_edge(self, uid, vid, key):
+        """ Removes the edge from subgraph. No changes are made to base graph. """
         self._hidden_edges[(uid, vid, key)] = True
 
     def show_edge(self, uid, vid, key):
+        """ Adds the edge to subgraph. The edge must be a valid edge in base graph. """
         self._hidden_edges[(uid, vid, key)] = False
 
     def hide_edges(self, elist):
+        """ Removes multiple edge from subgraph. No changes are made to base graph. """
         map(self.hide_edge, elist)
 
     def show_edges(self, elist):
+        """ Adds multiple edges to subgraph. The edge must be a valid edge in base graph. """
         map(self.show_edge, elist)
 
     def hidden_edges(self):
+        """ Gets the list of edges from base graph that are not in subgraph. """
         return [edge for edge, value in self._hidden_edges.items() if value is True]
 
     def visible_edges(self):
+        """ Gets the list of edges in subgraph. """
         return [edge for edge, value in self._hidden_edges.items() if value is False]
 
     def number_of_visible_edges(self):
+        """ Gets the number of edges in subgraph. """
         return self.number_of_edges() - len(self.hidden_edges())
 
     def add_node(self):
         """
-        Adds a new node to the graph.
-
-        :warning: Duplication is NOT checked.
-
-        :return: (int) ID of the added node.
+        Raises error. Nodes cannot be added to subgraph.
+        See :meth:`SubGraph.hide_nodes` and :meth:`SubGraph.show_nodes`.
         """
         raise PermissionError("Cannot add nodes to a SubGraph.")
 
     def add_nodes(self, num_nodes):
         """
-        Adds multiple nodes to the graph.
-
-        :warning: Duplication is NOT checked.
-        :param num_nodes: (int) Number of nodes to be added.
-        :return: (list) IDs of added nodes.
+        Raises error. Nodes cannot be added to subgraph.
+        See :meth:`SubGraph.hide_nodes` and :meth:`SubGraph.show_nodes`.
         """
         raise PermissionError("Cannot add nodes to a SubGraph.")
 
     def add_edge(self, uid, vid):
         """
-        Adds a new edge between the give nodes.
-
-        :warning: Duplication is NOT checked. Hence, calling the function twice adds two parallel edges between
-            the same nodes.
-
-        :return: (int) Key of the added edge. Key = 0 means the first edge was added between the given nodes.
-            If Key = k, then (k+1)-th edge was added.
+        Raises error. Edges cannot be added to subgraph.
+        See :meth:`SubGraph.hide_edges` and :meth:`SubGraph.show_edges`.
         """
         raise PermissionError("Cannot add edges to a SubGraph.")
 
     def add_edges(self, edges):
         """
-        Adds multiple edge between the give nodes.
-
-        :warning: Duplication is NOT checked. Hence, calling the function twice adds two parallel edges between
-            the same nodes.
-
-        :return: (int) Key of the added edge. Key = 0 means the first edge was added between the given nodes.
-            If Key = k, then (k+1)-th edge was added.
+        Raises error. Edges cannot be added to subgraph.
+        See :meth:`SubGraph.hide_edges` and :meth:`SubGraph.show_edges`.
         """
         raise PermissionError("Cannot add edges to a SubGraph.")
 
     def rem_node(self, uid):
         """
-        Removal of nodes is NOT supported. Use filtering instead.
+        Raises error. Nodes cannot be removed to subgraph.
+        See :meth:`SubGraph.hide_nodes` and :meth:`SubGraph.show_nodes`.
         """
         raise NotImplementedError("Removal of nodes is not supported. Use SubGraph.hide_node() instead.")
 
     def rem_edge(self, uid, vid, key):
         """
-        Removal of edges is NOT supported. Use filtering instead.
+        Raises error. Edges cannot be removed to subgraph.
+        See :meth:`SubGraph.hide_edges` and :meth:`SubGraph.show_edges`.
         """
         raise NotImplementedError("Removal of nodes is not supported. Use SubGraph instead.")
 
     def has_node(self, uid):
         """
-        Checks whether the graph has the given node or not.
+        Checks whether the subgraph has the given node or not. Checks whether the node exists and is visible.
 
         :param uid: (int) Node ID to be checked for containment.
         :return: (bool) True if given node is in the graph, else False.
@@ -784,7 +796,7 @@ class SubGraph(Graph):
 
     def has_edge(self, uid, vid, key=None):
         """
-        Checks whether the graph has the given edge or not.
+        Checks whether the graph has the given edge or not. Checks whether the edge exists and is visible.
 
         :param uid: (int) Source node ID.
         :param vid: (int) Target node ID.
@@ -797,73 +809,83 @@ class SubGraph(Graph):
 
     def nodes(self):
         """
-        List of all nodes in the graph.
+        List of all nodes in the **subgraph**.
         """
         return list(self._graph.nodes())
 
     def edges(self):
         """
-        List of all edges in the graph. Each edge is represented as a 3-tuple (uid, vid, key).
+        List of all edges in the **subgraph**. Each edge is represented as a 3-tuple (uid, vid, key).
         """
         return list(self._graph.edges(keys=True))
 
     def successors(self, uid):
         """
         List of all successors of the node represented by uid.
+        Includes only visible nodes reachable via visible edges.
         """
         return list(self._graph.successors(uid))
 
     def predecessors(self, uid):
         """
         List of all predecessors of the node represented by uid.
+        Includes only visible nodes reachable via visible edges.
         """
         return list(self._graph.predecessors(uid))
 
     def neighbors(self, uid):
         """
         List of all (in and out) neighbors of the node represented by uid.
+        Includes only visible nodes reachable via visible edges.
         """
         return list(self._graph.neighbors(uid))
 
     def ancestors(self, uid):
         """
         List of all nodes from which the node represented by uid is reachable.
+        Includes only visible nodes reachable via visible edges.
         """
         return list(nx.ancestors(self._graph, uid))
 
     def descendants(self, uid):
         """
         List of all nodes that can be reached from  the node represented by uid.
+        Includes only visible nodes reachable via visible edges.
         """
         return list(nx.descendants(self._graph, uid))
 
     def in_edges(self, uid):
         """
         List of all in edges to the node represented by uid.
+        Includes only visible edges.
         """
         return self._graph.in_edges(uid, keys=True)
 
     def out_edges(self, uid):
         """
         List of all out edges from the node represented by uid.
+        Includes only visible edges.
         """
         return self._graph.out_edges(uid, keys=True)
 
     def number_of_nodes(self):
         """
-        The number of nodes in the graph.
+        The number of nodes in the **base** graph.
         """
         return self._graph.number_of_nodes()
 
     def number_of_edges(self):
         """
-        The number of edges in the graph.
+        The number of edges in the **base** graph.
         """
         return self._graph.number_of_edges()
 
     def clear(self):
         """
         Clears all nodes, edges and the node, edge and graph properties.
+
+        .. warning:: The function is untested.
+        # todo
         """
         self._graph.clear()
         self._node_properties = dict()
@@ -916,6 +938,9 @@ class SubGraph(Graph):
         Constructs a graph from a serialized graph object. The format is described in :py:meth:`Graph.serialize`.
 
         :return: (Graph) A new :class:`Graph` object..
+
+        .. warning:: The function is untested.
+        # todo
         """
         # Instantiate new object
         obj = cls()
@@ -983,6 +1008,9 @@ class SubGraph(Graph):
         :param protocol: (str) The protocol to use to save the file. Options: {"json" [Default], "pickle"}.
 
         .. note:: Pickle protocol is not tested.
+
+        .. warning:: The function is untested.
+        # todo
         """
         if not os.path.exists(fpath):
             raise FileNotFoundError("File does not exist.")
@@ -1010,6 +1038,9 @@ class SubGraph(Graph):
 
         :warning: If the node labels are not unique, the generated figure may contain 0, 1, 2, ...
             that avoid duplication.
+
+        .. warning:: The function is untested.
+        # todo
         """
         max_nodes = 500
         if self._graph.number_of_nodes() > max_nodes:
@@ -1054,6 +1085,9 @@ class SubGraph(Graph):
 
         :param other: (:class:`Graph` object) Graph to be checked for isomorphism with current graph.
         :return: (bool) `True`, if graphs are isomorphic. Else, `False`.
+
+        .. warning:: The function is untested.
+        # todo
         """
         return nx.is_isomorphic(self._graph, other._graph)
 
