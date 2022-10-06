@@ -1,5 +1,6 @@
 import copy
 import inspect
+import itertools
 import logging
 import typing
 from ggsolver import util
@@ -34,7 +35,7 @@ class GraphicalModel:
         self._is_probabilistic = is_probabilistic
 
         # Input domain (Expected value: Name of the function that returns an Iterable object.)
-        self._input = kwargs["inputs"] if "inputs" in kwargs else None
+        self._input_func = kwargs["inputs"] if "inputs" in kwargs else None
 
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
@@ -58,6 +59,234 @@ class GraphicalModel:
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
+    def _clear_cache(self):
+        self.__states = dict()
+        self.__is_graphified = False
+
+    def _gen_edges(self, state, inp):
+        delta = getattr(self, "delta")
+        next_states = delta(state, inp)
+        edges = set()
+
+        # There are three types of graphical models. Handle each separately.
+        # If model is deterministic, next states is a single state.
+        if self.is_deterministic():
+            try:
+                uid = self.__states[state]
+                vid = self.__states[next_states]
+                edges.add((uid, vid, inp, None))
+            except ValueError:
+                logging.warning(
+                    util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                         f"No edge(s) added to graph for state={state}, input={inp}, "
+                                         f"next_state={next_states}.")
+                )
+
+        # If model is non-deterministic, next states is an Iterable of states.
+        elif not self.is_deterministic() and not self.is_probabilistic():
+            for next_state in next_states:
+                try:
+                    uid = self.__states[state]
+                    vid = self.__states[next_state]
+                    edges.add((uid, vid, inp, None))
+                except ValueError:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+
+        # If model is stochastic, next states is a Distribution of states.
+        elif not self.is_deterministic() and self.is_probabilistic():
+            for next_state in next_states.support():
+                try:
+                    uid = self.__states[state]
+                    vid = self.__states[next_state]
+                    edges.add((uid, vid, inp, next_states.pmf(next_state)))
+                except ValueError:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+
+        else:
+            raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
+                            f"Check the values: is_deterministic: {self.is_deterministic()}, "
+                            f"self.is_quantitative:{self.is_probabilistic()}.")
+
+        return edges
+
+    def _gen_edges2(self, state, inp):
+        delta = getattr(self, "delta")
+        next_states = delta(state, inp)
+        edges = set()
+
+        # There are three types of graphical models. Handle each separately.
+        # If model is deterministic, next states is a single state.
+        if self.is_deterministic():
+            try:
+                edges.add((state, next_states, inp, None))
+            except ValueError:
+                logging.warning(
+                    util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                         f"No edge(s) added to graph for state={state}, input={inp}, "
+                                         f"next_state={next_states}.")
+                )
+
+        # If model is non-deterministic, next states is an Iterable of states.
+        elif not self.is_deterministic() and not self.is_probabilistic():
+            for next_state in next_states:
+                try:
+                    edges.add((state, next_state, inp, None))
+                except ValueError:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+
+        # If model is stochastic, next states is a Distribution of states.
+        elif not self.is_deterministic() and self.is_probabilistic():
+            for next_state in next_states.support():
+                try:
+                    edges.add((state, next_state, inp, next_states.pmf(next_state)))
+                except ValueError:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+
+        else:
+            raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
+                            f"Check the values: is_deterministic: {self.is_deterministic()}, "
+                            f"self.is_quantitative:{self.is_probabilistic()}.")
+
+        return edges
+
+    def _gen_underlying_graph_unpointed(self, graph):
+        """
+        Programmer's notes:
+        1. Caches states (returned by `self.states()`) in self.__states variable.
+        2. Assumes all states to be hashable.
+        3.
+        """
+        # Get states
+        states = getattr(self, "states")
+        states = list(states())
+
+        # Add states to graph
+        node_ids = list(graph.add_nodes(len(states)))
+
+        # Cache states as a dictionary {state: uid}
+        self.__states = dict(zip(states, node_ids))
+
+        # Node property: state
+        np_state = NodePropertyMap(graph=graph)
+        np_state.update(dict(zip(node_ids, states)))
+        graph["state"] = np_state
+
+        # Logging and printing
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: states. Added {len(node_ids)} states. [OK]"))
+
+        # Get input function
+        input_func = getattr(self, self._input_func)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
+
+        # Graph property: input domain (stores the name of edge property that represents inputs)
+        graph["input_domain"] = self._input_func
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
+
+        # Get input domain
+        inputs = list(input_func())
+
+        # Generate edges
+        edges = set()
+        for state, inp in itertools.product(self.__states.keys(), inputs):
+            new_edges = self._gen_edges(state, inp)
+            edges.update(new_edges)
+
+        # Edge properties: input, prob,
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
+
+        # Update graph edges
+        for uid, vid, inp, prob in edges:
+            key = graph.add_edge(uid, vid)
+            ep_input[uid, vid, key] = inp
+            ep_prob[uid, vid, key] = prob
+
+        # Add edge properties to graph
+        graph[self._input_func] = ep_input
+        graph["prob"] = ep_prob
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property (input domain): {self._input_func}. [OK]"))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property (probability): prob. [OK]"))
+
+    def _gen_underlying_graph_pointed(self, graph):
+        # Get input function
+        input_func = getattr(self, self._input_func)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
+
+        # Graph property: input domain (stores the name of edge property that represents inputs)
+        graph["input_domain"] = self._input_func
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
+
+        # Get input domain
+        inputs = list(input_func())
+
+        # Node property: state
+        np_state = NodePropertyMap(graph=graph)
+
+        # Edge properties: input, prob,
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
+
+        # BFS traversal until all reachable states are visited.
+        s0 = self.init_state()
+        uid = graph.add_node()
+        self.__states[s0] = uid
+        np_state[uid] = s0
+
+        queue = [s0]
+        visited = set()
+
+        # Generate edges
+        while len(queue) > 0:
+            # Visit a state. Add to graph. Update cache. Update node property `state`.
+            state = queue.pop()
+            visited.add(state)
+            uid = self.__states[state]
+
+            # Apply all inputs to state
+            for inp in inputs:
+                # Get successors: set of (from_st, to_st, inp, prob)
+                new_edges = self._gen_edges2(state, inp)
+
+                for _, to_state, inp, prob in new_edges:
+                    # If to_state was added to queue in the past, its id will be cached.
+                    # Otherwise, add new node, cache it and queue it for exploration.
+                    if to_state in self.__states:
+                        vid = self.__states[to_state]
+                    else:
+                        vid = graph.add_node()
+                        self.__states[to_state] = vid
+                        np_state[uid] = state
+                        queue.append(to_state)
+
+                    # Add edge to graph
+                    key = graph.add_edge(uid, vid)
+
+                    # Set edge properties
+                    ep_input[uid, vid, key] = inp
+                    ep_prob[uid, vid, key] = prob
+
+        # Add edge properties to graph
+        graph[self._input_func] = ep_input
+        graph["prob"] = ep_prob
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property (input domain): {self._input_func}. [OK]"))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property (probability): prob. [OK]"))
+
     def _add_nodes_to_graph(self, graph):
         """
         Adds nodes to the input graph and sets the "state" property.
@@ -84,8 +313,8 @@ class GraphicalModel:
         Assumes: self._add_nodes_to_graph() is called before and self.__states is cached.
         """
         try:
-            inputs = getattr(self, self._input)()
-            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.{self._input}() must be a list/tuple."
+            inputs = getattr(self, self._input_func)()
+            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.{self._input_func}() must be a list/tuple."
         except TypeError:
             logging.error(util.ColoredMsg.error(f"[ERROR] Input domain of {self} is not set. No edges were added."))
             return
@@ -154,12 +383,12 @@ class GraphicalModel:
                                     f"self.is_quantitative:{self.is_probabilistic()}.")
 
         # Update the properties with graph
-        if self._input not in self.GRAPH_PROPERTY:
+        if self._input_func not in self.GRAPH_PROPERTY:
             graph["inp_domain"] = inputs
-            graph["input_name"] = self._input
+            graph["input_name"] = self._input_func
             logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
         else:
-            logging.info(util.ColoredMsg.ok(f"[INFO] Queuing graph property: {self._input} instead of inp_domain. OK"))
+            logging.info(util.ColoredMsg.ok(f"[INFO] Queuing graph property: {self._input_func} instead of inp_domain. OK"))
 
         graph["prob"] = property_prob
         graph["input"] = property_inp
@@ -253,7 +482,7 @@ class GraphicalModel:
             logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. IGNORED"))
         except AttributeError:
             logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
-    
+
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
@@ -288,6 +517,8 @@ class GraphicalModel:
             :py:meth:`TSys.graphify_unpointed()` is called, which constructs the complete transition system.
         :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
         """
+        self._clear_cache()
+
         if pointed is True and self._init_state is None:
             raise ValueError(f"{self.__class__.__name__} is not initialized. "
                              f"Did you forget to call {self.__class__.__name__}.initialize() function?")
@@ -306,7 +537,42 @@ class GraphicalModel:
 
         :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
         """
-        raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
+        graph = Graph()
+
+        # Glob node, edge and graph properties
+        state_props = self.NODE_PROPERTY
+        trans_props = self.EDGE_PROPERTY
+        graph_props = self.GRAPH_PROPERTY
+
+        # Warn about duplication
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
+                                            f"{set.intersection(state_props, trans_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
+                                            f"{set.intersection(trans_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
+                                            f"{set.intersection(graph_props, state_props)}"))
+
+        # Add nodes and edges to the graph
+        # self._add_nodes_to_graph(graph)
+        # self._add_edges_to_graph(graph)
+        self._gen_underlying_graph_pointed(graph)
+
+        # Add node properties
+        for p_name in state_props:
+            self._add_node_prop_to_graph(graph, p_name)
+
+        # Add edge properties
+        for p_name in trans_props:
+            self._add_edge_prop_to_graph(graph, p_name)
+
+        # Add graph properties
+        for p_name in graph_props:
+            self._add_graph_prop_to_graph(graph, p_name)
+
+        return graph
 
     def graphify_unpointed(self):
         """
@@ -334,8 +600,9 @@ class GraphicalModel:
                                             f"{set.intersection(graph_props, state_props)}"))
 
         # Add nodes and edges to the graph
-        self._add_nodes_to_graph(graph)
-        self._add_edges_to_graph(graph)
+        # self._add_nodes_to_graph(graph)
+        # self._add_edges_to_graph(graph)
+        self._gen_underlying_graph_unpointed(graph)
 
         # Add node properties
         for p_name in state_props:
