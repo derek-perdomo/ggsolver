@@ -6,6 +6,7 @@ License goes here...
 import json
 import os
 import pickle
+from functools import reduce
 
 import networkx as nx
 from ggsolver import util
@@ -630,6 +631,32 @@ class Graph(IGraph):
         dot_graph.layout("dot")
         dot_graph.draw(fpath)
 
+    def is_isomorphic_to(self, other: 'Graph'):
+        """
+        Checks if the graph is isomorphic to the `other` graph.
+
+        :param other: (:class:`Graph` object) Graph to be checked for isomorphism with current graph.
+        :return: (bool) `True`, if graphs are isomorphic. Else, `False`.
+        """
+        return nx.is_isomorphic(self._graph, other._graph)
+
+    def base_graph(self):
+        return self._graph
+
+    def reverse(self):
+        """
+        Return a SubGraph.
+        """
+        return self._graph.reverse(copy=False)
+
+    def bfs_layers(self, sources):
+        return nx.bfs_layers(self._graph, sources)
+
+    def reverse_bfs(self, sources):
+        rev_graph = self._graph.reverse()
+        reachable_nodes = set(reduce(set.union, list(map(set, nx.bfs_layers(rev_graph, sources)))))
+        return reachable_nodes
+
 
 class SubGraph(Graph):
     """
@@ -708,8 +735,8 @@ class SubGraph(Graph):
         return [uid for uid, value in self._hidden_nodes.items() if value is True]
 
     def visible_nodes(self):
-        """ Gets the list of nodes in subgraph. """
-        return [uid for uid, value in self._hidden_nodes.items() if value is False]
+        # return [uid for uid, value in self._hidden_nodes.items() if value is False]
+        return list(set(self.nodes()) - set(self.hidden_nodes()))
 
     def number_of_visible_nodes(self):
         """ Gets the number of nodes in subgraph. """
@@ -736,8 +763,8 @@ class SubGraph(Graph):
         return [edge for edge, value in self._hidden_edges.items() if value is True]
 
     def visible_edges(self):
-        """ Gets the list of edges in subgraph. """
-        return [edge for edge, value in self._hidden_edges.items() if value is False]
+        # return [edge for edge, value in self._hidden_edges.items() if value is False]
+        return list(set(self.edges()) - set(self.hidden_edges()))
 
     def number_of_visible_edges(self):
         """ Gets the number of edges in subgraph. """

@@ -367,7 +367,7 @@ class GraphicalModel:
         """
         self._init_state = state
 
-    def graphify(self, pointed=False):
+    def graphify(self, pointed=False, base_only=False):
         """
         Constructs the underlying graph of the graphical model.
 
@@ -424,6 +424,50 @@ class GraphicalModel:
             self._add_graph_prop_to_graph(graph, p_name)
 
         print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
+        return graph
+
+    def graphify_unpointed(self, base_only):
+        """
+        Constructs the underlying graph of the graphical model. The constructed graph contains all possible states in
+        the model.
+
+        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
+        """
+        graph = Graph()
+
+        # Glob node, edge and graph properties
+        state_props = self.NODE_PROPERTY
+        trans_props = self.EDGE_PROPERTY
+        graph_props = self.GRAPH_PROPERTY
+
+        # Warn about duplication
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
+                                            f"{set.intersection(state_props, trans_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
+                                            f"{set.intersection(trans_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
+                                            f"{set.intersection(graph_props, state_props)}"))
+
+        # Add nodes and edges to the graph
+        self._add_nodes_to_graph(graph)
+        self._add_edges_to_graph(graph)
+
+        if not base_only:
+            # Add node properties
+            for p_name in state_props:
+                self._add_node_prop_to_graph(graph, p_name)
+
+            # Add edge properties
+            for p_name in trans_props:
+                self._add_edge_prop_to_graph(graph, p_name)
+
+            # Add graph properties
+            for p_name in graph_props:
+                self._add_graph_prop_to_graph(graph, p_name)
+
         return graph
 
     def serialize(self):
