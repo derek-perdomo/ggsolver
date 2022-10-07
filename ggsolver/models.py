@@ -68,8 +68,7 @@ class GraphicalModel:
         self.__states = dict()
         self.__is_graphified = False
 
-    def _gen_edges(self, state, inp):
-        delta = getattr(self, "delta")
+    def _gen_edges(self, delta, state, inp):
         next_states = delta(state, inp)
         edges = set()
 
@@ -157,8 +156,12 @@ class GraphicalModel:
         ep_prob = EdgePropertyMap(graph=graph, default=None)
 
         # Generate edges
-        for state, inp in itertools.product(self.__states.keys(), inputs):
-            new_edges = self._gen_edges(state, inp)
+        delta = getattr(self, "delta")
+        for state, inp in tqdm(itertools.product(self.__states.keys(), inputs),
+                               total=len(self.__states) * len(inputs),
+                               desc="Unpointed graphify adding edges"):
+
+            new_edges = self._gen_edges(delta, state, inp)
 
             # Update graph edges
             uid = self.__states[state]
@@ -175,6 +178,8 @@ class GraphicalModel:
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property (probability): prob. [OK]"))
 
     def _gen_underlying_graph_pointed(self, graph):
+        logging.info(util.ColoredMsg.ok(f"[INFO] Running graphify UNPOINTED."))
+
         # Get input function
         input_func = getattr(self, self._input_func)
         logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
@@ -203,34 +208,40 @@ class GraphicalModel:
         visited = set()
 
         # Generate edges
-        while len(queue) > 0:
-            # Visit a state. Add to graph. Update cache. Update node property `state`.
-            state = queue.pop()
-            visited.add(state)
-            uid = self.__states[state]
+        delta = getattr(self, "delta")
+        with tqdm(total=1, desc="Pointed graphify adding edges") as progress_bar:
+            while len(queue) > 0:
+                # Update progress_bar
+                progress_bar.total = len(queue) + len(visited)
+                progress_bar.update(1)
 
-            # Apply all inputs to state
-            for inp in inputs:
-                # Get successors: set of (from_st, to_st, inp, prob)
-                new_edges = self._gen_edges(state, inp)
+                # Visit a state. Add to graph. Update cache. Update node property `state`.
+                state = queue.pop()
+                visited.add(state)
+                uid = self.__states[state]
 
-                for _, to_state, inp, prob in new_edges:
-                    # If to_state was added to queue in the past, its id will be cached.
-                    # Otherwise, add new node, cache it and queue it for exploration.
-                    if to_state in self.__states:
-                        vid = self.__states[to_state]
-                    else:
-                        vid = graph.add_node()
-                        self.__states[to_state] = vid
-                        np_state[uid] = state
-                        queue.append(to_state)
+                # Apply all inputs to state
+                for inp in inputs:
+                    # Get successors: set of (from_st, to_st, inp, prob)
+                    new_edges = self._gen_edges(delta, state, inp)
 
-                    # Add edge to graph
-                    key = graph.add_edge(uid, vid)
+                    for _, to_state, inp, prob in new_edges:
+                        # If to_state was added to queue in the past, its id will be cached.
+                        # Otherwise, add new node, cache it and queue it for exploration.
+                        if to_state in self.__states:
+                            vid = self.__states[to_state]
+                        else:
+                            vid = graph.add_node()
+                            self.__states[to_state] = vid
+                            np_state[uid] = state
+                            queue.append(to_state)
 
-                    # Set edge properties
-                    ep_input[uid, vid, key] = inp
-                    ep_prob[uid, vid, key] = prob
+                        # Add edge to graph
+                        key = graph.add_edge(uid, vid)
+
+                        # Set edge properties
+                        ep_input[uid, vid, key] = inp
+                        ep_prob[uid, vid, key] = prob
 
         # Add edge properties to graph
         graph[self._input_func] = ep_input
