@@ -77,38 +77,43 @@ class GraphicalModel:
         # There are three types of graphical models. Handle each separately.
         # If model is deterministic, next states is a single state.
         if self.is_deterministic():
-            try:
-                edges.add((state, next_states, inp, None))
-            except ValueError:
+            if next_states is None:
                 logging.warning(
                     util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
                                          f"No edge(s) added to graph for state={state}, input={inp}, "
                                          f"next_state={next_states}.")
                 )
+                return set()
+
+            edges.add((state, next_states, inp, None))
 
         # If model is non-deterministic, next states is an Iterable of states.
         elif not self.is_deterministic() and not self.is_probabilistic():
             for next_state in next_states:
-                try:
-                    edges.add((state, next_state, inp, None))
-                except ValueError:
+                if next_state is None:
                     logging.warning(
                         util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
                                              f"No edge(s) added to graph for state={state}, input={inp}, "
                                              f"next_state={next_state}.")
                     )
+                    continue
+
+                edges.add((state, next_state, inp, None))
 
         # If model is stochastic, next states is a Distribution of states.
         elif not self.is_deterministic() and self.is_probabilistic():
+            # FIXME. I have doubts that following implementation is correct.
+            #  If support is empty, the code under `if` will not execute.
             for next_state in next_states.support():
-                try:
-                    edges.add((state, next_state, inp, next_states.pmf(next_state)))
-                except ValueError:
+                if next_state is None:
                     logging.warning(
                         util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
                                              f"No edge(s) added to graph for state={state}, input={inp}, "
                                              f"next_state={next_state}.")
                     )
+                    continue
+
+                edges.add((state, next_state, inp, next_states.pmf(next_state)))
 
         else:
             raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
