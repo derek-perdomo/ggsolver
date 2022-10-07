@@ -72,60 +72,6 @@ class GraphicalModel:
         # If model is deterministic, next states is a single state.
         if self.is_deterministic():
             try:
-                uid = self.__states[state]
-                vid = self.__states[next_states]
-                edges.add((uid, vid, inp, None))
-            except ValueError:
-                logging.warning(
-                    util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                         f"No edge(s) added to graph for state={state}, input={inp}, "
-                                         f"next_state={next_states}.")
-                )
-
-        # If model is non-deterministic, next states is an Iterable of states.
-        elif not self.is_deterministic() and not self.is_probabilistic():
-            for next_state in next_states:
-                try:
-                    uid = self.__states[state]
-                    vid = self.__states[next_state]
-                    edges.add((uid, vid, inp, None))
-                except ValueError:
-                    logging.warning(
-                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                             f"No edge(s) added to graph for state={state}, input={inp}, "
-                                             f"next_state={next_state}.")
-                    )
-
-        # If model is stochastic, next states is a Distribution of states.
-        elif not self.is_deterministic() and self.is_probabilistic():
-            for next_state in next_states.support():
-                try:
-                    uid = self.__states[state]
-                    vid = self.__states[next_state]
-                    edges.add((uid, vid, inp, next_states.pmf(next_state)))
-                except ValueError:
-                    logging.warning(
-                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                             f"No edge(s) added to graph for state={state}, input={inp}, "
-                                             f"next_state={next_state}.")
-                    )
-
-        else:
-            raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
-                            f"Check the values: is_deterministic: {self.is_deterministic()}, "
-                            f"self.is_quantitative:{self.is_probabilistic()}.")
-
-        return edges
-
-    def _gen_edges2(self, state, inp):
-        delta = getattr(self, "delta")
-        next_states = delta(state, inp)
-        edges = set()
-
-        # There are three types of graphical models. Handle each separately.
-        # If model is deterministic, next states is a single state.
-        if self.is_deterministic():
-            try:
                 edges.add((state, next_states, inp, None))
             except ValueError:
                 logging.warning(
@@ -201,21 +147,21 @@ class GraphicalModel:
         # Get input domain
         inputs = list(input_func())
 
-        # Generate edges
-        edges = set()
-        for state, inp in itertools.product(self.__states.keys(), inputs):
-            new_edges = self._gen_edges(state, inp)
-            edges.update(new_edges)
-
         # Edge properties: input, prob,
         ep_input = EdgePropertyMap(graph=graph)
         ep_prob = EdgePropertyMap(graph=graph, default=None)
 
-        # Update graph edges
-        for uid, vid, inp, prob in edges:
-            key = graph.add_edge(uid, vid)
-            ep_input[uid, vid, key] = inp
-            ep_prob[uid, vid, key] = prob
+        # Generate edges
+        for state, inp in itertools.product(self.__states.keys(), inputs):
+            new_edges = self._gen_edges(state, inp)
+
+            # Update graph edges
+            uid = self.__states[state]
+            for _, t, _, prob in new_edges:
+                vid = self.__states[t]
+                key = graph.add_edge(uid, vid)
+                ep_input[uid, vid, key] = inp
+                ep_prob[uid, vid, key] = prob
 
         # Add edge properties to graph
         graph[self._input_func] = ep_input
@@ -261,7 +207,7 @@ class GraphicalModel:
             # Apply all inputs to state
             for inp in inputs:
                 # Get successors: set of (from_st, to_st, inp, prob)
-                new_edges = self._gen_edges2(state, inp)
+                new_edges = self._gen_edges(state, inp)
 
                 for _, to_state, inp, prob in new_edges:
                     # If to_state was added to queue in the past, its id will be cached.
@@ -287,116 +233,6 @@ class GraphicalModel:
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property (input domain): {self._input_func}. [OK]"))
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property (probability): prob. [OK]"))
 
-    def _add_nodes_to_graph(self, graph):
-        """
-        Adds nodes to the input graph and sets the "state" property.
-        """
-        assert isinstance(self.states(), (tuple, list)), f"{self.__class__.__name__}.states() must return a list/tuple."
-        states = self.states()
-        node_ids = list(graph.add_nodes(len(states)))
-        p_map = NodePropertyMap(graph=graph)
-        for i in range(len(node_ids)):
-            p_map[node_ids[i]] = states[i]
-        graph["state"] = p_map
-
-        # Cache states
-        self.__states = states
-
-        # Logging and printing
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: states. Added {len(node_ids)} states."))
-
-    def _add_edges_to_graph(self, graph):
-        """
-        Adds edges to the input graph and sets the "input" property.
-        Each edge is unique identified by a triple (state, input, next_state).
-
-        Assumes: self._add_nodes_to_graph() is called before and self.__states is cached.
-        """
-        try:
-            inputs = getattr(self, self._input_func)()
-            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.{self._input_func}() must be a list/tuple."
-        except TypeError:
-            logging.error(util.ColoredMsg.error(f"[ERROR] Input domain of {self} is not set. No edges were added."))
-            return
-
-        if len(inputs) == 0:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Input domain of {self} is empty. No edges were added."))
-
-        # Create an edge property called input
-        property_inp = EdgePropertyMap(graph=self)
-        property_prob = EdgePropertyMap(graph=self, default=None)
-
-        # Generate edges by applying each input to every state.
-        for state in self.__states:
-            for inp in inputs:
-                next_states = self.delta(state, inp)
-
-                # There are three types of graphical models. Handle each separately.
-                # If model is deterministic, next states is a single state.
-                if self.is_deterministic():
-                    try:
-                        uid = self.__states.index(state)
-                        vid = self.__states.index(next_states)
-                        key = graph.add_edge(uid, vid)
-                        property_inp[(uid, vid, key)] = inp
-                    except ValueError:
-                        logging.warning(
-                            util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                 f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                 f"next_state={next_states}.")
-                        )
-
-                # If model is non-deterministic, next states is an Iterable of states.
-                elif not self.is_deterministic() and not self.is_probabilistic():
-                    for next_state in next_states:
-                        try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
-                            key = graph.add_edge(uid, vid)
-                            property_inp[(uid, vid, key)] = inp
-                        except ValueError:
-                            logging.warning(
-                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                     f"next_state={next_state}.")
-                            )
-
-                # If model is stochastic, next states is a Distribution of states.
-                elif not self.is_deterministic() and self.is_probabilistic():
-                    for next_state in next_states.support():
-                        try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
-                            key = graph.add_edge(uid, vid)
-                            property_inp[(uid, vid, key)] = inp
-                            property_prob[(uid, vid, key)] = next_states.pmf(next_state)
-                        except ValueError:
-                            logging.warning(
-                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                     f"next_state={next_state}.")
-                            )
-
-                else:
-                    raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
-                                    f"Check the values: is_deterministic: {self.is_deterministic()}, "
-                                    f"self.is_quantitative:{self.is_probabilistic()}.")
-
-        # Update the properties with graph
-        if self._input_func not in self.GRAPH_PROPERTY:
-            graph["inp_domain"] = inputs
-            graph["input_name"] = self._input_func
-            logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
-        else:
-            logging.info(util.ColoredMsg.ok(f"[INFO] Queuing graph property: {self._input_func} instead of inp_domain. OK"))
-
-        graph["prob"] = property_prob
-        graph["input"] = property_inp
-
-        # Logging and printing
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. OK."))
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: prob. OK."))
-
     def _add_node_prop_to_graph(self, graph, p_name, default=None):
         """
         Adds the node property called `p_name` to the graph.
@@ -406,7 +242,7 @@ class GraphicalModel:
         Assumes: self._add_nodes_to_graph() is called before.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property is ignored: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property is ignored: {p_name}. [IGNORED]"))
             return
 
         try:
@@ -417,11 +253,11 @@ class GraphicalModel:
             for uid in range(len(self.__states)):
                 p_map[uid] = p_func(self.__states[uid])
             graph[p_name] = p_map
-            logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: {p_name}. OK"))
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: {p_name}. [OK]"))
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
 
     def _add_edge_prop_to_graph(self, graph, p_name, default=None):
         """
@@ -433,7 +269,7 @@ class GraphicalModel:
         Assumes: self._add_edges_to_graph() is called.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. [IGNORED]"))
             return
 
         try:
@@ -444,11 +280,11 @@ class GraphicalModel:
             for uid, vid, key in graph.edges():
                 p_map[(uid, vid, key)] = p_func(self.__states[uid], graph["input"][(uid, vid, key)], self.__states[vid])
             graph[p_name] = p_map
-            logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: {p_name}. OK"))
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: {p_name}. [OK]"))
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Edge property not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Edge property not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
 
     def _add_graph_prop_to_graph(self, graph, p_name):
         """
@@ -459,29 +295,29 @@ class GraphicalModel:
         Assumes: self._add_states_to_graph() is called before and self.__states is cached.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. [IGNORED]"))
             return
 
         try:
             p_func = getattr(self, p_name)
             if inspect.ismethod(p_func) or (inspect.isfunction(p_func) and p_func.__name__ == "<lambda>"):
                 graph[p_name] = p_func()
-                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. [OK]"))
             elif inspect.isfunction(p_func):
                 if len(inspect.signature(p_func).parameters) == 0:
                     graph[p_name] = p_func()
                 else:
                     graph[p_name] = p_func(self)
-                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. [OK]"))
             # elif inspect.ismethod(p_func):
             #     graph[p_name] = p_func()
             #     logging.warning(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
             else:
                 raise TypeError(f"Graph property {p_name} is neither a function nor a method.")
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -517,105 +353,54 @@ class GraphicalModel:
             :py:meth:`TSys.graphify_unpointed()` is called, which constructs the complete transition system.
         :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
         """
+        # Clear cached information
         self._clear_cache()
 
+        # Input parameter validation
         if pointed is True and self._init_state is None:
             raise ValueError(f"{self.__class__.__name__} is not initialized. "
                              f"Did you forget to call {self.__class__.__name__}.initialize() function?")
-        elif pointed is True and self._init_state is not None:
-            graph = self.graphify_pointed()
+
+        # Initialize graph object
+        graph = Graph()
+
+        # Glob node, edge and graph properties
+        node_props = getattr(self, "NODE_PROPERTY")
+        edge_props = getattr(self, "EDGE_PROPERTY")
+        graph_props = getattr(self, "GRAPH_PROPERTY")
+
+        # Warn about duplication
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed node properties: {node_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed edge properties: {edge_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate node, edge properties: "
+                                            f"{set.intersection(node_props, edge_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate edge, graph properties: "
+                                            f"{set.intersection(edge_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, node properties: "
+                                            f"{set.intersection(graph_props, node_props)}"))
+
+        # Construct underlying graph for pointed construction
+        if pointed is True:
+            self._gen_underlying_graph_pointed(graph)
+
+        # Construct underlying graph for unpointed construction
         else:
-            graph = self.graphify_unpointed()
+            self._gen_underlying_graph_unpointed(graph)
+
+        # Add node properties
+        for p_name in node_props:
+            self._add_node_prop_to_graph(graph, p_name)
+
+        # Add edge properties
+        for p_name in edge_props:
+            self._add_edge_prop_to_graph(graph, p_name)
+
+        # Add graph properties
+        for p_name in graph_props:
+            self._add_graph_prop_to_graph(graph, p_name)
 
         print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
-        return graph
-
-    def graphify_pointed(self):
-        """
-        Constructs the underlying graph of the graphical model. The constructed graph contains only the states that are
-        reachable from the initial state.
-
-        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
-        """
-        graph = Graph()
-
-        # Glob node, edge and graph properties
-        state_props = self.NODE_PROPERTY
-        trans_props = self.EDGE_PROPERTY
-        graph_props = self.GRAPH_PROPERTY
-
-        # Warn about duplication
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
-                                            f"{set.intersection(state_props, trans_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
-                                            f"{set.intersection(trans_props, graph_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
-                                            f"{set.intersection(graph_props, state_props)}"))
-
-        # Add nodes and edges to the graph
-        # self._add_nodes_to_graph(graph)
-        # self._add_edges_to_graph(graph)
-        self._gen_underlying_graph_pointed(graph)
-
-        # Add node properties
-        for p_name in state_props:
-            self._add_node_prop_to_graph(graph, p_name)
-
-        # Add edge properties
-        for p_name in trans_props:
-            self._add_edge_prop_to_graph(graph, p_name)
-
-        # Add graph properties
-        for p_name in graph_props:
-            self._add_graph_prop_to_graph(graph, p_name)
-
-        return graph
-
-    def graphify_unpointed(self):
-        """
-        Constructs the underlying graph of the graphical model. The constructed graph contains all possible states in
-        the model.
-
-        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
-        """
-        graph = Graph()
-
-        # Glob node, edge and graph properties
-        state_props = self.NODE_PROPERTY
-        trans_props = self.EDGE_PROPERTY
-        graph_props = self.GRAPH_PROPERTY
-
-        # Warn about duplication
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
-                                            f"{set.intersection(state_props, trans_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
-                                            f"{set.intersection(trans_props, graph_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
-                                            f"{set.intersection(graph_props, state_props)}"))
-
-        # Add nodes and edges to the graph
-        # self._add_nodes_to_graph(graph)
-        # self._add_edges_to_graph(graph)
-        self._gen_underlying_graph_unpointed(graph)
-
-        # Add node properties
-        for p_name in state_props:
-            self._add_node_prop_to_graph(graph, p_name)
-
-        # Add edge properties
-        for p_name in trans_props:
-            self._add_edge_prop_to_graph(graph, p_name)
-
-        # Add graph properties
-        for p_name in graph_props:
-            self._add_graph_prop_to_graph(graph, p_name)
-
         return graph
 
     def serialize(self):
