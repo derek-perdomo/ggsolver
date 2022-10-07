@@ -5,8 +5,13 @@ import logging
 import typing
 from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
-from ggsolver.logic import pl
 from functools import partial
+from tqdm import tqdm
+
+try:
+    from ggsolver.logic import pl
+except ImportError:
+    logging.error(util.ColoredMsg.error(f"[ERROR] logic.pl could not be loaded. Logic functionality will not work."))
 
 
 # ==========================================================================
