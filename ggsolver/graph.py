@@ -244,6 +244,9 @@ class Graph(IGraph):
     def __str__(self):
         return f"<Graph with |V|={self.number_of_nodes()}, |E|={self.number_of_edges()}>"
 
+    def base_graph(self):
+        return self._graph
+
     def add_node(self):
         """
         Adds a new node to the graph.
@@ -371,6 +374,15 @@ class Graph(IGraph):
         List of all in edges to the node represented by uid.
         """
         return self._graph.in_edges(uid, keys=True)
+
+    def is_isomorphic_to(self, other: 'Graph'):
+        """
+        Checks if the graph is isomorphic to the `other` graph.
+
+        :param other: (:class:`Graph` object) Graph to be checked for isomorphism with current graph.
+        :return: (bool) `True`, if graphs are isomorphic. Else, `False`.
+        """
+        return nx.is_isomorphic(self._graph, other._graph)
 
     def out_edges(self, uid):
         """
@@ -617,18 +629,6 @@ class Graph(IGraph):
         dot_graph = nx.nx_agraph.to_agraph(g)
         dot_graph.layout("dot")
         dot_graph.draw(fpath)
-
-    def is_isomorphic_to(self, other: 'Graph'):
-        """
-        Checks if the graph is isomorphic to the `other` graph.
-
-        :param other: (:class:`Graph` object) Graph to be checked for isomorphism with current graph.
-        :return: (bool) `True`, if graphs are isomorphic. Else, `False`.
-        """
-        return nx.is_isomorphic(self._graph, other._graph)
-
-    def base_graph(self):
-        return self._graph
 
 
 class SubGraph(Graph):
