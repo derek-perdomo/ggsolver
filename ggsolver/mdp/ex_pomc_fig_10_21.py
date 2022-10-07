@@ -2,6 +2,7 @@
 Example from Principles of Model Checking, Fig. 10.21.
 """
 from ggsolver.mdp.models import QualitativeMDP
+from ggsolver.mdp.reachability import ASWinReach
 
 
 if __name__ == '__main__':
@@ -20,6 +21,14 @@ if __name__ == '__main__':
             "sink": {'alpha': ["sink"], 'beta': ["sink"]},
         },
         init_state="s0",
-        final=["s2", "s3"]
+        final=["s6"]
+        # final=["s6", "s7"]
+        # final=["s2", "s3"]
     )
     mdp_graph = mdp.graphify()
+    mdp_graph.to_png("mdp.png", nlabel=["state"], elabel=["input"])
+
+    win = ASWinReach(mdp_graph)
+    win.solve()
+    print(win.win1_act(4))
+    print(win.win1_act(0))
