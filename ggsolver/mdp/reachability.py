@@ -120,22 +120,13 @@ class PWinReach(Solver):
         Alg. 45 from Principles of Model Checking.
         Using the same variable names as Alg. 45.
         """
-        # Initialize algorithm variables
-        graph = SubGraph(self._graph)
-        b = self._final
-
-        # Make B absorbing
-        for uid in b:
-            for _, vid, key in graph.out_edges(uid):
-                graph.hide_edge(uid, vid, key)
-
-        reachable_nodes = graph.reverse_bfs(b)
-        for uid in graph.nodes():
+        self.reset()
+        final = self._final
+        reachable_nodes = self._solution.reverse_bfs(final)
+        for uid in self._solution.nodes():
             if uid not in reachable_nodes:
-                graph.hide_node(uid)
-
-        self._win1 = set(reachable_nodes)
-        self._strategy_graph = graph
+                self._solution.hide_node(uid)
+        self._is_solved = True
 
     def pi1(self, node):
         return random.choice(self.win1_act(node))
