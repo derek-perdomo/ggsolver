@@ -7,6 +7,7 @@ from ggsolver.models import Solver
 from functools import reduce
 
 
+# TODO. Adopt to SubGraph based solver.
 class ASWinReach(Solver):
     def __init__(self, graph, final=None, player=1, **kwargs):
         """
