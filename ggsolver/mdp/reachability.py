@@ -1,10 +1,7 @@
 import random
-
-import networkx as nx
-
 from ggsolver.graph import Graph, SubGraph
 from ggsolver.models import Solver
-from functools import reduce
+from tqdm import tqdm
 
 
 # TODO. Adopt to SubGraph based solver.
@@ -141,16 +138,3 @@ class PWinReach(Solver):
 
         # Mark the game as solved.
         self._is_solved = True
-
-    # TODO. Remove function.
-    def pi1(self, node):
-        return random.choice(self.win1_act(node))
-
-    # TODO. Remove function.
-    def win1_act(self, node):
-        if self._strategy_graph.has_node(node):
-            acts = set()
-            for uid, vid, key in self._strategy_graph.out_edges(node):
-                acts.add(self._graph["input"][uid, vid, key])
-            return list(acts)
-        return []
