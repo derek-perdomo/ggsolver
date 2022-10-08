@@ -123,18 +123,21 @@ class PWinReach(Solver):
         # Get final states
         final = self._final
 
-        # TODO (add tqdm). Encapsulate reachabale nodes and winner encoding.
-        # Identify the set of nodes from which a final state can be reached (i.e., there exists a path in graph)
-        reachable_nodes = self._solution.reverse_bfs(final)
+        with tqdm(total=self._solution.number_of_nodes()) as progress_bar:
+            # Identify the set of nodes from which a final state can be reached (i.e., there exists a path in graph)
+            progress_bar.set_description("Running reverse BFS...")
+            reachable_nodes = self._solution.reverse_bfs(final)
 
-        # Hide the nodes in MDP.
-        for uid in self._solution.nodes():
-            self._node_winner[uid] = 1 if uid in reachable_nodes else 3
-            out_edges = self._solution.out_edges(uid)
-            winning_acts = {self._solution["input"][uid, vid, key]
-                            for _, vid, key in out_edges if vid not in reachable_nodes}
-            for _, vid, key in out_edges:
-                self._edge_winner[uid, vid, key] = 1 if self._solution["input"][uid, vid, key] in winning_acts else 3
+            # Hide the nodes in MDP.
+            progress_bar.set_description("Marking node, edge winners...")
+            for uid in self._solution.nodes():
+                progress_bar.update(1)
+                self._node_winner[uid] = 1 if uid in reachable_nodes else 3
+                out_edges = self._solution.out_edges(uid)
+                winning_acts = {self._solution["input"][uid, vid, key]
+                                for _, vid, key in out_edges if vid not in reachable_nodes}
+                for _, vid, key in out_edges:
+                    self._edge_winner[uid, vid, key] = 1 if self._solution["input"][uid, vid, key] in winning_acts else 3
 
         # Mark the game as solved.
         self._is_solved = True
