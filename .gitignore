@@ -16,4 +16,4 @@ cmake-build-debug/
 *.pyc
 examples/.ipynb_checkpoints/
 
-examples/interfaces/.ipynb_checkpoints/
+examples/notebooks/interfaces/.ipynb_checkpoints/
