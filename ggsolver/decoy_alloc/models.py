@@ -43,6 +43,7 @@ class ReachabilityGame(Game):
 
 
 class DecoyAllocGame(Game):
+    """ Def. 5 in Paper """
     GRAPH_PROPERTY = Game.GRAPH_PROPERTY.copy()
     NODE_PROPERTY = Game.NODE_PROPERTY.copy()
 
@@ -56,19 +57,23 @@ class DecoyAllocGame(Game):
         self._fakes = fakes
 
     def states(self):
-        pass
+        return self._game.states()
 
     def actions(self):
-        pass
+        return self._game.actions()
 
     def delta(self, state, act):
-        pass
+        # Make all traps and fake targets a sink state
+        if state in self._traps or state in self._fakes:
+            return state
+        else:
+            return self._game.delta(state, act)
 
     def final(self, state):
-        pass
+        return self._game.final(state)
 
     def turn(self, state):
-        pass
+        return self._game.turn(state)
 
     def game(self):
         return self._game
@@ -83,14 +88,18 @@ class DecoyAllocGame(Game):
 
 
 class PerceptualGameP2(DecoyAllocGame):
+    """ Def 6. In Paper """
     def delta(self, state, act):
-        pass
+        # Same as DecoyAllocGame except fakes and traps are not sink states
+        return self._game.delta(state, act)
 
     def final(self, state):
-        pass
+        # TODO Convert to set and return list
+        return self._game.final().union(self._game.fakes)
 
 
 class ReachabilityGameOfP1(Game):
+    """ Def. 11 in Paper """
     def __init__(self, p2_game, solution_p2_game, **kwargs):
         super(ReachabilityGameOfP1, self).__init__(is_turn_based=p2_game.is_turn_based(),
                                                    is_deterministic=p2_game.is_deterministic(),
@@ -116,6 +125,8 @@ class ReachabilityGameOfP1(Game):
 
 
 class Hypergame(Game):
+    """ Def. 7 in Paper (The actual game and P2s perceptual game). The 2nd level is an instance of this with
+        P1s hypergame and P2s perceptual game"""
     def __init__(self, p2_game, solution_p2_game, **kwargs):
         super(Hypergame, self).__init__(is_turn_based=p2_game.is_turn_based(),
                                         is_deterministic=p2_game.is_deterministic(),
@@ -125,10 +136,10 @@ class Hypergame(Game):
         self._solution_p2_game = solution_p2_game
 
     def states(self):
-        pass
+        return self._p2_game.states().union(self._solution_p2_game.states())
 
     def actions(self):
-        pass
+        return self._p2_game.actions().union(self._solution_p2_game.actions())
 
     def delta(self, state, act):
         pass
