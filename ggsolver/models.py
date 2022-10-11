@@ -1,15 +1,19 @@
-# TODO. Try implementing dtptb package.
-# TODO. Add logging statements.
-# TODO. Make note that user will not be warned of any private attributes that are unserialized.
-# TODO. Make note that user must update RESERVED_PROPERTIES and _graphify_unpointed appropriately.
-# TODO. Instead of registering property function, register just name and then use getattr to
-#  find the appropriate function during serialization. This will allow rebinding functions.
+import copy
 import inspect
+import itertools
 import logging
+import random
 import typing
+from collections.abc import Iterable
 from ggsolver import util
-from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph
+from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph, SubGraph
 from functools import partial
+from tqdm import tqdm
+
+try:
+    from ggsolver.logic import pl
+except ImportError:
+    logging.error(util.ColoredMsg.error(f"[ERROR] logic.pl could not be loaded. Logic functionality will not work."))
 
 
 # ==========================================================================
@@ -37,9 +41,8 @@ class GraphicalModel:
         self._is_deterministic = is_deterministic
         self._is_probabilistic = is_probabilistic
 
-        # Input domain (Expected value: A function that returns an Iterable object.)
-        self._inp_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
-        self._inp_name = kwargs["input_name"] if "input_name" in kwargs else None
+        # Input domain (Expected value: Name of the function that returns an Iterable object.)
+        self._input_func = kwargs["input_domain"] if "input_domain" in kwargs else None
 
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
@@ -63,112 +66,195 @@ class GraphicalModel:
     # ==========================================================================
     # PRIVATE FUNCTIONS.
     # ==========================================================================
-    def _add_nodes_to_graph(self, graph):
+    def _clear_cache(self):
+        self.__states = dict()
+        self.__is_graphified = False
+
+    def _gen_edges(self, delta, state, inp):
+        next_states = delta(state, inp)
+        edges = set()
+
+        # There are three types of graphical models. Handle each separately.
+        # If model is deterministic, next states is a single state.
+        if self.is_deterministic():
+            if next_states is None:
+                logging.warning(
+                    util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                         f"No edge(s) added to graph for state={state}, input={inp}, "
+                                         f"next_state={next_states}.")
+                )
+                return set()
+
+            edges.add((state, next_states, inp, None))
+
+        # If model is non-deterministic, next states is an Iterable of states.
+        elif not self.is_deterministic() and not self.is_probabilistic():
+            for next_state in next_states:
+                if next_state is None:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+                    continue
+
+                edges.add((state, next_state, inp, None))
+
+        # If model is stochastic, next states is a Distribution of states.
+        elif not self.is_deterministic() and self.is_probabilistic():
+            # FIXME. I have doubts that following implementation is correct.
+            #  If support is empty, the code under `if` will not execute.
+            for next_state in next_states.support():
+                if next_state is None:
+                    logging.warning(
+                        util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
+                                             f"No edge(s) added to graph for state={state}, input={inp}, "
+                                             f"next_state={next_state}.")
+                    )
+                    continue
+
+                edges.add((state, next_state, inp, next_states.pmf(next_state)))
+
+        else:
+            raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
+                            f"Check the values: is_deterministic: {self.is_deterministic()}, "
+                            f"self.is_quantitative:{self.is_probabilistic()}.")
+
+        return edges
+
+    def _gen_underlying_graph_unpointed(self, graph):
         """
-        Adds nodes to the input graph and sets the "state" property.
+        Programmer's notes:
+        1. Caches states (returned by `self.states()`) in self.__states variable.
+        2. Assumes all states to be hashable.
+        3.
         """
-        assert isinstance(self.states(), (tuple, list)), f"{self.__class__.__name__}.states() must return a list/tuple."
-        states = self.states()
+        # Get states
+        states = getattr(self, "states")
+        states = list(states())
+
+        # Add states to graph
         node_ids = list(graph.add_nodes(len(states)))
-        p_map = NodePropertyMap(graph=graph)
-        for i in range(len(node_ids)):
-            p_map[node_ids[i]] = states[i]
-        graph["state"] = p_map
 
-        # Cache states
-        self.__states = states
+        # Cache states as a dictionary {state: uid}
+        self.__states = dict(zip(states, node_ids))
+
+        # Node property: state
+        np_state = NodePropertyMap(graph=graph)
+        np_state.update(dict(zip(node_ids, states)))
+        graph["state"] = np_state
 
         # Logging and printing
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: states. Added {len(node_ids)} states."))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: states. Added {len(node_ids)} states. [OK]"))
 
-    def _add_edges_to_graph(self, graph):
-        """
-        Adds edges to the input graph and sets the "input" property.
-        Each edge is unique identified by a triple (state, input, next_state).
+        # Get input function
+        input_func = getattr(self, self._input_func)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
 
-        Assumes: self._add_nodes_to_graph() is called before and self.__states is cached.
-        """
-        try:
-            inputs = self._inp_domain()
-            assert isinstance(inputs, (list, tuple)), f"{self.__class__.__name__}.inp_domain must be a list/tuple."
-        except TypeError:
-            logging.error(util.ColoredMsg.error(f"[ERROR] Input domain of {self} is not set. No edges were added."))
-            return
+        # Graph property: input domain (stores the name of edge property that represents inputs)
+        graph["input_domain"] = self._input_func
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
 
-        if len(inputs) == 0:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Input domain of {self} is empty. No edges were added."))
+        # Get input domain
+        inputs = list(input_func())
 
-        # Create an edge property called input
-        property_inp = EdgePropertyMap(graph=self)
-        property_prob = EdgePropertyMap(graph=self, default=None)
+        # Edge properties: input, prob,
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
 
-        # Generate edges by applying each input to every state.
-        for state in self.__states:
-            for inp in inputs:
-                next_states = self.delta(state, inp)
+        # Generate edges
+        delta = getattr(self, "delta")
+        for state, inp in tqdm(itertools.product(self.__states.keys(), inputs),
+                               total=len(self.__states) * len(inputs),
+                               desc="Unpointed graphify adding edges"):
 
-                # There are three types of graphical models. Handle each separately.
-                # If model is deterministic, next states is a single state.
-                if self.is_deterministic:
-                    try:
-                        uid = self.__states.index(state)
-                        vid = self.__states.index(next_states)
+            new_edges = self._gen_edges(delta, state, inp)
+
+            # Update graph edges
+            uid = self.__states[state]
+            for _, t, _, prob in new_edges:
+                vid = self.__states[t]
+                key = graph.add_edge(uid, vid)
+                ep_input[uid, vid, key] = inp
+                ep_prob[uid, vid, key] = prob
+
+        # Add edge properties to graph
+        graph["input"] = ep_input
+        graph["prob"] = ep_prob
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. [OK]"))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: prob. [OK]"))
+
+    def _gen_underlying_graph_pointed(self, graph):
+        logging.info(util.ColoredMsg.ok(f"[INFO] Running graphify UNPOINTED."))
+
+        # Get input function
+        input_func = getattr(self, self._input_func)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
+
+        # Graph property: input domain (stores the name of edge property that represents inputs)
+        graph["input_domain"] = self._input_func
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
+
+        # Get input domain
+        inputs = list(input_func())
+
+        # Node property: state
+        np_state = NodePropertyMap(graph=graph)
+
+        # Edge properties: input, prob,
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
+
+        # BFS traversal until all reachable states are visited.
+        s0 = self.init_state()
+        uid = graph.add_node()
+        self.__states[s0] = uid
+        np_state[uid] = s0
+
+        queue = [s0]
+        visited = set()
+
+        # Generate edges
+        delta = getattr(self, "delta")
+        with tqdm(total=1, desc="Pointed graphify adding edges") as progress_bar:
+            while len(queue) > 0:
+                # Update progress_bar
+                progress_bar.total = len(queue) + len(visited)
+                progress_bar.update(1)
+
+                # Visit a state. Add to graph. Update cache. Update node property `state`.
+                state = queue.pop()
+                visited.add(state)
+                uid = self.__states[state]
+
+                # Apply all inputs to state
+                for inp in inputs:
+                    # Get successors: set of (from_st, to_st, inp, prob)
+                    new_edges = self._gen_edges(delta, state, inp)
+
+                    for _, to_state, inp, prob in new_edges:
+                        # If to_state was added to queue in the past, its id will be cached.
+                        # Otherwise, add new node, cache it and queue it for exploration.
+                        if to_state in self.__states:
+                            vid = self.__states[to_state]
+                        else:
+                            vid = graph.add_node()
+                            self.__states[to_state] = vid
+                            np_state[uid] = state
+                            queue.append(to_state)
+
+                        # Add edge to graph
                         key = graph.add_edge(uid, vid)
-                        property_inp[(uid, vid, key)] = inp
-                    except ValueError:
-                        logging.warning(
-                            util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                 f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                 f"next_state={next_states}.")
-                        )
 
-                # If model is non-deterministic, next states is an Iterable of states.
-                elif not self.is_deterministic and not self.is_probabilistic:
-                    for next_state in next_states:
-                        try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
-                            key = graph.add_edge(uid, vid)
-                            property_inp[(uid, vid, key)] = inp
-                        except ValueError:
-                            logging.warning(
-                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                     f"next_state={next_state}.")
-                            )
+                        # Set edge properties
+                        ep_input[uid, vid, key] = inp
+                        ep_prob[uid, vid, key] = prob
 
-                # If model is stochastic, next states is a Distribution of states.
-                elif not self.is_deterministic and self.is_probabilistic:
-                    for next_state in next_states.support():
-                        try:
-                            uid = self.__states.index(state)
-                            vid = self.__states.index(next_state)
-                            key = graph.add_edge(uid, vid)
-                            property_inp[(uid, vid, key)] = inp
-                            property_prob[(uid, vid, key)] = next_states.pmf(next_state)
-                        except ValueError:
-                            logging.warning(
-                                util.ColoredMsg.warn(f"[WARN] {self.__class__.__name__}._graphify_unpointed(): "
-                                                     f"No edge(s) added to graph for state={state}, input={inp}, "
-                                                     f"next_state={next_state}.")
-                            )
-
-                else:
-                    raise TypeError("Graphical Model is neither deterministic, nor non-deterministic, nor stochastic! "
-                                    f"Check the values: is_deterministic: {self.is_deterministic}, "
-                                    f"self.is_quantitative:{self.is_probabilistic}.")
-
-        # Update the properties with graph
-        graph["inp_domain"] = inputs
-        graph["prob"] = property_prob
-        graph["input"] = property_inp
-        if self._inp_name is not None:
-            graph[self._inp_name] = property_inp
-
-        # Logging and printing
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: inp_domain. OK."))
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. OK."))
-        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: prob. OK."))
+        # Add edge properties to graph
+        graph["input"] = ep_input
+        graph["prob"] = ep_prob
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. [OK]"))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: prob. [OK]"))
 
     def _add_node_prop_to_graph(self, graph, p_name, default=None):
         """
@@ -179,7 +265,7 @@ class GraphicalModel:
         Assumes: self._add_nodes_to_graph() is called before.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property is ignored: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property is ignored: {p_name}. [IGNORED]"))
             return
 
         try:
@@ -187,14 +273,17 @@ class GraphicalModel:
             p_func = getattr(self, p_name)   # self.NODE_PROPERTY[p_name]
             if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
                 raise TypeError(f"Node property {p_func} is not a function.")
-            for uid in range(len(self.__states)):
-                p_map[uid] = p_func(self.__states[uid])
+            # for uid in range(len(self.__states)):
+            #     p_map[uid] = p_func(self.__states[uid])
+            #
+            for uid in range(graph.number_of_nodes()):
+                p_map[uid] = p_func(graph["state"][uid])
             graph[p_name] = p_map
-            logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: {p_name}. OK"))
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: {p_name}. [OK]"))
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
 
     def _add_edge_prop_to_graph(self, graph, p_name, default=None):
         """
@@ -206,7 +295,7 @@ class GraphicalModel:
         Assumes: self._add_edges_to_graph() is called.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. [IGNORED]"))
             return
 
         try:
@@ -215,44 +304,47 @@ class GraphicalModel:
             if not (inspect.isfunction(p_func) or inspect.ismethod(p_func)):
                 raise TypeError(f"Edge property {p_func} is not a function.")
             for uid, vid, key in graph.edges():
-                p_map[(uid, vid, key)] = p_func(self.__states[uid], graph["input"][(uid, vid, key)], self.__states[vid])
+                p_map[(uid, vid, key)] = p_func(graph["states"][uid],
+                                                graph["input"][(uid, vid, key)],
+                                                graph["states"][vid])
             graph[p_name] = p_map
-            logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: {p_name}. OK"))
+            logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: {p_name}. [OK]"))
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Edge property not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Edge property not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
 
     def _add_graph_prop_to_graph(self, graph, p_name):
         """
         Adds a graph property called `p_name` to the graph.
 
-        Requires: `p_name` should be a function in self that inputs no parameters.
-
-        Assumes: self._add_states_to_graph() is called before and self.__states is cached.
+        Requires: `p_name` should be a function in self that inputs no parameters or a non-callable value.
         """
         if graph.has_property(p_name):
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Duplicate property: {p_name}. [IGNORED]"))
             return
 
         try:
             p_func = getattr(self, p_name)
             if inspect.ismethod(p_func) or (inspect.isfunction(p_func) and p_func.__name__ == "<lambda>"):
                 graph[p_name] = p_func()
-                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. [OK]"))
             elif inspect.isfunction(p_func):
-                graph[p_name] = p_func(self)
-                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
+                if len(inspect.signature(p_func).parameters) == 0:
+                    graph[p_name] = p_func()
+                else:
+                    graph[p_name] = p_func(self)
+                logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. [OK]"))
             # elif inspect.ismethod(p_func):
             #     graph[p_name] = p_func()
             #     logging.warning(util.ColoredMsg.ok(f"[INFO] Processed graph property: {p_name}. OK"))
             else:
                 raise TypeError(f"Graph property {p_name} is neither a function nor a method.")
         except NotImplementedError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. IGNORED"))
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Graph property is not implemented: {p_name}. [IGNORED]"))
         except AttributeError:
-            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. IGNORED"))
-    
+            logging.warning(util.ColoredMsg.warn(f"[WARN] Node property function is not defined: {p_name}. [IGNORED]"))
+
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
@@ -278,7 +370,7 @@ class GraphicalModel:
         """
         self._init_state = state
 
-    def graphify(self, pointed=False):
+    def graphify(self, pointed=False, base_only=False):
         """
         Constructs the underlying graph of the graphical model.
 
@@ -287,67 +379,54 @@ class GraphicalModel:
             :py:meth:`TSys.graphify_unpointed()` is called, which constructs the complete transition system.
         :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
         """
+        # Clear cached information
+        self._clear_cache()
+
+        # Input parameter validation
         if pointed is True and self._init_state is None:
             raise ValueError(f"{self.__class__.__name__} is not initialized. "
                              f"Did you forget to call {self.__class__.__name__}.initialize() function?")
-        elif pointed is True and self._init_state is not None:
-            graph = self.graphify_pointed()
-        else:
-            graph = self.graphify_unpointed()
 
-        print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
-        return graph
-
-    def graphify_pointed(self):
-        """
-        Constructs the underlying graph of the graphical model. The constructed graph contains only the states that are
-        reachable from the initial state.
-
-        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
-        """
-        raise NotImplementedError(f"{self.__class__.__name__}._graphify_pointed() is not implemented.")
-
-    def graphify_unpointed(self):
-        """
-        Constructs the underlying graph of the graphical model. The constructed graph contains all possible states in
-        the model.
-
-        :return: (:class:`ggsolver.graph.Graph` object) An equivalent graph representation of the graphical model.
-        """
+        # Initialize graph object
         graph = Graph()
 
         # Glob node, edge and graph properties
-        state_props = self.NODE_PROPERTY
-        trans_props = self.EDGE_PROPERTY
-        graph_props = self.GRAPH_PROPERTY
+        node_props = getattr(self, "NODE_PROPERTY")
+        edge_props = getattr(self, "EDGE_PROPERTY")
+        graph_props = getattr(self, "GRAPH_PROPERTY")
 
         # Warn about duplication
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed state properties: {state_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Globbed trans properties: {trans_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed node properties: {node_props}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Globbed edge properties: {edge_props}"))
         logging.info(util.ColoredMsg.header(f"[INFO] Globbed graph properties: {graph_props}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate state, trans properties: "
-                                            f"{set.intersection(state_props, trans_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate trans, graph properties: "
-                                            f"{set.intersection(trans_props, graph_props)}"))
-        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, state properties: "
-                                            f"{set.intersection(graph_props, state_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate node, edge properties: "
+                                            f"{set.intersection(node_props, edge_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate edge, graph properties: "
+                                            f"{set.intersection(edge_props, graph_props)}"))
+        logging.info(util.ColoredMsg.header(f"[INFO] Duplicate graph, node properties: "
+                                            f"{set.intersection(graph_props, node_props)}"))
 
-        # Add nodes and edges to the graph
-        self._add_nodes_to_graph(graph)
-        self._add_edges_to_graph(graph)
+        # Construct underlying graph for pointed construction
+        if pointed is True:
+            self._gen_underlying_graph_pointed(graph)
+
+        # Construct underlying graph for unpointed construction
+        else:
+            self._gen_underlying_graph_unpointed(graph)
 
         # Add node properties
-        for p_name in state_props:
+        for p_name in node_props:
             self._add_node_prop_to_graph(graph, p_name)
 
         # Add edge properties
-        for p_name in trans_props:
+        for p_name in edge_props:
             self._add_edge_prop_to_graph(graph, p_name)
 
         # Add graph properties
         for p_name in graph_props:
             self._add_graph_prop_to_graph(graph, p_name)
 
+        print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
         return graph
 
     def serialize(self):
@@ -666,13 +745,13 @@ class TSys(GraphicalModel):
             then the transition system is probabilistic. Otherwise, it is non-deterministic.
         :param input_domain: (optional, function). A member function of TSys class that defines the inputs to the
             transition system. [Default: TSys.actions]
-        :param input_name: (optional, str). The name of input property during graphify().
+        :param input_domain: (optional, str). The name of input property during graphify().
         :param init_state: (optional, JSON-serializable object). The initial state of the transition system.
         """
-        super(TSys, self).__init__(input_domain=self.actions,
-                                   is_deterministic=is_deterministic,
-                                   is_probabilistic=is_probabilistic,
-                                   **kwargs)
+        kwargs["input_domain"] = "actions" if "input_domain" not in kwargs else kwargs["input_domain"]
+        kwargs["is_deterministic"] = is_deterministic
+        kwargs["is_probabilistic"] = is_probabilistic
+        super(TSys, self).__init__(**kwargs)
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -809,10 +888,38 @@ class Game(TSys):
     GRAPH_PROPERTY = TSys.GRAPH_PROPERTY.copy()
 
     def __init__(self, is_turn_based=True, is_deterministic=True, is_probabilistic=False, **kwargs):
-        super(Game, self).__init__(is_deterministic=is_deterministic,
-                                   is_probabilistic=is_probabilistic,
-                                   **kwargs)
+        kwargs["is_deterministic"] = is_deterministic
+        kwargs["is_probabilistic"] = is_probabilistic
+        super(Game, self).__init__(**kwargs)
         self._is_turn_based = is_turn_based
+
+        # Process keyword arguments
+        if "states" in kwargs:
+            def states_():
+                return list(kwargs["states"])
+
+            self.states = states_
+
+        if "actions" in kwargs:
+            def actions_():
+                return list(kwargs["actions"])
+
+            self.actions = actions_
+
+        if "trans_dict" in kwargs:
+            def delta_(state, inp):
+                return kwargs["trans_dict"][state][inp]
+
+            self.delta = delta_
+
+        if "init_state" in kwargs:
+            self.initialize(kwargs["init_state"])
+
+        if "final" in kwargs:
+            def final_(state):
+                return 0 if state in kwargs["final"] else -1
+
+            self.final = final_
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
@@ -870,71 +977,201 @@ class Game(TSys):
 
 class Automaton(GraphicalModel):
     """
-    Alphabet is powerset(atoms).
+    Represents an Automaton.
+
+    .. math::
+        \\mathcal{A} = (Q, \\Sigma := 2^{AP}, \\delta, q_0, F)
+
+    In the `Automaton` class, each component is represented as a function.
+
+    - The set of states :math:`Q` is represented by `Automaton.states` function,
+    - The set of atomic propositions :math:`AP` is represented by `Automaton.atoms` function,
+    - The set of symbols :math:`\\Sigma` is represented by `Automaton.sigma` function,
+    - The transition function :math:`\\delta` is represented by `Automaton.delta` function,
+    - The initial state :math:`q_0` is represented by `Automaton.init_state` function.
+
+    An automaton may have one of the following acceptance conditions:
+
+    - (:class:`Automaton.ACC_REACH`, 0)
+    - (:class:`Automaton.ACC_SAFETY`, 0)
+    - (:class:`Automaton.ACC_BUCHI`, 0)
+    - (:class:`Automaton.ACC_COBUCHI`, 0)
+    - (:class:`Automaton.ACC_PARITY`, 0)
+    - (:class:`Automaton.ACC_PREF_LAST`, None)
+    - (:class:`Automaton.ACC_ACC_PREF_MP`, None)
+
     """
     NODE_PROPERTY = GraphicalModel.NODE_PROPERTY.copy()
     EDGE_PROPERTY = GraphicalModel.EDGE_PROPERTY.copy()
     GRAPH_PROPERTY = GraphicalModel.GRAPH_PROPERTY.copy()
 
-    ACC_REACH = "Reach"
-    ACC_SAFETY = "Safety"
-    ACC_BUCHI = "Buchi"
-    ACC_COBUCHI = "co-Buchi"
-    ACC_PARITY = "parity"
+    ACC_REACH = "Reach"                                 #:
+    ACC_SAFETY = "Safety"                               #:
+    ACC_BUCHI = "Buchi"                                 #:
+    ACC_COBUCHI = "co-Buchi"                            #:
+    ACC_PARITY = "Parity Min Even"                      #:
+    ACC_PREF_LAST = "Preference Last"                   #:
+    ACC_PREF_MP = "Preference MostPreferred"            #:
     ACC_UNDEFINED = "undefined"
+    ACC_TYPES = [
+        ACC_UNDEFINED,
+        ACC_REACH,
+        ACC_SAFETY,
+        ACC_BUCHI,
+        ACC_COBUCHI,
+        ACC_PARITY,
+        ACC_PREF_LAST,
+        ACC_PREF_MP
+    ]                                   #: Acceptance conditions supported by Automaton.
 
-    def __init__(self, acc_cond=ACC_UNDEFINED, **kwargs):
+    def __init__(self, **kwargs):
+        """
+        Supported keyword arguments:
+
+        :param states: (Iterable) An iterable over states in the automaton.
+        :param atoms: (Iterable[str]) An iterable over atomic propositions in the automaton.
+        :param trans_dict: (dict) A dictionary defining the (deterministic) transition function of automaton.
+                      Format of dictionary: {state: {logic.PLFormula: state}}
+        :param init_state: (object) The initial state, a member of states iterable.
+        :param final: (Iterable[states]) The set of final states, a subset of states iterable.
+        :param acc_cond: (tuple) A tuple of automaton acceptance type and an acceptance set.
+            For example, DFA has an acceptance condition of `(Automaton.ACC_REACH, 0)`.
+        :param is_deterministic: (bool) Whether the Automaton is deterministic.
+        """
+        kwargs["inputs"] = "sigma" if "inputs" not in kwargs else kwargs["inputs"]
         super(Automaton, self).__init__(**kwargs)
 
-        # Default properties (will be treated as graph properties during serialization)
-        self._acc_cond = acc_cond
-        self._is_sbacc = kwargs["is_sbacc"] if "is_sbacc" in kwargs else None
-        self._is_complete = kwargs["is_complete"] if "is_complete" in kwargs else None
-        self._is_stutter_invariant = kwargs["is_stutter_invariant"] if "is_stutter_invariant" in kwargs else None
-        self._is_unambiguous = kwargs["is_unambiguous"] if "is_unambiguous" in kwargs else None
-        self._is_terminal = kwargs["is_terminal"] if "is_terminal" in kwargs else None
+        # Process keyword arguments
+        if "states" in kwargs:
+            def states_():
+                return list(kwargs["states"])
+            self.states = states_
+
+        if "atoms" in kwargs:
+            def atoms_():
+                return list(kwargs["atoms"])
+            self.atoms = atoms_
+
+        if "trans_dict" in kwargs:
+            def delta_(state, inp):
+                next_states = set()
+                for formula, n_state in kwargs["trans_dict"][state].items():
+                    if pl.evaluate(formula, inp):
+                        next_states.add(n_state)
+
+                if self.is_deterministic():
+                    if len(next_states) > 1:
+                        raise ValueError("Non-determinism detected in a deterministic automaton. " +
+                                         f"delta({state}, {inp}) -> {next_states}.")
+                    return next(iter(next_states), None) if len(next_states) == 1 else None
+
+                return next_states
+
+            self.delta = delta_
+
+        if "init_state" in kwargs:
+            self.initialize(kwargs["init_state"])
+
+        if "final" in kwargs:
+            def final_(state):
+                return 0 if state in kwargs["final"] else -1
+            self.final = final_
+
+        if "acc_cond" in kwargs:
+            def acc_cond_():
+                return kwargs["acc_cond"]
+            self.acc_cond = acc_cond_
+
+        if "is_deterministic" in kwargs:
+            def is_deterministic_():
+                return kwargs["is_deterministic"]
+            self.is_deterministic = is_deterministic_
 
     # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     @register_property(GRAPH_PROPERTY)
-    def acc_cond(self):
-        return self._acc_cond
-
-    @register_property(GRAPH_PROPERTY)
     def atoms(self):
+        """
+        Returns a list/tuple of atomic propositions.
+
+        :return: (list of str) A list of atomic proposition.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.atoms() is not implemented.")
 
     @register_property(NODE_PROPERTY)
     def final(self, state):
+        """
+        Returns the acceptance set associated with the given state.
+
+        :param state: (an element of `self.states()`) A valid state.
+        :return: (int) Acceptance set associated with the given state.
+        """
         raise NotImplementedError(f"{self.__class__.__name__}.final() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
-    def num_acc_sets(self):
-        raise NotImplementedError(f"{self.__class__.__name__}.num_acc_sets() is not implemented.")
+    def acc_type(self):
+        """
+        Acceptance type of the automaton.
 
-    # ==========================================================================
-    # PUBLIC FUNCTIONS.
-    # ==========================================================================
+        :return: A value from :class:`Automaton.ACC_TYPES`.
+        """
+        return self.acc_cond()[0]
+
     @register_property(GRAPH_PROPERTY)
-    def is_sbacc(self):
-        return self._is_sbacc
+    def acc_cond(self):
+        """
+        Acceptance condition of the automaton.
+
+        :return: (2-tuple) A value of type (acc_type, acc_set) where acc_type is from :class:`Automaton.ACC_TYPES`
+                 and acc_set is either an integer or a list of integer.
+        """
+        return self.ACC_UNDEFINED, None
+
+    @register_property(GRAPH_PROPERTY)
+    def num_acc_sets(self):
+        """
+        Number of acceptance sets.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__}.num_acc_sets() is not implemented.")
 
     @register_property(GRAPH_PROPERTY)
     def is_complete(self):
-        return self._is_complete
+        """
+        Is the automaton complete? That is, is transition function well-defined at every state for any
+        input symbol?
+        """
+        raise NotImplementedError
 
-    @register_property(GRAPH_PROPERTY)
-    def is_stutter_invariant(self):
-        return self._is_stutter_invariant
+    # ==========================================================================
+    # FUNCTIONS TO BE IMPLEMENTED BY USER.
+    # ==========================================================================
+    def sigma(self):
+        """
+        Returns the set of alphabet of automaton. It is the powerset of atoms().
+        """
+        return list(util.powerset(self.atoms()))
 
-    @register_property(GRAPH_PROPERTY)
-    def is_unambiguous(self):
-        return self._is_unambiguous
+    def from_automaton(self, aut: 'Automaton'):
+        """
+        Constructs an Automaton from another Automaton instance.
+        The input automaton's acceptance condition must match that of a current Automaton.
+        """
+        assert aut.acc_cond() == self.acc_cond(), f"aut.acc_cond(): {aut.acc_cond()}, self.acc_cond(): {self.acc_cond()}"
 
-    @register_property(GRAPH_PROPERTY)
-    def is_terminal(self):
-        return self._is_terminal
+        # Copy all functions from automaton.
+        self.states = aut.states
+        self.delta = aut.delta
+        self._inp_domain = self.sigma
+
+        for gp in aut.GRAPH_PROPERTY:
+            setattr(self, gp, getattr(aut, gp))
+
+        for np in aut.NODE_PROPERTY:
+            setattr(self, np, getattr(aut, np))
+
+        for ep in aut.EDGE_PROPERTY:
+            setattr(self, ep, getattr(aut, ep))
 
 
 class Solver:
@@ -953,85 +1190,160 @@ class Solver:
         def solver(self):
             ... uses only self._graph.
 
-    """
-    DETERMINISTIC = "deterministic"
-    RANDOMIZED = "randomized"
 
-    def __init__(self, graph, strategy_type=DETERMINISTIC, **kwargs):
+    """
+    def __init__(self, graph, **kwargs):
         # Load and validate graph
         self._graph = graph
-        self.validate()
+        self._solution = SubGraph(self._graph)
 
-        # Type of strategy
-        self._strategy_type = strategy_type
+        # Associate node and edge properties with solution
+        self._node_winner = NodePropertyMap(self._solution, default=-1)     # Values denote which player wins from node.
+        self._edge_winner = EdgePropertyMap(self._solution, default=-1)     # Values denote which player wins from edge.
+        self._solution["node_winner"] = self._node_winner
+        self._solution["edge_winner"] = self._edge_winner
 
-        # Winning regions of the players
-        self._win1 = None
-        self._win2 = None
+        # Status variables
+        self._is_solved = False
 
         # Cache variables
-        self.__state2node = dict()
+        self._state2node = {self._solution["state"][uid]: uid for uid in self._solution.nodes()}
 
-    def validate(self):
-        """
-        Validates the input game.
-        Typically, this would involve checking if all necessary properties are well-defined.
-        """
-        pass
+    def __str__(self):
+        return f"<Solver for {self._graph}>"
 
-    def reset(self):
-        """ Resets the internal variables to default values. """
-        # Winning regions of the players
-        self._win1 = None
-        self._win2 = None
+    def graph(self):
+        return self._solution
+
+    def state2node(self, state):
+        return self._state2node[state]
+
+    def is_solved(self):
+        return self._is_solved
+
+    def solution(self):
+        if not self.is_solved():
+            raise ValueError(f"{self} is not solved.")
+        return self._solution
 
     def solve(self):
-        """
-        Solves the game to compute winning regions as per the solution concept.
-        """
-        raise NotImplementedError(f"{self.__class__.__name__}.solve() is not implemented.")
-
-    def pi1(self, node):
-        """
-        Player 1's strategy at the given state.
-
-        :param node: A valid state in the game.
-        :return: A valid action.
-        """
         raise NotImplementedError
 
-    def pi2(self, node):
-        """
-        Player 2's strategy at the given state.
+    def winner(self, state):
+        uid = self.state2node(state)
+        return self._node_winner[uid]
 
-        :param node: A valid state in the game.
-        :return: A valid action.
-        """
+    def win_acts(self, state):
+        # Get the input domain for
+        input_domain = self._solution["input_domain"]
+
+        # Get node id for the state
+        uid = self.state2node(state)
+
+        # Determine which player has a winning strategy at the state
+        player = self._node_winner[uid]
+
+        # Identify all winning actions.
+        win_acts = set()
+        for _, vid, key in self._graph.out_edges(uid):
+            if self._edge_winner[uid, vid, key] == player:
+                win_acts.add(self._graph[input_domain][uid, vid, key])
+
+        # Convert to list and return
+        return list(win_acts)
+
+    def win_region(self, player):
+        # return [self._solution["state"][uid] for uid in self._solution.nodes() if self._node_winner[uid] == player]
+        return [self._solution["state"][uid] for uid in self._solution.nodes() if self._node_winner[uid] == player]
+
+    def reset(self):
+        self._solution = SubGraph(self._graph)
+        self._node_winner = NodePropertyMap(self._solution, default=-1)  # Values denote which player wins from node.
+        self._edge_winner = EdgePropertyMap(self._solution, default=-1)  # Values denote which player wins from edge.
+        self._solution["node_winner"] = self._node_winner
+        self._solution["edge_winner"] = self._edge_winner
+
+
+class Strategy:
+    def __init__(self, graph, player, losing_behavior=None, **kwargs):
+        assert "node_winner" in graph.node_properties(), "graph must have node property called 'node_winner'. " \
+                                                         "Ensure the graph is the solution generated by a Solver."
+        assert "edge_winner" in graph.edge_properties(), "graph must have edge property called 'edge_winner'. " \
+                                                         "Ensure the graph is the solution generated by a Solver."
+        assert losing_behavior is None or callable(losing_behavior), \
+            "losing behavior should be a function that takes a state as input and returns either None or an action."
+
+        # Instance variables
+        self._graph = graph
+        self._player = player
+        self._strategy = dict()
+        self._losing_behavior = (lambda st: None) if losing_behavior is None else losing_behavior
+
+        # Generate and cache strategy
+        self._gen_strategy()
+
+    def _gen_strategy(self):
         raise NotImplementedError
 
-    def win1(self):
-        return self._win1
 
-    def win2(self):
-        return self._win2
+class DeterministicStrategy(Strategy):
+    def __call__(self, state):
+        return self._strategy[state]
 
-    def enabled_acts(self, node):
-        pass
+    def _gen_strategy(self):
+        # Generate a deterministic strategy by choosing an action at every winning state.
+        # States that are losing for the player return according to `losing_behavior` function.
+        input_domain = self._graph["input_domain"]
+        win_edges = self._graph["edge_winner"]
+        for uid in self._graph.nodes():
+            state = self._graph["state"][uid]
+            for _, vid, key in self._graph.out_edges(uid):
+                if win_edges[uid, vid, key] == self._player:
+                    self._strategy[state] = self._graph[input_domain][uid, vid, key]
+                    break
+                self._strategy[state] = self._losing_behavior(state)
 
-    def serialize(self):
-        pass
 
-    @classmethod
-    def deserialize(cls, graph_dict):
-        raise NotImplementedError
+class NonDeterministicStrategy(Strategy):
+    def __call__(self, state):
+        actions = self._strategy[state]
+        try:
+            return random.choice(actions)
+        except IndexError:   # In case the list is empty.
+            return None
 
-    def save(self, fpath, overwrite=False, protocol="json"):
-        # Add win1, win2, win3 as graph properties
-        # Add pi1, pi2, pi3 as node properties
-        pass
+    def _gen_strategy(self):
+        # Generate a deterministic strategy by choosing an action at every winning state.
+        # States that are losing for the player return according to `losing_behavior` function.
+        input_domain = self._graph["input_domain"]
+        win_edges = self._graph["edge_winner"]
 
-    def load(self, fpath, protocol="json"):
-        pass
+        # Visit all states
+        for uid in self._graph.nodes():
+            state = self._graph["state"][uid]
 
-    def strategy_type(self):
-        return self._strategy_type
+            # Initialize strategy as empty set
+            self._strategy[state] = set()
+
+            # Visit all outgoing edges from that state
+            for _, vid, key in self._graph.out_edges(uid):
+                # If they are winning for the player, include the action
+                if win_edges[uid, vid, key] == self._player:
+                    self._strategy[state].add(self._graph[input_domain][uid, vid, key])
+
+            # If no actions were winning, follow losing behavior
+            if len(self._strategy[state]) == 0:
+                # User must ensure that losing behavior returns an iterable
+                self._strategy[state] = self._losing_behavior(state)
+
+            # Store the valid actions as a list
+            self._strategy[state] = list(self._strategy[state])
+
+
+# Currently (v0.1.5) I do not include randomized strategies with customizable probability distribution on each state.
+# class RandomizedStrategy(NonDeterministicStrategy):
+#     def __init__(self, graph, player, losing_behavior=None, **kwargs):
+#         raise NotImplementedError("Need to figure out how to select/customize distributions at each state.")
+#
+#     def __call__(self, state):
+#         pass

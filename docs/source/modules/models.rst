@@ -1,6 +1,19 @@
 Models
 ======
 
+
+Automaton
+---------
+
+.. autoclass:: ggsolver.models.Automaton
+    :members:
+    :inherited-members:
+    :special-members: __init__
+
+
+TSys
+----
+
 .. autoclass:: ggsolver.models.TSys
     :members:   __init__,
                 states,
@@ -21,6 +34,9 @@ Models
                 is_nondeterministic,
                 is_probabilistic
 
+
+Game
+----
 
 .. autoclass:: ggsolver.models.Game
     :members:   __init__,

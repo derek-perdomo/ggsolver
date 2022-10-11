@@ -38,6 +38,7 @@ Graph
                 deserialize,
                 save,
                 load,
-                to_png
+                to_png,
+                is_isomorphic_to
 
 

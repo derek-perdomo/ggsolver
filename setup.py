@@ -56,8 +56,8 @@ with open("ggsolver/__init__.py") as fid:
 
 packages = [
     "ggsolver",
-    "ggsolver.spotaut",
-    "ggsolver.dtptb",
+    "ggsolver.interfaces",
+    "ggsolver.logic",
 ]
 
 install_requires = []

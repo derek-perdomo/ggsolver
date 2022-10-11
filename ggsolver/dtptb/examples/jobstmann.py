@@ -1,6 +1,9 @@
 from ggsolver.models import *
 from ggsolver.dtptb.reachability import *
 from pprint import pprint
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.ERROR)
 
 
 class JobstmannGame(Game):
@@ -24,7 +27,7 @@ class JobstmannGame(Game):
         return None
 
     def final(self, state):
-        return True if state in {3, 4} else False
+        return True if state in self.param_final else False
 
     def turn(self, state):
         if state in [0, 4, 6]:
@@ -38,7 +41,14 @@ if __name__ == '__main__':
     graph = game.graphify()
     win = SWinReach(graph)
     win.solve()
-    print(win.win1())
+    print(win.win_region(1))
+
+    game2 = JobstmannGame(final={1, 2, 5})
+    graph2 = game2.graphify()
+    win2 = SWinSafe(graph2, player=2)
+    win2.solve()
+    print(win2.win_region(1))
+    print(win2.win_region(2))
 
     # # Print the generated graph
     # print(f"Printing {graph}")

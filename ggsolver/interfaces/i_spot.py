@@ -4,7 +4,6 @@ Defines an interface from spot automaton to ggsolver automaton.
 
 import spot
 from ggsolver.models import Automaton, register_property
-from ggsolver.util import powerset
 from dd.autoref import BDD
 
 
@@ -67,17 +66,17 @@ class SpotAutomaton(Automaton):
         # Set the acceptance condition (in ggsolver terms)
         name = self.spot_aut.acc().name()
         if name == "Büchi" and spot.mp_class(formula).upper() in ["B", "S"]:
-            self._acc_cond = Automaton.ACC_SAFETY
+            self._acc_cond = (Automaton.ACC_SAFETY, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["G"]:
-            self._acc_cond = Automaton.ACC_REACH
+            self._acc_cond = (Automaton.ACC_REACH, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["O", "R"]:
-            self._acc_cond = Automaton.ACC_REACH
+            self._acc_cond = (Automaton.ACC_BUCHI, 0)
         elif name == "co-Büchi":
-            self._acc_cond = Automaton.ACC_COBUCHI
+            self._acc_cond = (Automaton.ACC_COBUCHI, 0)
         elif name == "all":
-            self._acc_cond = Automaton.ACC_SAFETY
+            self._acc_cond = (Automaton.ACC_SAFETY, 0)
         else:  # name contains "parity":
-            self._acc_cond = Automaton.ACC_PARITY
+            self._acc_cond = (Automaton.ACC_PARITY, 0)
 
     def _determine_options(self):
         """
@@ -91,15 +90,7 @@ class SpotAutomaton(Automaton):
         elif mp_cls.upper() == "P":
             return 'coBuchi', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
         else:  # cls.upper() == "T":
-            return 'parity', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
-
-    def sigma(self):
-        """
-        Set of symbols for automaton. Follows mathematical definition of automaton.
-        """
-        if len(self.atoms()) > 16:
-            raise ValueError("To many atoms. Currently support up to 16 atoms.")
-        return list(powerset(self.atoms()))
+            return 'parity min even', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc", "colored"
 
     def states(self):
         """ States of automaton. """
@@ -209,7 +200,7 @@ class SpotAutomaton(Automaton):
         Is the automaton semi-deterministic?
         See https://spot.lrde.epita.fr/doxygen/namespacespot.html#a56b3f00b7b93deafb097cad595998783
         """
-        return bool(spot.is_semi_deterministic()(self.spot_aut))
+        return bool(spot.is_semi_deterministic(self.spot_aut))
 
     @register_property(Automaton.GRAPH_PROPERTY)
     def acc_name(self):
