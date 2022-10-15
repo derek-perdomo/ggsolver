@@ -94,61 +94,87 @@ class PerceptualGameP2(DecoyAllocGame):
         return self._game.delta(state, act)
 
     def final(self, state):
-        # TODO Convert to set and return list
-        return self._game.final().union(self._game.fakes)
+        # TODO Unsure if _game.fakes is a set already
+        return list(set(self._game.final()).union(set(self._game.fakes)))
 
 
 class ReachabilityGameOfP1(Game):
     """ Def. 11 in Paper """
-    def __init__(self, p2_game, solution_p2_game, **kwargs):
+    def __init__(self, p2_game, solution_p2_game, traps, **kwargs):
         super(ReachabilityGameOfP1, self).__init__(is_turn_based=p2_game.is_turn_based(),
                                                    is_deterministic=p2_game.is_deterministic(),
                                                    is_probabilistic=p2_game.is_probabilistic())
-
+        self._traps = traps
         self._p2_game = p2_game
         self._solution_p2_game = solution_p2_game
 
     def states(self):
-        pass
+        return self._solution_p2_game.win_region(2)
 
     def actions(self):
-        pass
+        return self._p2_game.actions()
 
     def delta(self, state, act):
-        pass
+        # Delta is the same if rationalizable actions and undefined otherwise
+        # Def. 3/10 or Def. 5 in other paper for definition of rationalizable action
+        # TODO should the action also reduce rank to be rationalizable?
+
+        is_rationalizable = (state in self._solution_p2_game.win_region(1) and
+                             self._p2_game.delta(state, act) in self._solution_p2_game.win_region(1)) \
+                            or state in self._solution_p2_game.win_region(2)
+        if state in self._traps:
+            # Sink state for all traps
+            return state
+        elif is_rationalizable:
+            return self._p2_game.delta(state, act)
+        else:
+            return None
+
 
     def final(self, state):
-        pass
+        #TODO Final states are the traps. Do we need to pass the traps to this game?
+        return self._traps
 
     def turn(self, state):
-        pass
+        self._p2_game.turn(state)
 
 
 class Hypergame(Game):
-    """ Def. 7 in Paper (The actual game and P2s perceptual game). The 2nd level is an instance of this with
-        P1s hypergame and P2s perceptual game"""
-    def __init__(self, p2_game, solution_p2_game, **kwargs):
+    """ Def. 18 """
+    def __init__(self, p2_game, solution_p2_game, traps, fakes, **kwargs):
         super(Hypergame, self).__init__(is_turn_based=p2_game.is_turn_based(),
                                         is_deterministic=p2_game.is_deterministic(),
                                         is_probabilistic=p2_game.is_probabilistic())
-
+        self._traps = traps
+        self._fakes = fakes
         self._p2_game = p2_game
         self._solution_p2_game = solution_p2_game
 
     def states(self):
-        return self._p2_game.states().union(self._solution_p2_game.states())
+        return self._solution_p2_game.win_region(2)
 
     def actions(self):
-        return self._p2_game.actions().union(self._solution_p2_game.actions())
+        return self._p2_game.actions()
 
     def delta(self, state, act):
-        pass
+        is_rationalizable = (state in self._solution_p2_game.win_region(1) and
+                             self._p2_game.delta(state, act) in self._solution_p2_game.win_region(1)) \
+                            or state in self._solution_p2_game.win_region(2)
+
+        if state in self._traps or state in self._fakes:
+            # Sinks states for traps and fake targets
+            return state
+        # Check if action is rationalizable
+        elif is_rationalizable:
+            return self._p2_game.delta(state, act)
+        else:
+            return None
 
     def final(self, state):
-        pass
+        return list(set(self._traps).union(set(self._fakes)))
 
     def turn(self, state):
-        pass
+        return self._p2_game.turn(state)
 
 
 
