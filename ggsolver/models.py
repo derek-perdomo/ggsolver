@@ -42,7 +42,7 @@ class GraphicalModel:
         self._is_probabilistic = is_probabilistic
 
         # Input domain (Expected value: Name of the function that returns an Iterable object.)
-        self._input_func = kwargs["input_domain"] if "input_domain" in kwargs else None
+        self._input_domain = kwargs["input_domain"] if "input_domain" in kwargs else None
 
         # Pointed model
         self._init_state = kwargs["init_state"] if "init_state" in kwargs else None
@@ -148,11 +148,11 @@ class GraphicalModel:
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: states. Added {len(node_ids)} states. [OK]"))
 
         # Get input function
-        input_func = getattr(self, self._input_func)
-        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
+        input_func = getattr(self, self._input_domain)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_domain}'. [OK]"))
 
         # Graph property: input domain (stores the name of edge property that represents inputs)
-        graph["input_domain"] = self._input_func
+        graph["input_domain"] = self._input_domain
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
 
         # Get input domain
@@ -188,11 +188,11 @@ class GraphicalModel:
         logging.info(util.ColoredMsg.ok(f"[INFO] Running graphify UNPOINTED."))
 
         # Get input function
-        input_func = getattr(self, self._input_func)
-        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_func}'. [OK]"))
+        input_func = getattr(self, self._input_domain)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_domain}'. [OK]"))
 
         # Graph property: input domain (stores the name of edge property that represents inputs)
-        graph["input_domain"] = self._input_func
+        graph["input_domain"] = self._input_domain
         logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
 
         # Get input domain
@@ -249,6 +249,9 @@ class GraphicalModel:
                         # Set edge properties
                         ep_input[uid, vid, key] = inp
                         ep_prob[uid, vid, key] = prob
+
+        # Add node properties to graph
+        graph["state"] = np_state
 
         # Add edge properties to graph
         graph["input"] = ep_input
@@ -743,9 +746,8 @@ class TSys(GraphicalModel):
             it is either non-deterministic or probabilistic.
         :param is_probabilistic: (bool). If `is_deterministic` is `False`, then if `is_probabilistic` is `True`
             then the transition system is probabilistic. Otherwise, it is non-deterministic.
-        :param input_domain: (optional, function). A member function of TSys class that defines the inputs to the
-            transition system. [Default: TSys.actions]
-        :param input_domain: (optional, str). The name of input property during graphify().
+        :param input_domain: (optional, str). Name of the member function of TSys class that defines the inputs to the
+            transition system. [Default: "actions"]
         :param init_state: (optional, JSON-serializable object). The initial state of the transition system.
         """
         kwargs["input_domain"] = "actions" if "input_domain" not in kwargs else kwargs["input_domain"]
@@ -863,6 +865,7 @@ class Game(TSys):
     By default, every `Graph` returned a `Game.graphify()` function have the following (node/edge/graph) properties:
 
     - `state`: (node property) A Map from every node to the state of transition system it represents.
+    - `input_domain`: (graph property) Name of function that defines input domain of game (="actions").
     - `actions`: (graph property) List of valid actions.
     - `input`: (edge property) A map from every edge `(uid, vid, key)` to its associated action label.
     - `prob`: (edge property) The probability associated with the edge `(uid, vid, key)`.
@@ -1162,7 +1165,7 @@ class Automaton(GraphicalModel):
         # Copy all functions from automaton.
         self.states = aut.states
         self.delta = aut.delta
-        self._inp_domain = self.sigma
+        self._input_domain = self.sigma
 
         for gp in aut.GRAPH_PROPERTY:
             setattr(self, gp, getattr(aut, gp))
@@ -1179,18 +1182,7 @@ class Solver:
     Represents a game solver that computes the winning regions and strategies for the players
     under a fixed solution concept.
 
-    It is recommended to implement a solver using the underlying graph of the game.
-    This helps speeding up the algorithms. Hence, a typical workflow would look like
-
-    .. code::
-        def __init__(self, game, ...):
-            super(Solver, self).__init__(game, ...)
-            self._graph = self.game.graphify()
-
-        def solver(self):
-            ... uses only self._graph.
-
-
+    :param graph: (Graph or SubGraph instance) Graph or subgraph representing the game on a graph.
     """
     def __init__(self, graph, **kwargs):
         # Load and validate graph
@@ -1213,29 +1205,42 @@ class Solver:
         return f"<Solver for {self._graph}>"
 
     def graph(self):
-        return self._solution
+        """ Returns the input game graph. """
+        return self._graph
 
     def state2node(self, state):
+        """ Helper function to get the node id associated with given state. """
         return self._state2node[state]
 
     def is_solved(self):
+        """ Returns if the game is solved or not. """
         return self._is_solved
 
     def solution(self):
+        """
+        Returns the solved game graph.
+        The graph contains two special properties:
+
+        - `node_winner` (node property): Maps each node to the id of player (1/2) who wins from that node.
+        - `edge_winner` (edge property): Maps each edge to the id of player (1/2) who wins using that edge.
+        """
         if not self.is_solved():
             raise ValueError(f"{self} is not solved.")
         return self._solution
 
     def solve(self):
+        """ Abstract method."""
         raise NotImplementedError
 
     def winner(self, state):
+        """ Returns the player who wins from the given state. """
         uid = self.state2node(state)
         return self._node_winner[uid]
 
     def win_acts(self, state):
-        # Get the input domain for
-        input_domain = self._solution["input_domain"]
+        """ Retuns the list of winning actions from the given state. """
+        # Get the input domain (name of function) of game
+        ep_input = self._solution["input"]
 
         # Get node id for the state
         uid = self.state2node(state)
@@ -1247,16 +1252,18 @@ class Solver:
         win_acts = set()
         for _, vid, key in self._graph.out_edges(uid):
             if self._edge_winner[uid, vid, key] == player:
-                win_acts.add(self._graph[input_domain][uid, vid, key])
+                win_acts.add(self._graph[ep_input][uid, vid, key])
 
         # Convert to list and return
         return list(win_acts)
 
     def win_region(self, player):
+        """ Returns the winning region for the player. """
         # return [self._solution["state"][uid] for uid in self._solution.nodes() if self._node_winner[uid] == player]
         return [self._solution["state"][uid] for uid in self._solution.nodes() if self._node_winner[uid] == player]
 
     def reset(self):
+        """ Resets the solver. """
         self._solution = SubGraph(self._graph)
         self._node_winner = NodePropertyMap(self._solution, default=-1)  # Values denote which player wins from node.
         self._edge_winner = EdgePropertyMap(self._solution, default=-1)  # Values denote which player wins from edge.
@@ -1265,6 +1272,12 @@ class Solver:
 
 
 class Strategy:
+    """
+    Defines a strategy for a player.
+
+    Allows customization of losing behavior by specifying a function that maps a losing node to an action.
+    By default, losing state is mapped to None.
+    """
     def __init__(self, graph, player, losing_behavior=None, **kwargs):
         assert "node_winner" in graph.node_properties(), "graph must have node property called 'node_winner'. " \
                                                          "Ensure the graph is the solution generated by a Solver."
@@ -1287,25 +1300,41 @@ class Strategy:
 
 
 class DeterministicStrategy(Strategy):
+    """
+    Represents a deterministic strategy. That is, the strategy at a given state always selects the same winning action.
+
+    Allows customization of losing behavior by specifying a function that maps a losing node to an action.
+    By default, losing state is mapped to None.
+    """
     def __call__(self, state):
+        """ Returns the action selected by strategy at given state. """
         return self._strategy[state]
 
     def _gen_strategy(self):
         # Generate a deterministic strategy by choosing an action at every winning state.
         # States that are losing for the player return according to `losing_behavior` function.
-        input_domain = self._graph["input_domain"]
+        ep_input = self._graph["input"]
         win_edges = self._graph["edge_winner"]
         for uid in self._graph.nodes():
             state = self._graph["state"][uid]
             for _, vid, key in self._graph.out_edges(uid):
                 if win_edges[uid, vid, key] == self._player:
-                    self._strategy[state] = self._graph[input_domain][uid, vid, key]
+                    self._strategy[state] = self._graph[ep_input][uid, vid, key]
                     break
                 self._strategy[state] = self._losing_behavior(state)
 
 
 class NonDeterministicStrategy(Strategy):
+    """
+    Represents a non-deterministic strategy. Uniformly samples an action from winning actions at that state.
+
+    Allows customization of losing behavior by specifying a function that maps a losing node to an action.
+    By default, losing state is mapped to None.
+    """
+
     def __call__(self, state):
+        """ Returns the action selected by strategy at given state. """
+
         actions = self._strategy[state]
         try:
             return random.choice(actions)
@@ -1315,7 +1344,7 @@ class NonDeterministicStrategy(Strategy):
     def _gen_strategy(self):
         # Generate a deterministic strategy by choosing an action at every winning state.
         # States that are losing for the player return according to `losing_behavior` function.
-        input_domain = self._graph["input_domain"]
+        ep_input = self._graph["input"]
         win_edges = self._graph["edge_winner"]
 
         # Visit all states
@@ -1329,7 +1358,7 @@ class NonDeterministicStrategy(Strategy):
             for _, vid, key in self._graph.out_edges(uid):
                 # If they are winning for the player, include the action
                 if win_edges[uid, vid, key] == self._player:
-                    self._strategy[state].add(self._graph[input_domain][uid, vid, key])
+                    self._strategy[state].add(self._graph[ep_input][uid, vid, key])
 
             # If no actions were winning, follow losing behavior
             if len(self._strategy[state]) == 0:

@@ -208,3 +208,18 @@
 [INFO] SUCCESS!! Updated abhibp1993/ggsolver:latest image.
 [INFO] Running docker push abhibp1993/ggsolver:latest
 [INFO] SUCCESS!! Pushed abhibp1993/ggsolver:latest image.
+[INFO] 
+
+		********** Running dockerfile rebuild script on 2022-10-18 17:00:23.444018 ********** 
+
+
+[INFO] Updated E:\Github-Projects\ggsolver\docker\devel/Dockerfile with version 0.1.5.
+[INFO] Updated E:\Github-Projects\ggsolver\docker\latest/Dockerfile with version 0.1.5.
+[INFO] Running docker build -t abhibp1993/ggsolver:devel E:\Github-Projects\ggsolver\docker\devel
+[INFO] SUCCESS!! Updated abhibp1993/ggsolver:devel image.
+[INFO] Running docker push abhibp1993/ggsolver:devel
+[INFO] SUCCESS!! Pushed abhibp1993/ggsolver:devel image.
+[INFO] Running docker build --no-cache -t abhibp1993/ggsolver:latest E:\Github-Projects\ggsolver\docker\latest
+[INFO] SUCCESS!! Updated abhibp1993/ggsolver:latest image.
+[INFO] Running docker push abhibp1993/ggsolver:latest
+[INFO] SUCCESS!! Pushed abhibp1993/ggsolver:latest image.

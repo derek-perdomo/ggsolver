@@ -10,4 +10,7 @@ API
     modules/models
     modules/interfaces
     modules/automata
+    modules/dtptb
+    modules/mdp
+
 
