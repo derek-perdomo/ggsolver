@@ -20,7 +20,7 @@ start: prefltl_formula
 
 
 // LTL formula will accept any arbitrary string. We will invoke spot's parser to process LTL, PL formulas.
-?ltl_formula:               STRING
+ltl_formula:                STRING
 
 
 STRING:                     /[a-zA-Z()_!|&]+/
