@@ -1057,7 +1057,8 @@ class Automaton(GraphicalModel):
             def delta_(state, inp):
                 next_states = set()
                 for formula, n_state in kwargs["trans_dict"][state].items():
-                    if pl.evaluate(formula, inp):
+                    # if pl.evaluate(formula, inp):
+                    if pl.PL(f_str=formula, atoms=self.atoms()).evaluate(inp):
                         next_states.add(n_state)
 
                 if self.is_deterministic():
