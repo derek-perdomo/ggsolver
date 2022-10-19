@@ -1,46 +1,41 @@
+from functools import reduce
+
 import spot
 import ggsolver.interfaces.i_spot as i_spot
+from ggsolver.graph import *
 from ggsolver.logic.formula import BaseFormula, ParsingError, PARSERS_DIR
-from ggsolver.util import apply_atoms_limit, powerset
-
+from ggsolver.logic.ltl import LTL, ScLTL
+from lark import Lark, Transformer, Tree, Visitor
 from pathlib import Path
-from lark import Lark, Transformer, Tree, Visitor, logger
-
-import logging
-logger.setLevel(logging.DEBUG)
 
 
 class PrefLTL(BaseFormula):
     """
-    PL formula is internally represented as spot.formula instance.
+    PrefLTL formula is internally represented as a PrefModel instance.
     """
     def __init__(self, f_str, atoms=None):
         super(PrefLTL, self).__init__(f_str, atoms)
-        self._repr = None
-        self._atoms = None
-        self._outcomes = None
+
+        # Parse input string
+        parser = LTLPrefParser()
+        self.tree = parser.parse(self.f_str)
+
+        # Build preference model
+        self._repr = PrefModel(self.tree)
+
+        # Construct atoms and outcomes
+        #   Ensure all LTL formulas share same set of atoms.
+        self._atoms |= self._repr.atoms
+        self._outcomes = {LTL(f_str=str(outcome), atoms=self._atoms) for outcome in self._repr.outcomes}
 
     def __str__(self):
         return str(self.f_str)
-
-    def _collect_atoms(self):
-        atoms = set()
-
-        def traversal(node: spot.formula, atoms_):
-            if node.is_literal():
-                if "!" not in node.to_str():
-                    atoms_.add(node.to_str())
-                    return True
-            return False
-
-        self._repr.traverse(traversal, atoms)
-        return self._atoms | atoms
 
     # ==================================================================
     # IMPLEMENTATION OF ABSTRACT METHODS
     # ==================================================================
     def translate(self):
-        return i_spot.SpotAutomaton(formula=self.f_str, atoms=self.atoms())
+        raise NotImplementedError
 
     def substitute(self, subs_map=None):
         raise NotImplementedError("To be implemented in future.")
@@ -52,27 +47,19 @@ class PrefLTL(BaseFormula):
         :param true_atoms: (Iterable[str]) A propositional logic formula.
         :return: (bool) True if formula is true, otherwise False.
         """
-        # Define a transform to apply to AST of spot.formula.
-        def transform(node: spot.formula):
-            if node.is_literal():
-                if "!" not in node.to_str():
-                    if node.to_str() in true_atoms:
-                        return spot.formula.tt()
-                    else:
-                        return spot.formula.ff()
-
-            return node.map(transform)
-
-        # Apply the transform and return the result.
-        # Since every literal is replaced by true or false,
-        #   the transformed formula is guaranteed to be either true or false.
-        return True if transform(self._repr).is_tt() else False
+        raise NotImplementedError("Evaluation not defined for PrefLTL formula.")
 
     def atoms(self):
         return self._atoms
 
+    def outcomes(self):
+        return self._outcomes
+
+    def model(self):
+        return self._repr
+
     # ==================================================================
-    # SPECIAL METHODS OF PL CLASS
+    # SPECIAL METHODS OF PrefLTL CLASS
     # ==================================================================
     def simplify(self):
         """
@@ -102,6 +89,149 @@ class LTLPrefParser:
         return parse_tree
 
 
+class PrefModel(Transformer):
+    def __init__(self, tree):
+        super(PrefModel, self).__init__()
+
+        # Instance variables
+        self.tree = tree
+        self.outcomes = set()
+        self.atoms = set()
+
+        # Build preference model
+        #  FIXME Typically, a model is list of sets (due to ORing).
+        self.model = self.transform(self.tree)
+        if not isinstance(self.model, set):
+            raise ParsingError(f"PrefLTL formula is invalid. Transformer produced {self.model}")
+
+        # Define all outcomes over same set of atoms.
+        for outcome in self.outcomes:
+            outcome.update_atoms(self.atoms)
+
+        # Fix indices of outcomes
+        self.outcomes = list(self.outcomes)
+
+        # Complete preference model. (add alpha0)
+        self._complete_outcomes()
+        print(self.outcomes)
+
+        # Force all outcomes to be preferred to alpha0.
+        self._assumption1()
+
+        # Make reflexive.
+        self.make_reflexive()
+
+        # Transitive closure.
+        self.transitive_closure()
+
+    # ============================================================================
+    # HELPER FUNCTIONS
+    # ============================================================================
+    def _complete_outcomes(self):
+        alpha0_str = " & ".join([f"(!{str(f)})" for f in self.outcomes])
+        alpha0 = LTL(f_str=alpha0_str)
+        self.outcomes.insert(0, alpha0)
+
+    def _assumption1(self):
+        for idx in range(1, len(self.outcomes)):
+            self.model.add((self.outcomes[idx], self.outcomes[0]))
+
+    def transitive_closure(self):
+        closure = self.model
+        while True:
+            new_relations = set((x, w) for x, y in closure for z, w in closure if z == y)
+            closure_until_now = closure | new_relations
+            if closure_until_now == closure:
+                break
+            closure = closure_until_now
+        return closure
+
+    def make_reflexive(self):
+        for outcome in self.outcomes:
+            self.model.add((outcome, outcome))
+
+    # ============================================================================
+    # VISUALIZATIONS
+    # ============================================================================
+    def graphify(self, base_only=False):
+        """
+        Preference model is not a GraphicalModel. So, it has different properties than a GraphicalModel.
+
+        :param base_only:
+        :return:
+        """
+        # Initialize graph object
+        graph = Graph()
+
+        # Set graph properties
+        graph["atoms"] = self.atoms
+        graph["outcomes"] = [str(outcome) for outcome in self.outcomes]
+
+        # Node property
+        np_state = NodePropertyMap(graph)
+
+        # Add nodes
+        node_ids = graph.add_nodes(len(self.outcomes))
+
+        # Cache states as a dictionary {state: uid}
+        states2id = dict(zip(self.outcomes, node_ids))
+
+        # Update state property
+        for outcome in self.outcomes:
+            np_state[states2id[outcome]] = outcome
+        graph["state"] = np_state
+
+        # Add edges
+        for out1, out2 in self.model:
+            uid = states2id[out2]
+            vid = states2id[out1]
+            graph.add_edge(uid, vid)
+
+        # Return graph
+        return graph
+
+    # ============================================================================
+    # LARK TRANSFORMER FUNCTIONS
+    # ============================================================================
+    def start(self, args):
+        return args[0]
+
+    def pref_and(self, args):
+        return set.union(*args[::2])
+
+    def pref_or(self, args):
+        raise NotImplementedError("Currently, ORing of preference formulas is not supported.")
+
+    def prefltl_weakpref(self, args):
+        return {(args[0], args[2])}
+
+    def prefltl_strictpref(self, args):
+        return {(args[0], args[2])}
+    
+    def prefltl_indifference(self, args):
+        return {(args[0], args[2]), (args[2], args[0])}
+
+    def prefltl_incomparable(self, args):
+        return set()
+
+    def ltl_formula(self, args):
+        f = LTL(args[0])
+        self.outcomes.add(f)
+        self.atoms.update(set(f.atoms()))
+        return f
+
+
 if __name__ == '__main__':
-    parser = LTLPrefParser()
-    tree = parser.parse("Fa > Gb")
+    parser_ = LTLPrefParser()
+    formula_ = PrefLTL("Fa > Gb && Fb > Ga && Fb > Gb", atoms={"c"})
+    print([(str(f), f.atoms()) for f in formula_.outcomes()])
+    print(formula_.atoms())
+
+    print()
+    from pprint import pprint
+    outcomes = formula_._repr.outcomes
+    pprint([(outcomes.index(x), outcomes.index(y)) for x, y in formula_._repr.model])
+    pprint([(str(x), str(y)) for x, y in formula_._repr.model])
+
+    graph = formula_._repr.graphify()
+    graph.to_png("pref.png", nlabel=["state"])
