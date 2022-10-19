@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 
 # Global Variable
 PARSERS_DIR = os.path.dirname(inspect.getfile(inspect.currentframe()))
+PARSERS_DIR = os.path.join(PARSERS_DIR, "grammars")
 
 
 class ParsingError(ValueError):
