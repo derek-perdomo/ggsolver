@@ -31,6 +31,11 @@ CHANGELOG = {
         "Added progress bars to graphify and solvers in dtptb package.",
         "[Bugfix] input_domain stores the name of function (= graph property) that stores the input domain. Thus, "
         "the reconstructed graphical model has the same input domain functions as the original model.",
-    ]
+    ],
+    "0.1.6": [
+        "SpotAutomaton inputs `atoms` as optional parameters. "
+        "Users can specify any atoms that do not appear in the input formula.",
+        "Automaton graphify merges edges using PL formula for edge labels.",
 
+    ]
 }
