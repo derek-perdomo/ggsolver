@@ -1117,5 +1117,3 @@ class SubGraph(Graph):
         # todo
         """
         return nx.is_isomorphic(self._graph, other._graph)
-
-
