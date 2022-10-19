@@ -1156,7 +1156,7 @@ class Automaton(GraphicalModel):
         for uid in edges.keys():
             for vid in edges[uid].keys():
                 key = graph.add_edge(uid, vid)
-                ep_input[uid, vid, key] = pl.to_plformula(atoms, edges[uid][vid])
+                ep_input[uid, vid, key] = pl.sat2formula(atoms, edges[uid][vid])
                 ep_prob[uid, vid, key] = None
 
         # Add edge properties to graph
