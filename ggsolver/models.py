@@ -10,8 +10,10 @@ from tqdm import tqdm
 
 try:
     from ggsolver.logic import pl
-except ImportError:
-    logging.error(util.ColoredMsg.error(f"[ERROR] logic.pl could not be loaded. Logic functionality will not work."))
+except ImportError as err:
+    import traceback
+    logging.error(util.ColoredMsg.error(f"[ERROR] logic.pl could not be loaded. Logic functionality will not work. "
+                                        f"\nError: {err.with_traceback(None)}"))
 
 
 # ==========================================================================
