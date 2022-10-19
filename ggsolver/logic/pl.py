@@ -1,12 +1,10 @@
-from abc import ABC
-
 import spot
-from ggsolver.interfaces.i_spot import SpotAutomaton
+import ggsolver.interfaces.i_spot as i_spot
 from ggsolver.logic.formula import BaseFormula, ParsingError
 from ggsolver.util import apply_atoms_limit, powerset
 
 
-class PL(BaseFormula, ABC):
+class PL(BaseFormula):
     """
     PL formula is internally represented as spot.formula instance.
     """
@@ -37,7 +35,7 @@ class PL(BaseFormula, ABC):
     # IMPLEMENTATION OF ABSTRACT METHODS
     # ==================================================================
     def translate(self):
-        return SpotAutomaton(formula=self.f_str, atoms=self.atoms())
+        return i_spot.SpotAutomaton(formula=self.f_str, atoms=self.atoms())
 
     def substitute(self, subs_map=None):
         raise NotImplementedError("To be implemented in future.")
