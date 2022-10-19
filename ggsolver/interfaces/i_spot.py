@@ -50,7 +50,7 @@ class SpotAutomaton(Automaton):
           'Colored' (only for parity acceptance)
         """
         # Construct the automaton
-        super(SpotAutomaton, self).__init__(input_domain=self.sigma)
+        super(SpotAutomaton, self).__init__(input_domain="atoms")
 
         # Instance variables
         self._formula = formula

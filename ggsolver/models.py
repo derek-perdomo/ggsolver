@@ -1,13 +1,11 @@
-import copy
 import inspect
 import itertools
 import logging
 import random
 import typing
-from collections.abc import Iterable
+from functools import partial
 from ggsolver import util
 from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph, SubGraph
-from functools import partial
 from tqdm import tqdm
 
 try:
@@ -1091,6 +1089,85 @@ class Automaton(GraphicalModel):
             self.is_deterministic = is_deterministic_
 
     # ==========================================================================
+    # PRIVATE FUNCTIONS
+    # ==========================================================================
+    def _gen_underlying_graph_unpointed(self, graph):
+        """
+        Programmer's notes:
+        1. Caches states (returned by `self.states()`) in self.__states variable.
+        2. Assumes all states to be hashable.
+        3. Parallel edges are merged using ORing of PL Formulas.
+        """
+        # Get states
+        states = getattr(self, "states")
+        states = list(states())
+
+        # Add states to graph
+        node_ids = list(graph.add_nodes(len(states)))
+
+        # Cache states as a dictionary {state: uid}
+        self.__states = dict(zip(states, node_ids))
+
+        # Node property: state
+        np_state = NodePropertyMap(graph=graph)
+        np_state.update(dict(zip(node_ids, states)))
+        graph["state"] = np_state
+
+        # Logging and printing
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: states. Added {len(node_ids)} states. [OK]"))
+
+        # Get input function
+        #   Specialized for automaton class: we expect input function to be atoms.
+        assert self._input_domain == "atoms", "For automaton class, we expect input domain to be `atoms`."
+        input_func = getattr(self, self._input_domain)
+        atoms = input_func()
+        inputs = util.powerset(atoms)
+        logging.info(util.ColoredMsg.ok(f"[INFO] Input domain function detected as '{self._input_domain}'. [OK]"))
+
+        # Graph property: input domain (stores the name of edge property that represents inputs)
+        graph["input_domain"] = self._input_domain
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: input_domain. [OK]"))
+
+        # # Get input domain
+        # inputs = input_func()
+
+        # Edge properties: input, prob,
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
+
+        # Generate edges
+        delta = getattr(self, "delta")
+        edges = {uid: dict() for uid in node_ids}
+        for state, inp in tqdm(itertools.product(self.__states.keys(), inputs),
+                               total=len(self.__states) * 2 ** len(atoms),
+                               desc="Specialized unpointed graphify adding edges for automaton "):
+
+            new_edges = self._gen_edges(delta, state, inp)
+
+            # Update graph edges
+            uid = self.__states[state]
+            for _, t, _, _ in new_edges:
+                vid = self.__states[t]
+                if vid not in edges[uid]:
+                    edges[uid][vid] = list()
+                edges[uid][vid].append(inp)
+
+        for uid in edges.keys():
+            for vid in edges[uid].keys():
+                key = graph.add_edge(uid, vid)
+                ep_input[uid, vid, key] = pl.to_plformula(atoms, edges[uid][vid])
+                ep_prob[uid, vid, key] = None
+
+        # Add edge properties to graph
+        graph["input"] = ep_input
+        graph["prob"] = ep_prob
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed edge property: input. [OK]"))
+        logging.info(util.ColoredMsg.ok(f"[INFO] Processed graph property: prob. [OK]"))
+
+    def _gen_underlying_graph_pointed(self, graph):
+        raise NotImplementedError("Pointed graphify is not defined for automaton.")
+
+    # ==========================================================================
     # FUNCTIONS TO BE IMPLEMENTED BY USER.
     # ==========================================================================
     @register_property(GRAPH_PROPERTY)
@@ -1165,7 +1242,7 @@ class Automaton(GraphicalModel):
         # Copy all functions from automaton.
         self.states = aut.states
         self.delta = aut.delta
-        self._input_domain = self.sigma
+        self._input_domain = "atoms"
 
         for gp in aut.GRAPH_PROPERTY:
             setattr(self, gp, getattr(aut, gp))
