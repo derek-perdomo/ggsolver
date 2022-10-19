@@ -19,6 +19,18 @@ class BaseFormula(ABC):
     def __str__(self):
         return str(self.f_str)
 
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.f_str})"
+
+    def __hash__(self):
+        return hash(self.f_str)
+
+    def __eq__(self, other):
+        raise NotImplementedError("Marked abstract.")
+
+    def update_atoms(self, atoms):
+        self._atoms |= set(atoms)
+
     @abstractmethod
     def translate(self):
         pass
