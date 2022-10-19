@@ -19,7 +19,7 @@ class SpotAutomaton(Automaton):
     Programmer's note: The graphified version of automaton does not use PL formulas as edge labels.
     This is intentionally done to be able to run our codes on robots that may not have logic libraries installed.
     """
-    def __init__(self, formula=None, options=None):
+    def __init__(self, formula=None, options=None, atoms=None):
         """
         Given an LTL formula, SpotAutomaton determines the best options for spot.translate() function
         to generate a deterministic automaton in ggsolver.Automaton format.
@@ -54,6 +54,7 @@ class SpotAutomaton(Automaton):
 
         # Instance variables
         self._formula = formula
+        self._user_atoms = set(atoms) if atoms is not None else set()
 
         # If options are not given, determine the set of options to generate deterministic automaton with
         # state-based acceptance condition.
@@ -98,7 +99,7 @@ class SpotAutomaton(Automaton):
 
     def atoms(self):
         """ Atomic propositions appearing in LTL formula. """
-        return [str(ap) for ap in self.spot_aut.ap()]
+        return list({str(ap) for ap in self.spot_aut.ap()} | self._user_atoms)
 
     def delta(self, state, inp):
         """
