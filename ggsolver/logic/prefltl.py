@@ -101,8 +101,6 @@ class PrefModel(Transformer):
         # Build preference model
         #  FIXME Typically, a model is list of sets (due to ORing).
         self.model = self.transform(self.tree)
-        if not isinstance(self.model, set):
-            raise ParsingError(f"PrefLTL formula is invalid. Transformer produced {self.model}")
 
         # Define all outcomes over same set of atoms.
         for outcome in self.outcomes:
@@ -133,22 +131,27 @@ class PrefModel(Transformer):
         self.outcomes.insert(0, alpha0)
 
     def _assumption1(self):
-        for idx in range(1, len(self.outcomes)):
-            self.model.add((self.outcomes[idx], self.outcomes[0]))
+        for model_idx in range(len(self.model)):
+            for outcome_idx in range(1, len(self.outcomes)):
+                self.model[model_idx].add((self.outcomes[outcome_idx], self.outcomes[0]))
 
     def transitive_closure(self):
-        closure = self.model
-        while True:
-            new_relations = set((x, w) for x, y in closure for z, w in closure if z == y)
-            closure_until_now = closure | new_relations
-            if closure_until_now == closure:
-                break
-            closure = closure_until_now
-        return closure
+        for model_idx in range(len(self.model)):
+            model = self.model[model_idx]
+            while True:
+                new_relations = set((x, w) for x, y in model for z, w in model if z == y)
+                # print(f"new_relations={[str(x), str(y) for x, y in new_relations]}")
+                print(f"{new_relations=}")
+                closure_until_now = model | new_relations
+                if closure_until_now == model:
+                    break
+                model = closure_until_now
+            self.model[model_idx] |= model
 
     def make_reflexive(self):
-        for outcome in self.outcomes:
-            self.model.add((outcome, outcome))
+        for model_idx in range(len(self.model)):
+            for outcome in self.outcomes:
+                self.model[model_idx].add((outcome, outcome))
 
     # ============================================================================
     # VISUALIZATIONS
@@ -182,7 +185,8 @@ class PrefModel(Transformer):
         graph["state"] = np_state
 
         # Add edges
-        for out1, out2 in self.model:
+        # PATCH (Temp. Remove this on 19 Oct 22)
+        for out1, out2 in self.model[0]:
             uid = states2id[out2]
             vid = states2id[out1]
             graph.add_edge(uid, vid)
@@ -194,6 +198,8 @@ class PrefModel(Transformer):
     # LARK TRANSFORMER FUNCTIONS
     # ============================================================================
     def start(self, args):
+        if type(args[0]) == set:
+            return [args[0]]
         return args[0]
 
     def pref_and(self, args):
@@ -223,15 +229,17 @@ class PrefModel(Transformer):
 
 if __name__ == '__main__':
     parser_ = LTLPrefParser()
-    formula_ = PrefLTL("Fa > Gb && Fb > Ga && Fb > Gb", atoms={"c"})
+    formula_ = PrefLTL("Fa > Gb && Fb > Ga && Fb > Fa", atoms={"c"})
     print([(str(f), f.atoms()) for f in formula_.outcomes()])
     print(formula_.atoms())
 
     print()
     from pprint import pprint
     outcomes = formula_._repr.outcomes
-    pprint([(outcomes.index(x), outcomes.index(y)) for x, y in formula_._repr.model])
-    pprint([(str(x), str(y)) for x, y in formula_._repr.model])
+    pprint([(outcomes.index(x), outcomes.index(y)) for x, y in formula_._repr.model[0]])
+    pprint([(str(x), str(y)) for x, y in formula_._repr.model[0]])
 
     graph = formula_._repr.graphify()
     graph.to_png("pref.png", nlabel=["state"])
+
+    # TODO. Try nested ANDing with parenthesis.
