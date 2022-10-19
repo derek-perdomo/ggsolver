@@ -13,12 +13,25 @@ class PL(BaseFormula, ABC):
     def __init__(self, f_str, atoms=None):
         super(PL, self).__init__(f_str, atoms)
         self._repr = spot.formula(f_str)
-        self._atoms = self._atoms | {str(ap) for ap in self._repr.ap()}
         if not self._repr.is_boolean():
             raise ParsingError(f"Given formula:{f_str} is not a PL formula.")
+        self._atoms = self._collect_atoms()
 
     def __str__(self):
         return str(self.f_str)
+
+    def _collect_atoms(self):
+        atoms = set()
+
+        def traversal(node: spot.formula, atoms_):
+            if node.is_literal():
+                if "!" not in node.to_str():
+                    atoms_.add(node.to_str())
+                    return True
+            return False
+
+        self._repr.traverse(traversal, atoms)
+        return self._atoms | atoms
 
     # ==================================================================
     # IMPLEMENTATION OF ABSTRACT METHODS
