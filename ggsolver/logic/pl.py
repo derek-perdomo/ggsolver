@@ -18,6 +18,12 @@ class PL(BaseFormula):
     def __str__(self):
         return str(self.f_str)
 
+    def __eq__(self, other: BaseFormula):
+        try:
+            return spot.are_equivalent(self.f_str, other.f_str)
+        except Exception:
+            return False
+
     def _collect_atoms(self):
         atoms = set()
 

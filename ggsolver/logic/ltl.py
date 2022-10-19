@@ -10,6 +10,8 @@ class LTL(BaseFormula):
     """
     LTL formula is internally represented as spot.formula instance.
     """
+    __hash__ = BaseFormula.__hash__
+
     def __init__(self, f_str, atoms=None):
         super(LTL, self).__init__(f_str, atoms)
         self._repr = spot.formula(f_str)
@@ -17,6 +19,12 @@ class LTL(BaseFormula):
 
     def __str__(self):
         return str(self.f_str)
+
+    def __eq__(self, other: BaseFormula):
+        try:
+            return spot.are_equivalent(self.f_str, other.f_str)
+        except Exception:
+            return False
 
     def _collect_atoms(self):
         atoms = set()
@@ -85,9 +93,16 @@ class ScLTL(LTL):
     """
     ScLTL formula is internally represented as spot.formula instance.
     """
+    __hash__ = LTL.__hash__
+
     def __init__(self, f_str, atoms=None):
         super(LTL, self).__init__(f_str, atoms)
         mp_class = spot.mp_class(self._repr).upper()
         if mp_class not in ["B", "G"]:
             raise ParsingError(f"Given formula:{f_str} is not an ScLTL formula.")
 
+    def __eq__(self, other: BaseFormula):
+        try:
+            return spot.are_equivalent(self.f_str, other.f_str)
+        except Exception:
+            return False
