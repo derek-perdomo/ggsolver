@@ -1078,7 +1078,7 @@ class Automaton(GraphicalModel):
 
         if "final" in kwargs:
             def final_(state):
-                return 0 if state in kwargs["final"] else -1
+                return [0] if state in kwargs["final"] else [-1]
             self.final = final_
 
         if "acc_cond" in kwargs:

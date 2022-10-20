@@ -96,7 +96,7 @@ class ScLTL(LTL):
     __hash__ = LTL.__hash__
 
     def __init__(self, f_str, atoms=None):
-        super(LTL, self).__init__(f_str, atoms)
+        super(ScLTL, self).__init__(f_str, atoms)
         mp_class = spot.mp_class(self._repr).upper()
         if mp_class not in ["B", "G"]:
             raise ParsingError(f"Given formula:{f_str} is not an ScLTL formula.")
