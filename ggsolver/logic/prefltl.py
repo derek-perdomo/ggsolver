@@ -256,14 +256,16 @@ class Formula2Model(Transformer):
         self.atoms = set(atoms)
 
         # Build preference model
-        self.model = self.transform(self.tree)
+        relation = self.transform(self.tree)
+        self.outcomes = {LTL(f_str=outcome.f_str, atoms=self.atoms) for outcome in self.outcomes}
+        self.model = PrefModel(outcomes=self.outcomes, atoms=self.atoms, relation=relation,
+                               null_assumption=self.null_assumption)
 
     # ============================================================================
     # LARK TRANSFORMER FUNCTIONS
     # ============================================================================
     def start(self, args):
-        return PrefModel(outcomes=self.outcomes, atoms=self.atoms, relation=args[0],
-                         null_assumption=self.null_assumption)
+        return args[0]
 
     def pref_and(self, args):
         return set.union(*args[::2])
