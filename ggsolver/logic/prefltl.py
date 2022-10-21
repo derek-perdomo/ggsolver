@@ -21,7 +21,7 @@ class PrefLTL(BaseFormula):
     """
     PrefLTL formula is internally represented as a PrefModel instance.
     """
-    def __init__(self, f_str, atoms=None):
+    def __init__(self, f_str, atoms=None, null_assumption=True):
         super(PrefLTL, self).__init__(f_str, atoms)
 
         # Parse input string
@@ -29,12 +29,13 @@ class PrefLTL(BaseFormula):
         self.tree = parser.parse(self.f_str)
 
         # Build preference model
-        self._repr = PrefModel(self.tree)
+        atoms = set() if atoms is None else set(atoms)
+        self._repr = Formula2Model(self.tree, atoms, null_assumption).model
 
         # Construct atoms and outcomes
         #   Ensure all LTL formulas share same set of atoms.
-        self._atoms |= self._repr.atoms
-        self._outcomes = [LTL(f_str=str(outcome), atoms=self._atoms) for outcome in self._repr.outcomes]
+        self._atoms = self._repr.atoms()
+        self._outcomes = self._repr.outcomes()
 
     def __str__(self):
         return str(self.f_str)
@@ -164,72 +165,39 @@ class LTLPrefParser:
         return parse_tree
 
 
-class PrefModel(Transformer):
-    def __init__(self, tree):
-        super(PrefModel, self).__init__()
-
+class PrefModel:
+    def __init__(self, outcomes, atoms, relation, null_assumption=True):
         # Instance variables
-        self.tree = tree
-        self.outcomes = set()
-        self.atoms = set()
+        self._atoms = set(atoms)            # set of atoms
+        self._outcomes = list(outcomes)     # list to have indexing.
 
-        # Build preference model
-        #  FIXME Typically, a model is list of sets (due to ORing).
-        self.model = self.transform(self.tree)
-
-        # Define all outcomes over same set of atoms.
-        for outcome in self.outcomes:
-            outcome.update_atoms(self.atoms)
-
-        # Fix indices of outcomes
-        self.outcomes = list(self.outcomes)
-
-        # Complete preference model. (add alpha0)
+        # Complete outcomes
         self._complete_outcomes()
-        print(self.outcomes)
 
-        # Force all outcomes to be preferred to alpha0.
-        self._assumption1()
+        # Cache for speedup
+        self._outcomes2index = {
+            outcome: self._outcomes.index(outcome)
+            for outcome in self._outcomes
+        }
 
-        # Make reflexive.
+        # Define relations (we will store index pairs for compactness)
+        self._relation = {
+            (self._outcomes2index[out1], self._outcomes2index[out2])
+            for out1, out2 in relation
+        }
+
+        # Impose null assumption
+        if null_assumption:
+            self._null_assumption()
+
+        # Make relation reflexive
         self.make_reflexive()
 
-        # Transitive closure.
+        # Apply transitive closure
         self.transitive_closure()
 
     # ============================================================================
-    # HELPER FUNCTIONS
-    # ============================================================================
-    def _complete_outcomes(self):
-        alpha0_str = " & ".join([f"(!{str(f)})" for f in self.outcomes])
-        alpha0 = LTL(f_str=alpha0_str)
-        self.outcomes.insert(0, alpha0)
-
-    def _assumption1(self):
-        for model_idx in range(len(self.model)):
-            for outcome_idx in range(1, len(self.outcomes)):
-                self.model[model_idx].add((self.outcomes[outcome_idx], self.outcomes[0]))
-
-    def transitive_closure(self):
-        for model_idx in range(len(self.model)):
-            model = self.model[model_idx]
-            while True:
-                new_relations = set((x, w) for x, y in model for z, w in model if z == y)
-                # print(f"new_relations={[str(x), str(y) for x, y in new_relations]}")
-                print(f"{new_relations=}")
-                closure_until_now = model | new_relations
-                if closure_until_now == model:
-                    break
-                model = closure_until_now
-            self.model[model_idx] |= model
-
-    def make_reflexive(self):
-        for model_idx in range(len(self.model)):
-            for outcome in self.outcomes:
-                self.model[model_idx].add((outcome, outcome))
-
-    # ============================================================================
-    # VISUALIZATIONS
+    # GRAPHICAL MODEL
     # ============================================================================
     def graphify(self):
         """
@@ -242,60 +210,125 @@ class PrefModel(Transformer):
         graph = Graph()
 
         # Set graph properties
-        graph["atoms"] = self.atoms
-        graph["outcomes"] = [str(outcome) for outcome in self.outcomes]
+        graph["atoms"] = self._atoms
+        graph["outcomes"] = [str(outcome) for outcome in self._outcomes]
 
         # Node property
         np_state = NodePropertyMap(graph)
 
         # Add nodes
-        node_ids = graph.add_nodes(len(self.outcomes))
+        node_ids = graph.add_nodes(len(self._outcomes))
 
         # Cache states as a dictionary {state: uid}
-        states2id = dict(zip(self.outcomes, node_ids))
+        states2id = dict(zip(self._outcomes, node_ids))
 
         # Update state property
-        for outcome in self.outcomes:
+        for outcome in self._outcomes:
             np_state[states2id[outcome]] = outcome
         graph["state"] = np_state
 
         # Add edges
-        # PATCH (Temp. Remove this on 19 Oct 22)
-        for out1, out2 in self.model[0]:
-            uid = states2id[out2]
-            vid = states2id[out1]
-            graph.add_edge(uid, vid)
+        for out1, out2 in self._relation:
+            uid = states2id[self._outcomes[out1]]
+            vid = states2id[self._outcomes[out2]]
+            graph.add_edge(vid, uid)
 
         # Return graph
         return graph
 
     # ============================================================================
-    # USER FUNCTIONS
+    # PREFERENCE DETERMINATION
     # ============================================================================
-    def is_preferred(self, idx1, idx2):
-        # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
-        return (idx1, idx2) in self.model[0]
+    def is_weakly_preferred(self, idx1, idx2):
+        return (idx1, idx2) in self._relation
+
+    def is_strictly_preferred(self, idx1, idx2):
+        return (idx1, idx2) in self._relation and (idx2, idx1) not in self._relation
 
     def is_indifferent(self, idx1, idx2):
-        # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
-        return (idx1, idx2) in self.model[0] and (idx2, idx1) in self.model[0]
+        return (idx1, idx2) in self._relation and (idx2, idx1) in self._relation
 
     def is_incomparable(self, idx1, idx2):
-        # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
-        return (idx1, idx2) not in self.model[0] and (idx2, idx1) not in self.model[0]
+        return (idx1, idx2) not in self._relation and (idx2, idx1) not in self._relation
+
+    # ============================================================================
+    # PROPERTIES AND HELPER FUNCTIONS
+    # ============================================================================
+    def atoms(self):
+        return self._atoms
+
+    def outcomes(self):
+        return self._outcomes
+
+    def index2outcome(self, idx):
+        return self._outcomes[idx]
+
+    def outcome2index(self, outcome):
+        return self._outcomes2index[outcome]
+
+    # ============================================================================
+    # HELPER FUNCTIONS
+    # ============================================================================
+    def _complete_outcomes(self):
+        alpha0_str = " & ".join([f"(!{str(f)})" for f in self._outcomes])
+        alpha0 = LTL(f_str=alpha0_str)
+        self._outcomes.insert(0, alpha0)
+
+    def _null_assumption(self):
+        for outcome_idx in range(1, len(self._outcomes)):
+            self._relation.add((outcome_idx, 0))
+
+    def transitive_closure(self):
+        model = set(self._relation)
+        while True:
+            new_relations = set((x, w) for x, y in model for z, w in model if z == y)
+            # print(f"new_relations={[str(x), str(y) for x, y in new_relations]}")
+            print(f"{new_relations=}")
+            closure_until_now = model | new_relations
+            if closure_until_now == model:
+                break
+            model = closure_until_now
+        self._relation |= model
+
+    def make_reflexive(self):
+        for i in range(len(self._outcomes)):
+            self._relation.add((i, i))
+
+
+class Formula2Model(Transformer):
+    """
+    Transforms a preference formula to a preference model :math:`(U, \succeq)`.
+
+    .. warn:: Generated model does not support ORing of preference formulas.
+    """
+    def __init__(self, tree, atoms, null_assumption):
+        super(Formula2Model, self).__init__()
+
+        # Instance variables
+        self.tree = tree
+        self.null_assumption = null_assumption
+        self.outcomes = set()
+        self.atoms = set(atoms)
+
+        # Build preference model
+        self.model = self.transform(self.tree)
 
     # ============================================================================
     # LARK TRANSFORMER FUNCTIONS
     # ============================================================================
     def start(self, args):
-        if type(args[0]) == set:
-            return [args[0]]
-        return args[0]
+        return PrefModel(outcomes=self.outcomes, atoms=self.atoms, relation=args[0],
+                         null_assumption=self.null_assumption)
 
     def pref_and(self, args):
         return set.union(*args[::2])
 
     def pref_or(self, args):
+        # TODO. See following tip.
+        # Tip. When preference formula is in DNF (disjunctive normal form),
+        #   a preference model of a formula containing OR will be a list of
+        #   AND-constrained PrefModels.
+        # This will require proving that DNF exists for arbitrary preference formula.
         raise NotImplementedError("Currently, ORing of preference formulas is not supported.")
 
     def prefltl_weakpref(self, args):
@@ -315,6 +348,163 @@ class PrefModel(Transformer):
         self.outcomes.add(f)
         self.atoms.update(set(f.atoms()))
         return f
+
+
+# class PrefModel2(Transformer):
+#     def __init__(self, tree):
+#         super(PrefModel, self).__init__()
+#
+#         # Instance variables
+#         self.tree = tree
+#         self.outcomes = set()
+#         self.atoms = set()
+#
+#         # Build preference model
+#         #  FIXME Typically, a model is list of sets (due to ORing).
+#         self.model = self.transform(self.tree)
+#
+#         # Define all outcomes over same set of atoms.
+#         for outcome in self.outcomes:
+#             outcome.update_atoms(self.atoms)
+#
+#         # Fix indices of outcomes
+#         self.outcomes = list(self.outcomes)
+#
+#         # Complete preference model. (add alpha0)
+#         self._complete_outcomes()
+#         print(self.outcomes)
+#
+#         # Force all outcomes to be preferred to alpha0.
+#         self._assumption1()
+#
+#         # Make reflexive.
+#         self.make_reflexive()
+#
+#         # Transitive closure.
+#         self.transitive_closure()
+#
+#     # ============================================================================
+#     # HELPER FUNCTIONS
+#     # ============================================================================
+#     def _complete_outcomes(self):
+#         alpha0_str = " & ".join([f"(!{str(f)})" for f in self.outcomes])
+#         alpha0 = LTL(f_str=alpha0_str)
+#         self.outcomes.insert(0, alpha0)
+#
+#     def _assumption1(self):
+#         for model_idx in range(len(self.model)):
+#             for outcome_idx in range(1, len(self.outcomes)):
+#                 self.model[model_idx].add((self.outcomes[outcome_idx], self.outcomes[0]))
+#
+#     def transitive_closure(self):
+#         for model_idx in range(len(self.model)):
+#             model = self.model[model_idx]
+#             while True:
+#                 new_relations = set((x, w) for x, y in model for z, w in model if z == y)
+#                 # print(f"new_relations={[str(x), str(y) for x, y in new_relations]}")
+#                 print(f"{new_relations=}")
+#                 closure_until_now = model | new_relations
+#                 if closure_until_now == model:
+#                     break
+#                 model = closure_until_now
+#             self.model[model_idx] |= model
+#
+#     def make_reflexive(self):
+#         for model_idx in range(len(self.model)):
+#             for outcome in self.outcomes:
+#                 self.model[model_idx].add((outcome, outcome))
+#
+#     # ============================================================================
+#     # VISUALIZATIONS
+#     # ============================================================================
+#     def graphify(self):
+#         """
+#         Preference model is not a GraphicalModel. So, it has different properties than a GraphicalModel.
+#
+#         :param base_only:
+#         :return:
+#         """
+#         # Initialize graph object
+#         graph = Graph()
+#
+#         # Set graph properties
+#         graph["atoms"] = self.atoms
+#         graph["outcomes"] = [str(outcome) for outcome in self.outcomes]
+#
+#         # Node property
+#         np_state = NodePropertyMap(graph)
+#
+#         # Add nodes
+#         node_ids = graph.add_nodes(len(self.outcomes))
+#
+#         # Cache states as a dictionary {state: uid}
+#         states2id = dict(zip(self.outcomes, node_ids))
+#
+#         # Update state property
+#         for outcome in self.outcomes:
+#             np_state[states2id[outcome]] = outcome
+#         graph["state"] = np_state
+#
+#         # Add edges
+#         # PATCH (Temp. Remove this on 19 Oct 22)
+#         for out1, out2 in self.model[0]:
+#             uid = states2id[out2]
+#             vid = states2id[out1]
+#             graph.add_edge(uid, vid)
+#
+#         # Return graph
+#         return graph
+#
+#     # ============================================================================
+#     # USER FUNCTIONS
+#     # ============================================================================
+#     def is_preferred(self, idx1, idx2):
+#         # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
+#         return (idx1, idx2) in self.model[0]
+#
+#     def is_indifferent(self, idx1, idx2):
+#         # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
+#         return (idx1, idx2) in self.model[0] and (idx2, idx1) in self.model[0]
+#
+#     def is_incomparable(self, idx1, idx2):
+#         # PATCH: Assumed AND-fragment. Hence, only 0th model is available.
+#         return (idx1, idx2) not in self.model[0] and (idx2, idx1) not in self.model[0]
+#
+#     # ============================================================================
+#     # LARK TRANSFORMER FUNCTIONS
+#     # ============================================================================
+#     def start(self, args):
+#         if type(args[0]) == set:
+#             return [args[0]]
+#         return args[0]
+#
+#     def pref_and(self, args):
+#         return set.union(*args[::2])
+#
+#     def pref_or(self, args):
+#         # Tip. When preference formula is in DNF (disjunctive normal form),
+#         #   a preference model of a formula containing OR will be a list of
+#         #   AND-constrained PrefModels.
+#         # This will require proving that DNF exists for arbitrary preference formula.
+#         raise NotImplementedError("Currently, ORing of preference formulas is not supported.")
+#
+#     def prefltl_weakpref(self, args):
+#         return {(args[0], args[2])}
+#
+#     def prefltl_strictpref(self, args):
+#         return {(args[0], args[2])}
+#
+#     def prefltl_indifference(self, args):
+#         return {(args[0], args[2]), (args[2], args[0])}
+#
+#     def prefltl_incomparable(self, args):
+#         return set()
+#
+#     def ltl_formula(self, args):
+#         f = LTL(args[0])
+#         self.outcomes.add(f)
+#         self.atoms.update(set(f.atoms()))
+#         return f
 
 
 class DFPA(Automaton):
@@ -410,13 +600,17 @@ if __name__ == '__main__':
     # graph.to_png("pref.png", nlabel=["state"])
 
     formula_ = PrefScLTL("Fa > Fb")
-    dfpa = formula_.translate()
-    print(f"{dfpa.states()=}")
-    print(f"{dfpa.atoms()=}")
-    print(f"{dfpa.init_state()=}")
-    print(f"{dfpa.delta((1, 1), {'a'})=}")
-    print(f"{dfpa.delta((1, 1), {'b'})=}")
-    pref_graph = dfpa.pref_graph()
-    pref_graph.to_png("pref_graph.png", nlabel=["state"])
-    print(f"{dfpa.pref_graph()=}")
+    model_ = formula_.model()
+    graph_ = model_.graphify()
+    graph_.to_png("graph.png", nlabel=["state"])
+
+    # dfpa = formula_.translate()
+    # print(f"{dfpa.states()=}")
+    # print(f"{dfpa.atoms()=}")
+    # print(f"{dfpa.init_state()=}")
+    # print(f"{dfpa.delta((1, 1), {'a'})=}")
+    # print(f"{dfpa.delta((1, 1), {'b'})=}")
+    # pref_graph = dfpa.pref_graph()
+    # pref_graph.to_png("pref_graph.png", nlabel=["state"])
+    # print(f"{dfpa.pref_graph()=}")
     # TODO. Try nested ANDing with parenthesis.
