@@ -5,3 +5,13 @@ dependencies:
   - python=3.9
   - spot
   - numpy
+  - matplotlib 
+  - pydot 
+  - networkx 
+  - pygraphviz 
+  - pytest
+  - scipy 
+  - lark
+  - sortedcontainers
+  - dd
+  - tqdm 
