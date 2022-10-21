@@ -2,6 +2,10 @@ import itertools
 from functools import reduce
 
 import spot
+
+from ggsolver.automata import DFA
+from ggsolver.models import Automaton
+
 import ggsolver.interfaces.i_spot as i_spot
 from ggsolver.automata import DFA
 from ggsolver.graph import *
