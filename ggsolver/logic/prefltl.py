@@ -260,6 +260,9 @@ class PrefModel:
     def outcomes(self):
         return self._outcomes
 
+    def relation(self):
+        return self._relation
+
     def index2outcome(self, idx):
         return self._outcomes[idx]
 
