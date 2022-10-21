@@ -283,7 +283,7 @@ class PrefModel:
         while True:
             new_relations = set((x, w) for x, y in model for z, w in model if z == y)
             # print(f"new_relations={[str(x), str(y) for x, y in new_relations]}")
-            print(f"{new_relations=}")
+            # print(f"{new_relations=}")
             closure_until_now = model | new_relations
             if closure_until_now == model:
                 break
@@ -599,7 +599,7 @@ if __name__ == '__main__':
     # graph = formula_._repr.graphify()
     # graph.to_png("pref.png", nlabel=["state"])
 
-    formula_ = PrefScLTL("Fa > Fb")
+    formula_ = PrefScLTL("(a U b) > Fb")
     model_ = formula_.model()
     graph_ = model_.graphify()
     graph_.to_png("graph.png", nlabel=["state"])
