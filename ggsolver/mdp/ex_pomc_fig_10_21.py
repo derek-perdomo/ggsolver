@@ -2,7 +2,7 @@
 Example from Principles of Model Checking, Fig. 10.21.
 """
 from ggsolver.mdp.models import QualitativeMDP
-from ggsolver.mdp.reachability import ASWinReach
+from ggsolver.mdp.reachability import ASWinReach, PWinReach
 
 
 if __name__ == '__main__':
@@ -30,5 +30,11 @@ if __name__ == '__main__':
 
     win = ASWinReach(mdp_graph)
     win.solve()
-    print(win.win1_act(4))
-    print(win.win1_act(0))
+    print(win.win_region(1))
+
+    win2 = PWinReach(mdp_graph)
+    win2.solve()
+    graph = win2.solution()
+
+    # from pprint import pprint
+    # pprint(graph.serialize())

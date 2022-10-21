@@ -58,6 +58,8 @@ packages = [
     "ggsolver",
     "ggsolver.interfaces",
     "ggsolver.logic",
+    "ggsolver.dtptb",
+    "ggsolver.mdp",
 ]
 
 install_requires = []

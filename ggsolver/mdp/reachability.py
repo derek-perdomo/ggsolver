@@ -1,10 +1,6 @@
 import random
-
-import networkx as nx
-
-from ggsolver.graph import Graph, SubGraph
 from ggsolver.models import Solver
-from functools import reduce
+from tqdm import tqdm
 
 
 class ASWinReach(Solver):
@@ -28,7 +24,7 @@ class ASWinReach(Solver):
         Using the same variable names as Alg. 45.
         """
         # Initialize algorithm variables
-        graph = SubGraph(self._graph)
+        graph = self._solution
         b = self._final
 
         # Make B absorbing
@@ -39,49 +35,33 @@ class ASWinReach(Solver):
         # Compute the set of nodes disconnected from B
         disconnected = self.disconnected(graph, b)
         set_u = {s for s in graph.nodes() if s in disconnected}
-        # print(f"Initializing set_u: {set_u}")
 
         while True:
             set_r = set_u.copy()
-            # print(f"--------------------------")
-            # print(f"set_r: {set_u}")
             while len(set_r) > 0:
                 u = set_r.pop()
-                # print(f"Popped: {u}, Pre: {self.pre(graph, u)}")
 
                 for t, a in self.pre(graph, u):
-                    # print(f"\tProcessing {t}, {a}")
-                    # print(f"\tt in set_u: {t in set_u}")
                     if t in set_u:
                         continue
                     self.remove_act(graph, t, a)
-                    # print(f"\tlen(graph.successors(t)) == 0: {len(graph.successors(t)) == 0}")
                     if len(graph.successors(t)) == 0:
-                        # print(f"\tAdding node: {t} to set_t, set_u")
                         set_r.add(t)
                         set_u.add(t)
-                # print(f"\tHiding node: {u}")
                 graph.hide_node(u)
             disconnected = self.disconnected(graph, b)
             set_u = {s for s in set(graph.nodes()) - set_u if s in disconnected}
-            # print(f"New set_u: {set_u}")
             if len(set_u) == 0:
                 break
 
-        self._win1 = set(graph.visible_nodes())
-        self._strategy_graph = graph
-        # print(self._win1)
-
-    def pi1(self, node):
-        return random.choice(self.win1_act(node))
-
-    def win1_act(self, node):
-        if self._strategy_graph.has_node(node):
-            acts = set()
-            for uid, vid, key in self._strategy_graph.out_edges(node):
-                acts.add(self._graph["input"][uid, vid, key])
-            return list(acts)
-        return []
+        # Process node, edge winners
+        for uid in tqdm(self._solution.nodes(), desc="Processing node, edge winners..."):
+            self._node_winner[uid] = 1 if self._solution.is_node_visible(uid) else 3
+            out_edges = self._solution.out_edges(uid)
+            winning_acts = {self._solution["input"][uid, vid, key]
+                            for _, vid, key in out_edges if self._solution.is_edge_visible(uid, vid, key)}
+            for _, vid, key in out_edges:
+                self._edge_winner[uid, vid, key] = 1 if self._solution["input"][uid, vid, key] in winning_acts else 3
 
     @staticmethod
     def disconnected(graph, sources):
@@ -116,35 +96,27 @@ class PWinReach(Solver):
         self._strategy_graph = None
 
     def solve(self):
-        """
-        Alg. 45 from Principles of Model Checking.
-        Using the same variable names as Alg. 45.
-        """
-        # Initialize algorithm variables
-        graph = SubGraph(self._graph)
-        b = self._final
+        # Reset the solver
+        self.reset()
 
-        # Make B absorbing
-        for uid in b:
-            for _, vid, key in graph.out_edges(uid):
-                graph.hide_edge(uid, vid, key)
+        # Get final states
+        final = self._final
 
-        reachable_nodes = graph.reverse_bfs(b)
-        for uid in graph.nodes():
-            if uid not in reachable_nodes:
-                graph.hide_node(uid)
+        with tqdm(total=self._solution.number_of_nodes()) as progress_bar:
+            # Identify the set of nodes from which a final state can be reached (i.e., there exists a path in graph)
+            progress_bar.set_description("Running reverse BFS...")
+            reachable_nodes = self._solution.reverse_bfs(final)
 
-        self._win1 = set(reachable_nodes)
-        self._strategy_graph = graph
+            # Hide the nodes in MDP.
+            progress_bar.set_description("Marking node, edge winners...")
+            for uid in self._solution.nodes():
+                progress_bar.update(1)
+                self._node_winner[uid] = 1 if uid in reachable_nodes else 3
+                out_edges = self._solution.out_edges(uid)
+                winning_acts = {self._solution["input"][uid, vid, key]
+                                for _, vid, key in out_edges if vid not in reachable_nodes}
+                for _, vid, key in out_edges:
+                    self._edge_winner[uid, vid, key] = 1 if self._solution["input"][uid, vid, key] in winning_acts else 3
 
-    def pi1(self, node):
-        return random.choice(self.win1_act(node))
-
-    def win1_act(self, node):
-        if self._strategy_graph.has_node(node):
-            acts = set()
-            for uid, vid, key in self._strategy_graph.out_edges(node):
-                acts.add(self._graph["input"][uid, vid, key])
-            return list(acts)
-        return []
-
+        # Mark the game as solved.
+        self._is_solved = True

@@ -66,3 +66,27 @@ Game
                 formula
 
 
+Solver
+------
+
+.. autoclass:: ggsolver.models.Solver
+    :members:
+    :inherited-members:
+
+
+DeterministicStrategy
+---------------------
+
+.. autoclass:: ggsolver.models.DeterministicStrategy
+    :members:
+    :inherited-members:
+    :special-members: __call__
+
+
+NonDeterministicStrategy
+------------------------
+
+.. autoclass:: ggsolver.models.NonDeterministicStrategy
+    :members:
+    :inherited-members:
+    :special-members: __call__
