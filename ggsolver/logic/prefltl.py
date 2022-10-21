@@ -93,8 +93,8 @@ class PrefScLTL(PrefLTL):
     """
     PrefLTL formula is internally represented as a PrefModel instance.
     """
-    def __init__(self, f_str, atoms=None):
-        super(PrefScLTL, self).__init__(f_str, atoms)
+    def __init__(self, f_str, atoms=None, null_assumption=True):
+        super(PrefScLTL, self).__init__(f_str, atoms, null_assumption)
         assert all(ScLTL(f.f_str) for f in self._outcomes[1:])
 
     def __str__(self):
