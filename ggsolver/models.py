@@ -1041,7 +1041,7 @@ class Automaton(GraphicalModel):
             For example, DFA has an acceptance condition of `(Automaton.ACC_REACH, 0)`.
         :param is_deterministic: (bool) Whether the Automaton is deterministic.
         """
-        kwargs["inputs"] = "sigma" if "inputs" not in kwargs else kwargs["inputs"]
+        kwargs["input_domain"] = "atoms" if "input_domain" not in kwargs else kwargs["input_domain"]
         super(Automaton, self).__init__(**kwargs)
 
         # Process keyword arguments
@@ -1121,7 +1121,8 @@ class Automaton(GraphicalModel):
 
         # Get input function
         #   Specialized for automaton class: we expect input function to be atoms.
-        assert self._input_domain == "atoms", "For automaton class, we expect input domain to be `atoms`."
+        assert self._input_domain == "atoms", "For automaton class, we expect input domain to be `atoms`. " \
+                                              f"Currently it is set to '{self._input_domain}'."
         input_func = getattr(self, self._input_domain)
         atoms = input_func()
         inputs = util.powerset(atoms)
