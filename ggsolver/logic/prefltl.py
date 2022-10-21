@@ -1,20 +1,11 @@
 import itertools
-from functools import reduce
-
-import spot
-
-from ggsolver.automata import DFA
-from ggsolver.models import Automaton
-
-import ggsolver.interfaces.i_spot as i_spot
-from ggsolver.automata import DFA
 from ggsolver.graph import *
-from ggsolver.logic.formula import BaseFormula, ParsingError, PARSERS_DIR
+from ggsolver.logic.formula import BaseFormula, PARSERS_DIR
 from ggsolver.logic.ltl import LTL, ScLTL
-from lark import Lark, Transformer, Tree, Visitor
-from pathlib import Path
-
 from ggsolver.models import Automaton
+from ggsolver.automata import DFA
+from lark import Lark, Transformer
+from pathlib import Path
 
 
 class PrefLTL(BaseFormula):

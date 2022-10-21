@@ -9,7 +9,7 @@ from ggsolver.graph import NodePropertyMap, EdgePropertyMap, Graph, SubGraph
 from tqdm import tqdm
 
 try:
-    from ggsolver.logic import pl
+    import ggsolver.logic.pl as pl
 except ImportError as err:
     import traceback
     logging.error(util.ColoredMsg.error(f"[ERROR] logic.pl could not be loaded. Logic functionality will not work. "

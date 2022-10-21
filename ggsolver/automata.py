@@ -1,6 +1,5 @@
 import itertools
 from functools import reduce
-
 from ggsolver.models import Automaton
 
 
