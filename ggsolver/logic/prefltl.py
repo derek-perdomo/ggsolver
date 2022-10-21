@@ -296,12 +296,29 @@ class Formula2Model(Transformer):
 
 
 class DFPA(Automaton):
-    def __init__(self, automata, pref_model):
+    """
+    state: (q1, ..., qn)
+    init_state: (q01, ..., q0n)
+    delta(q, inp) = (delta(qi, inp))_{i=1...n}
+    final(q) = node to which q belongs to.
+    pref_graph: (V, E)
+        - node: (f0, f1, ..., fn), where fi is True if i-th component of all states in node is the final state.
+        - edge: based on preference relation.
+    """
+    def __init__(self, outcomes, pref_model):
         super(DFPA, self).__init__(acc_cond=Automaton.ACC_PREF_MP)
-        assert all(isinstance(aut, DFA) for aut in automata)
-        self._automata = automata
+        self._outcomes = outcomes
         self._pref_model = pref_model
         self._pref_graph = None
+        self._automata = []
+
+        # We will not generate automaton for alpha0 because any state that doesn't satisfy
+        #   any outcomes alpha_1 ... alpha_n satisfies alpha_0, by construction.
+        atoms = reduce(set.union, [set(out.atoms()) for out in self._outcomes])
+        for i in range(1, len(self._outcomes)):
+            dfa = DFA(atoms=atoms)
+            dfa.from_automaton(aut=self._outcomes[i].translate())
+            self._automata.append(dfa)
 
     # =========================================================================
     # IMPLEMENTATION OF ABSTRACT METHODS
@@ -310,24 +327,25 @@ class DFPA(Automaton):
         return list(itertools.product(*[aut.states() for aut in self._automata]))
 
     def atoms(self):
-        return reduce(set.union, [set(aut.atoms()) for aut in self._automata])
+        return reduce(set.union, [set(out.atoms()) for out in self._outcomes])
 
     def init_state(self):
         return tuple(aut.init_state() for aut in self._automata)
 
     def delta(self, state, inp):
-        return tuple(self._automata[idx].delta(state[idx], inp) for idx in range(len(self._automata)))
+        return tuple(self._automata[i].delta(state[i], inp) for i in range(len(self._automata)))
 
     def final(self, state):
         """
         Returns the acceptance set to which the state belongs to.
         """
-        # TODO. Depends on Preference graph construction.
-        pass
+        outcomes = self.maximal(state)
+        return tuple(1 if outcome in outcomes else 0 for outcome in self._outcomes)
 
     # =========================================================================
     # SPECIAL METHODS
     # =========================================================================
+    # TODO. Should pref_graph be graph property?
     def pref_graph(self, cache=False):
         pref_graph = Graph()
 
@@ -335,12 +353,11 @@ class DFPA(Automaton):
         #   Use tuple of sorted lists to avoid duplicates. Lists needed to avoid unhashable error.
         nodes = dict()
         for q in self.states():
-            maximal_q = tuple(sorted(list(self.maximal(q))))
-            print(f"{q=}, {maximal_q=}, {self.outcomes(q)=}")
-            if maximal_q in nodes:
-                nodes[maximal_q].add(q)
+            node_q = self.final(q)
+            if node_q in nodes:
+                nodes[node_q].add(q)
             else:
-                nodes[maximal_q] = {q}
+                nodes[node_q] = {q}
         node_ids = pref_graph.add_nodes(len(nodes))
 
         np_state = pref_graph["state"] = NodePropertyMap(pref_graph)
@@ -349,6 +366,25 @@ class DFPA(Automaton):
         partition = pref_graph["partition"] = NodePropertyMap(pref_graph)
         for i in range(len(nodes)):
             partition[i] = nodes[np_state[i]]
+
+        # TODO: Add edges by comparing maximal sets.
+        cond1 = False
+        cond2 = True
+        for node_i, node_j in itertools.product(node_ids, node_ids):
+            # Get indices of maximal outcomes satisfied by states in node_i, node_j
+            maximal_i = [idx for idx, value in enumerate(np_state[node_i]) if value == 1]
+            maximal_j = [idx for idx, value in enumerate(np_state[node_j]) if value == 1]
+            for alpha_i, alpha_j in itertools.product(maximal_i, maximal_j):
+                # Condition 1
+                if self._pref_model.is_strictly_preferred(alpha_i, alpha_j):
+                    cond1 = True
+
+                # Condition 2
+                if self._pref_model.is_strictly_preferred(alpha_j, alpha_i):
+                    cond2 = False
+
+            if cond1 and cond2:
+                pref_graph.add_edge(node_j, node_i)
 
         if cache:
             self._pref_graph = pref_graph
@@ -364,11 +400,19 @@ class DFPA(Automaton):
         if len(out) == 0:
             out.add(0)
 
-        return {self._pref_model.outcomes[i] for i in out}
+        return {self._pref_model.outcomes()[i] for i in out}
 
     def maximal(self, state):
         outcomes = self.outcomes(state)
-        remove = {i for i in outcomes if any(self._pref_model.is_preferred(j+1, i+1) for j in outcomes - {i})}
+        remove = set()
+        for outcome_1 in outcomes:
+            for outcome_2 in outcomes - {outcome_1}:
+                idx1 = self._pref_model.outcome2index(outcome_1)
+                idx2 = self._pref_model.outcome2index(outcome_2)
+                if self._pref_model.is_strictly_preferred(idx2, idx1):
+                    remove.add(outcome_1)
+                    break
+
         return outcomes - remove
 
 
@@ -387,10 +431,27 @@ if __name__ == '__main__':
     # graph = formula_._repr.graphify()
     # graph.to_png("pref.png", nlabel=["state"])
 
-    formula_ = PrefScLTL("(a U b) > Fb")
+    formula_ = PrefScLTL("Fa > Fb")
     model_ = formula_.model()
-    graph_ = model_.graphify()
-    graph_.to_png("graph.png", nlabel=["state"])
+    # graph_ = model_.graphify()
+    # graph_.to_png("graph.png", nlabel=["state"])
+
+    aut_ = formula_.translate()
+    print(f"{aut_.states()=}")
+    print(f"{aut_.atoms()=}")
+    print(f"{aut_.init_state()=}")
+    print(f"{aut_.delta((1, 1), {'a'})=}")
+    print(f"{aut_.delta((1, 1), {'b'})=}")
+    print(f"{aut_.delta((1, 1), {'a', 'b'})=}")
+    print(f"{aut_.final((0, 0))=}")
+    print(f"{aut_.final((0, 1))=}")
+    print(f"{aut_.final((1, 0))=}")
+    print(f"{aut_.final((1, 1))=}")
+    pref_graph_ = aut_.pref_graph()
+    pref_graph_.to_png("pref_graph.png", nlabel=["state", "partition"])
+    aut_graph_ = aut_.graphify()
+    aut_graph_.to_png("aut_graph.png", nlabel=["state"], elabel=["input"])
+
 
     # dfpa = formula_.translate()
     # print(f"{dfpa.states()=}")
