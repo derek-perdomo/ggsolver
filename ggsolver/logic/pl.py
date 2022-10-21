@@ -118,7 +118,7 @@ def sat2formula(atoms, sat_assignments):
     formula = []
     for assignment in sat_assignments:
         # Each clause includes an ANDing of atoms in assignment and ANDing of negation of atoms not in assignment
-        complete_acc = [p if p in assignment else f"!{p}" for p in atoms()]
+        complete_acc = [p if p in assignment else f"!{p}" for p in atoms]
         formula.append(f"({' & '.join(complete_acc)})")
 
     # Construct DNF formula by joining all clauses using disjunction
