@@ -13,5 +13,8 @@ dependencies:
   - scipy 
   - lark
   - sortedcontainers
-  - dd
   - tqdm 
+  - pip
+  - pip:
+    - dd
+    
