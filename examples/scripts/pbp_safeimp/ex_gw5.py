@@ -1,9 +1,8 @@
-import copy
 import itertools
 import json
 
-from ggsolver.inc_pbp.models import PrefModel, ImprovementMDP
-from ggsolver.inc_pbp.reachability import SASIReach, SPIReach
+from ggsolver.pbp.safeimp.models import PrefModel, ImprovementMDP
+from ggsolver.pbp.safeimp.reachability import SASIReach, SPIReach
 from ggsolver.models import register_property
 from ggsolver.mdp.models import QualitativeMDP
 from ggsolver.gridworld import util
@@ -175,8 +174,6 @@ class MDPGridworld(QualitativeMDP):
 
 
 if __name__ == '__main__':
-    from pprint import pprint
-
     outcomes = {
         0: (0, 0),
         1: (2, 0),

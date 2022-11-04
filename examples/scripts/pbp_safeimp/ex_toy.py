@@ -3,8 +3,8 @@ The example used here is from Principles of Model Checking, Fig. 10.21.
 This is not suitable for studying preferences. But is used as a quick test for code.
 """
 
-from ggsolver.inc_pbp.models import *
-from ggsolver.inc_pbp.reachability import *
+from ggsolver.pbp.safeimp.models import *
+from ggsolver.pbp.safeimp.reachability import *
 import logging
 logging.basicConfig(level=logging.ERROR)
 
