@@ -123,6 +123,7 @@ def sat2formula(atoms, sat_assignments):
 
     # Construct DNF formula by joining all clauses using disjunction
     formula = " | ".join(formula)
+    formula = PL(f_str=formula, atoms=atoms).simplify()
 
     # Simplify the formula
     return PL(f_str=formula, atoms=atoms)
