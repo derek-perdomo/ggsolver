@@ -14,7 +14,7 @@ class ParsingError(ValueError):
 class BaseFormula(ABC):
     def __init__(self, f_str, atoms=None):
         self.f_str = f_str
-        self._atoms = atoms if atoms is not None else set()
+        self._atoms = set(atoms) if atoms is not None else set()
 
     def __str__(self):
         return str(self.f_str)
