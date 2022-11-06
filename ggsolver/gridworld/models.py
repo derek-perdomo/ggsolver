@@ -1,5 +1,5 @@
 import pygame
-from typing import Union
+from typing import Union, List
 from ggsolver.graph import *
 from dataclasses import dataclass
 from ggsolver.util import ColoredMsg
@@ -92,9 +92,62 @@ class GWSim:
         # Game objects
         self._game_objects = pygame.sprite.Group()
         self._bg_sprites = pygame.sprite.Group()
+        self._p1_sprites = pygame.sprite.Group()
+        self._p2_sprites = pygame.sprite.Group()
+        self._p3_sprites = pygame.sprite.Group()
 
         # Initialization functions
         self._generate_bg_sprites()
+
+    def allocate_sprite_rect(self, sprite, cell, is_background=False):
+        """
+        Returns a rectangle w.r.t. top-left of cell.
+        """
+        # If sprite is background sprite: it gets full allocation.
+        if is_background:
+            width = self._cell_size[0]
+            height = self._cell_size[1]
+            return 0, 0, width, height
+
+        # If sprite is player character or NPC, then allocate smaller space within a cell.
+        else:
+            # Collect sprites in given cell
+            sprites_in_cell = [
+                spr for spr in self._p1_sprites.sprites() if tuple(spr.get_grid_coordinates()) == tuple(cell)
+            ]
+            # TODO. Add P2, P3 sprites as well.
+
+            if len(sprites_in_cell) == 0:
+                width = int(0.75 * self._cell_size[0])
+                height = int(0.75 * self._cell_size[1])
+                left = (self._cell_size[0] - width) // 2
+                top = (self._cell_size[1] - height) // 2
+                return left, top, width, height
+
+            elif len(sprites_in_cell) == 1:
+                idx = sprites_in_cell.index(sprite)
+
+                width = int(0.40 * self._cell_size[0])
+                height = int(0.40 * self._cell_size[1])
+
+                if idx == 0:
+                    left = int(0.05 * self._cell_size[0])
+                    top = int(0.05 * self._cell_size[1])
+
+                else:  # idx == 1:
+                    left = int(0.5 * self._cell_size[0])
+                    top = int(0.5 * self._cell_size[1])
+
+                return left, top, width, height
+
+    def add_p1_sprite(self, sprite):
+        self._p1_sprites.add(sprite)
+
+    def add_p2_sprite(self, sprite):
+        self._p2_sprites.add(sprite)
+
+    def add_p3_sprite(self, sprite):
+        self._p3_sprites.add(sprite)
 
     def toggle_grid_lines(self):
         self._show_grid_lines = not self._show_grid_lines
@@ -118,11 +171,18 @@ class GWSim:
             clock.tick(self._fps)
 
     def event_handler(self, event):
+        # Handle mouse_hover event.
+        self.on_mouse_hover()
+
         if event.type == pygame.QUIT:
             self._running = False
+
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_t:
                 self.toggle_grid_lines()
+
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            self.on_click()
 
     def update(self):
         # if self._show_grid_lines:
@@ -131,32 +191,47 @@ class GWSim:
 
     def render(self, state):
         # Screen background is black.
-        self._screen.fill((0, 0, 0))
+        # self._screen.fill((0, 0, 0))
+        self._screen.fill((100, 200, 200))
 
         # Determine position of grid in window.
         grid_left = (self._screen.get_size()[0] - self._grid.get_size()[0]) // 2
         grid_top = (self._screen.get_size()[1] - self._grid.get_size()[1]) // 2
-        self._screen.blit(self._grid, (grid_left, grid_top))
 
         # Update background sprites
         self._bg_sprites.update()
         self._bg_sprites.draw(self._grid)
 
-        # Handle mouse_hover event.
-        self.mouse_hover()
+        # Update player 1 sprites
+        self._p1_sprites.update()
+        self._p1_sprites.draw(self._grid)
 
+        # Update player 2 sprites
+        self._p2_sprites.update()
+        self._p2_sprites.draw(self._grid)
 
+        # Update player 3 (nature) sprites
+        self._p3_sprites.update()
+        self._p3_sprites.draw(self._grid)
 
+        self._screen.blit(self._grid, (grid_left, grid_top))
         pygame.display.flip()
+
+    def add_sprite(self, sprite):
+        self._game_objects.add(sprite)
 
     def get_mouse_hover_animation_color(self):
         return self._mouse_hover_anim_color
 
-    def mouse_hover(self):
+    def on_mouse_hover(self):
         if self._animate_mouse_hover:
             mouse_pos = pygame.mouse.get_pos()
             for sprite in self._bg_sprites.sprites():
-                sprite.mouse_hover(mouse_pos)
+                sprite.on_mouse_hover(mouse_pos)
+
+    def on_click(self):
+        for spr in self._game_objects.sprites():
+            spr.on_click(pygame.mouse.get_pos())
 
     def _generate_bg_sprites(self):
         x_max, y_max = self._dim
@@ -167,7 +242,7 @@ class GWSim:
                                    line_width=self._grid_line_style.line_width,
                                    show_grid_lines=self._show_grid_lines)
                 self._bg_sprites.add(cell_xy)
-                self._game_objects.add(cell_xy)
+                # self._game_objects.add(cell_xy)
 
     def _auto_window_size(self):
         # Given gridworld dimensions, try 100 x 100 pix cells.
@@ -261,12 +336,38 @@ class GameObject(pygame.sprite.Sprite):
         :param y: (int) Y-coordinate.
         """
         super(GameObject, self).__init__()
+
+        # Store grid coordinates
+        self._grid_coordinates = (x, y)
+
+        # Set parent and child relation
         self._parent = parent
-        self.image = pygame.Surface(self._parent.cell_size())
+        self._parent.add_sprite(self)
+
+        # Get surface allocation for image rectangle
+        if isinstance(self, BGSprite):
+            self._alloc_rect = self._parent.allocate_sprite_rect(sprite=self, cell=(x, y), is_background=True)
+            print(f"BGSprite: {self._alloc_rect=}")
+        else:
+            self._alloc_rect = self._parent.allocate_sprite_rect(sprite=self, cell=(x, y))
+
+    # Define surface to play with for the sprite.
+        self.image = pygame.Surface(self._alloc_rect[2:])
         self.rect = self.image.get_rect()
-        cell_width, cell_height = self._parent.cell_size()
-        self._pos = [x * cell_width, y * cell_height]
-        self.rect.topleft = self._pos
+        self.rect.topleft = [
+            self._parent.cell_size()[0] * self._grid_coordinates[0] + self._alloc_rect[0],
+            self._parent.cell_size()[1] * self._grid_coordinates[1] + self._alloc_rect[1]
+        ]
+        print(f"\t{self.rect.topleft=}")
+
+    def get_grid_coordinates(self):
+        return self._grid_coordinates
+
+    def on_mouse_hover(self, mouse_pos):
+        pass
+
+    def on_click(self, mouse_pos):
+        pass
 
 
 class BGSprite(GameObject):
@@ -307,11 +408,67 @@ class BGSprite(GameObject):
     def toggle_grid_lines(self):
         self._show_grid_lines = not self._show_grid_lines
 
-    def mouse_hover(self, mouse_pos):
+    def on_mouse_hover(self, mouse_pos):
         if self.rect.collidepoint(mouse_pos):
             self.image.fill(self._parent.get_mouse_hover_animation_color())
         else:
             self.image.fill(self._bg_color)
+
+
+class ObstacleSprite(GameObject):
+    def __init__(self, parent, x, y, sprite_img):
+        super(ObstacleSprite, self).__init__(parent, x, y)
+
+        # Load image
+        self._sprite_img = sprite_img
+        self._sprite_img_surf = pygame.image.load(self._sprite_img).convert_alpha()
+        pygame.transform.scale(self._sprite_img_surf, self.rect.size, self.image)
+
+
+class PlayerSprite(GameObject):
+    def __init__(self, parent, x, y, sprite_img, line_color=(0, 255, 0)):
+        super(PlayerSprite, self).__init__(parent, x, y)
+
+        # Load image
+        self._sprite_img = sprite_img
+        self._sprite_img_surf = pygame.image.load(self._sprite_img).convert_alpha()
+        pygame.transform.scale(self._sprite_img_surf, self.rect.size, self.image)
+
+        # Selection state
+        self._is_selected = False
+        self._line_color = line_color
+        self._line_width = 4
+
+    def on_click(self, mouse_pos):
+        if self.rect.collidepoint(mouse_pos):
+            self._is_selected = not self._is_selected
+
+    def update(self):
+        if self._is_selected:
+            # When selected, draw border
+            pygame.draw.rect(
+                self.image,
+                self._line_color,
+                pygame.Rect(0, 0, self.rect.width, self.rect.height),
+                self._line_width
+            )
+
+            # Handle any connected tasks to be handled on select.
+            self.on_select()
+
+        else:
+            # When unselected, remove border
+            self._sprite_img_surf = pygame.image.load(self._sprite_img).convert_alpha()
+            pygame.transform.scale(self._sprite_img_surf, self.rect.size, self.image)
+
+            # Handle any connected tasks to be handled on select.
+            self.on_unselect()
+
+    def on_select(self):
+        pass
+
+    def on_unselect(self):
+        pass
 
 
 if __name__ == '__main__':
@@ -326,4 +483,9 @@ if __name__ == '__main__':
     )
     # for spr in sim._bg_sprites.sprites():
     #     print(spr, spr.rect)
+    player = PlayerSprite(sim, 2, 1, "0.png")
+    obs = PlayerSprite(sim, 2, 1, "0.png")
+
+    sim.add_p1_sprite(player)
+    sim.add_p3_sprite(obs)
     sim.run()
