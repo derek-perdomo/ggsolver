@@ -33,6 +33,7 @@ class SM:
 DEFAULT_CELL_SIZE = (50, 50)
 DEFAULT_BG_COLOR = (255, 255, 255)
 DEFAULT_LINE_STYLE = LineStyle(line_width=3, line_style="solid", line_color=(0, 0, 0))
+MOUSE_HOVER_ANIM_COLOR = (255, 222, 173)
 
 
 class GWSim:
@@ -40,12 +41,14 @@ class GWSim:
                  window_size: Union[str, tuple[int, int]] = "auto",
                  cell_size: Union[str, tuple[int, int]] = "auto",
                  bg_color=DEFAULT_BG_COLOR,
+                 mouse_hover_anim_color=MOUSE_HOVER_ANIM_COLOR,
                  grid_line_style=DEFAULT_LINE_STYLE,
                  mode=None,
                  fps=2,
                  show_help=True,
                  show_msg_box=False,
                  show_grid_lines=True,
+                 show_mouse_hover_animation=True,
                  enable_sound=False,
                  caption="Gridworld demo"):
         """
@@ -84,6 +87,10 @@ class GWSim:
         pygame.init()
         pygame.display.set_caption(self._window_caption)
         self._screen = pygame.display.set_mode(self._window_size)
+
+        # Pygame events
+        self._animate_mouse_hover = show_mouse_hover_animation
+        self._mouse_hover_anim_color = mouse_hover_anim_color
 
         # Game objects
         self._game_objects = pygame.sprite.Group()
@@ -129,7 +136,11 @@ class GWSim:
     def render(self, state):
         self._bg_sprites.update()
         self._bg_sprites.draw(self._screen)
+        self.mouse_hover()
         pygame.display.flip()
+
+    def get_mouse_hover_animation_color(self):
+        return self._mouse_hover_anim_color
 
     def _generate_bg_sprites(self):
         x_max, y_max = self._dim
@@ -142,6 +153,12 @@ class GWSim:
                                    show_grid_lines=self._show_grid_lines)
                 self._bg_sprites.add(cell_xy)
                 self._game_objects.add(cell_xy)
+
+    def mouse_hover(self):
+        if self._animate_mouse_hover:
+            mouse_pos = pygame.mouse.get_pos()
+            for sprite in self._bg_sprites.sprites():
+                sprite.mouse_hover(mouse_pos)
 
 
 class GameObject(pygame.sprite.Sprite):
@@ -197,6 +214,12 @@ class BGSprite(GameObject):
     def toggle_grid_lines(self):
         self._show_grid_lines = not self._show_grid_lines
 
+    def mouse_hover(self, mouse_pos):
+        if self.rect.collidepoint(mouse_pos):
+            self.image.fill(self._parent.get_mouse_hover_animation_color())
+        else:
+            self.image.fill(self._bg_color)
+
 
 if __name__ == '__main__':
     sim = GWSim(
@@ -204,10 +227,9 @@ if __name__ == '__main__':
         sm=None,
         window_size=(400, 400),
         cell_size=(200, 200),
-        bg_color=(100, 100, 100),
         show_grid_lines=True,
-        grid_line_style=LineStyle(line_width=1, line_style="solid", line_color=(255, 0, 0))
+        fps=60
     )
-    for spr in sim._bg_sprites.sprites():
-        print(spr, spr.rect)
+    # for spr in sim._bg_sprites.sprites():
+    #     print(spr, spr.rect)
     sim.run()
