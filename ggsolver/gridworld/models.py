@@ -61,6 +61,7 @@ class GWSim:
         self._fps = fps
         self._show_help = show_help
         self._show_msg_box = show_msg_box
+        self._show_grid_lines = False
         self._enable_sound = enable_sound
         self._bg_color = bg_color
         self._grid_line_style = grid_line_style
@@ -90,6 +91,11 @@ class GWSim:
         # Initialization functions
         self._generate_bg_sprites()
 
+    def toggle_grid_lines(self):
+        self._show_grid_lines = not self._show_grid_lines
+        for sprite in self._bg_sprites.sprites():
+            sprite.toggle_grid_lines()
+
     def cell_size(self):
         return self._cell_size
 
@@ -110,8 +116,13 @@ class GWSim:
     def event_handler(self, event):
         if event.type == pygame.QUIT:
             self._running = False
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_t:
+                self.toggle_grid_lines()
 
     def update(self):
+        if self._show_grid_lines:
+            self._bg_sprites.update(show_grid_lines=True)
         pass
 
     def render(self, state):
@@ -124,7 +135,10 @@ class GWSim:
         x_size, y_size = self._cell_size
         for x in range(x_max):
             for y in range(y_max):
-                cell_xy = BGSprite(parent=self, x=x*x_size, y=y*y_size, bg_color=self._bg_color, border_style=self._grid_line_style)
+                cell_xy = BGSprite(parent=self, x=x*x_size, y=y*y_size, bg_color=self._bg_color,
+                                   line_color=self._grid_line_style.line_color,
+                                   line_width=self._grid_line_style.line_width,
+                                   show_grid_lines=self._show_grid_lines)
                 self._bg_sprites.add(cell_xy)
                 self._game_objects.add(cell_xy)
 
@@ -145,7 +159,8 @@ class GameObject(pygame.sprite.Sprite):
 
 
 class BGSprite(GameObject):
-    def __init__(self, parent, x, y, bg_color=(255, 255, 255), border_style=DEFAULT_LINE_STYLE):
+    def __init__(self, parent, x, y, bg_color=(255, 255, 255),
+                 line_width=3, line_color=(0, 0, 0), show_grid_lines=True):
         """
         :param parent: (Player object)
         :param x: (int) X-coordinate.
@@ -155,19 +170,29 @@ class BGSprite(GameObject):
         """
         super(BGSprite, self).__init__(parent, x, y)
         self._bg_color = bg_color
-        self._line_width = border_style.line_width
-        self._line_color = border_style.line_color
-        self._line_style = border_style.line_style
-
-        # self.image = pygame.Surface()
+        self._line_width = line_width
+        self._line_color = line_color
+        self._show_grid_lines = show_grid_lines
         self.image.fill(self._bg_color)
-        # self.image.set_colorkey(self._bg_color)
-        pygame.draw.rect(
-            self.image,
-            self._line_color,
-            pygame.Rect(0, 0, self.rect.width, self.rect.height),
-            self._line_width
-        )
+
+    def update(self):
+        if self._show_grid_lines:
+            pygame.draw.rect(
+                self.image,
+                self._line_color,
+                pygame.Rect(0, 0, self.rect.width, self.rect.height),
+                self._line_width
+            )
+        else:
+            pygame.draw.rect(
+                self.image,
+                self._bg_color,
+                pygame.Rect(0, 0, self.rect.width, self.rect.height),
+                self._line_width
+            )
+
+    def toggle_grid_lines(self):
+        self._show_grid_lines = not self._show_grid_lines
 
 
 if __name__ == '__main__':
