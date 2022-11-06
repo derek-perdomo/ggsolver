@@ -45,6 +45,7 @@ class GWSim:
                  fps=2,
                  show_help=True,
                  show_msg_box=False,
+                 show_grid_lines=True,
                  enable_sound=False,
                  caption="Gridworld demo"):
         """
@@ -61,7 +62,7 @@ class GWSim:
         self._fps = fps
         self._show_help = show_help
         self._show_msg_box = show_msg_box
-        self._show_grid_lines = False
+        self._show_grid_lines = show_grid_lines
         self._enable_sound = enable_sound
         self._bg_color = bg_color
         self._grid_line_style = grid_line_style
@@ -121,8 +122,8 @@ class GWSim:
                 self.toggle_grid_lines()
 
     def update(self):
-        if self._show_grid_lines:
-            self._bg_sprites.update(show_grid_lines=True)
+        # if self._show_grid_lines:
+        #     self._bg_sprites.update(show_grid_lines=True)
         pass
 
     def render(self, state):
@@ -166,7 +167,9 @@ class BGSprite(GameObject):
         :param x: (int) X-coordinate.
         :param y: (int) Y-coordinate.
         :param bg_color: (3-tuple of int) (R, G, B), each value between [0, 255]
-        :param border_style: (LineStyle) Line width of borders.
+        :param line_width: (int) Line width of borders.
+        :param line_color: (tuple[int, int, int]) Line color of borders.
+        :param show_grid_lines: (bool) Show/hide grid line.
         """
         super(BGSprite, self).__init__(parent, x, y)
         self._bg_color = bg_color
@@ -200,7 +203,10 @@ if __name__ == '__main__':
         dim=(2, 2),
         sm=None,
         window_size=(400, 400),
-        cell_size=(200, 200)
+        cell_size=(200, 200),
+        bg_color=(100, 100, 100),
+        show_grid_lines=True,
+        grid_line_style=LineStyle(line_width=1, line_style="solid", line_color=(255, 0, 0))
     )
     for spr in sim._bg_sprites.sprites():
         print(spr, spr.rect)
