@@ -37,18 +37,18 @@ class JobstmannGame(Game):
 
 
 if __name__ == '__main__':
-    game = JobstmannGame(final={3, 4})
+    game = JobstmannGame(final={3, 5, 6})
     graph = game.graphify()
     win = SWinReach(graph)
     win.solve()
-    print(win.win_region(1))
+    print(f"{win.win_region(1)=}")
 
-    game2 = JobstmannGame(final={1, 2, 5})
+    game2 = JobstmannGame(final={1, 2, 3, 6, 7})
     graph2 = game2.graphify()
     win2 = SWinSafe(graph2, player=2)
     win2.solve()
-    print(win2.win_region(1))
-    print(win2.win_region(2))
+    print(f"{win2.win_region(1)=}")
+    print(f"{win2.win_region(2)=}")
 
     # # Print the generated graph
     # print(f"Printing {graph}")
