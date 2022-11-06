@@ -149,6 +149,14 @@ class GWSim:
     def add_p3_sprite(self, sprite):
         self._p3_sprites.add(sprite)
 
+    def set_text(self, cell, text=None, style="Arial", size=20, text_color=(0, 0, 0), line_width=1, pos="topleft"):
+        for spr in self._bg_sprites:
+            if tuple(spr.get_grid_coordinates()) == tuple(cell):
+                spr.set_text(text, style, size, text_color, line_width, pos)
+
+    def clear_text(self, cell):
+        self.set_text(cell)
+
     def toggle_grid_lines(self):
         self._show_grid_lines = not self._show_grid_lines
         for sprite in self._bg_sprites.sprites():
@@ -389,6 +397,12 @@ class BGSprite(GameObject):
         self._show_grid_lines = show_grid_lines
         self.image.fill(self._bg_color)
 
+        self._text = None
+        self._text_font = None
+        self._text_color = (0, 0, 0)
+        self._text_line_width = 1
+        self._text_pos = "topleft"
+
     def update(self):
         if self._show_grid_lines:
             pygame.draw.rect(
@@ -398,12 +412,16 @@ class BGSprite(GameObject):
                 self._line_width
             )
         else:
-            pygame.draw.rect(
-                self.image,
-                self._bg_color,
-                pygame.Rect(0, 0, self.rect.width, self.rect.height),
-                self._line_width
-            )
+            self.image.fill(self._bg_color)
+
+        # Handle text, if available
+        if self._text is not None:
+            textSurf = self._text_font.render(self._text, 1, (0, 0, 0))
+            if self._text_pos == "topleft":
+                self.image.blit(textSurf, [0, 0])
+            else:
+                raise ValueError("Currently, only top-left text position is allowed. Will add more later.")
+
 
     def toggle_grid_lines(self):
         self._show_grid_lines = not self._show_grid_lines
@@ -413,6 +431,13 @@ class BGSprite(GameObject):
             self.image.fill(self._parent.get_mouse_hover_animation_color())
         else:
             self.image.fill(self._bg_color)
+
+    def set_text(self, text, font_style="Arial", font_size=24, text_color=(0, 0, 0), line_width=1, pos="topleft"):
+        self._text_font = pygame.font.SysFont(font_style, font_size)
+        self._text = text
+        self._text_color = text_color
+        self._text_line_width = line_width
+        self._text_pos = pos
 
 
 class ObstacleSprite(GameObject):
@@ -488,4 +513,5 @@ if __name__ == '__main__':
 
     sim.add_p1_sprite(player)
     sim.add_p3_sprite(obs)
+    sim.set_text((0, 0), "Hello!")
     sim.run()
