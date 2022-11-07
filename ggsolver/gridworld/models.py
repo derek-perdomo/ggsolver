@@ -496,6 +496,11 @@ class PlayerSprite(GameObject):
         pass
 
 
+class UpArrow(GameObject):
+    def __init__(self, parent, x, y):
+        super(UpArrow, self).__init__(parent, x, y)
+        
+
 if __name__ == '__main__':
     sim = GWSim(
         dim=(5, 5),
