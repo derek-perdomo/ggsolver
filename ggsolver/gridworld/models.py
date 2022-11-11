@@ -43,7 +43,7 @@ class Window:
         self._height = size[1]
         self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else (0, 0, 0)
         self._resizable = kwargs["resizable"] if "resizable" in kwargs else False
-        self._fps = kwargs["fps"] if "fps" in kwargs else False
+        self._fps = kwargs["fps"] if "fps" in kwargs else 60
         self._running = False
 
         # Initialize pygame window
@@ -63,6 +63,7 @@ class Window:
         pass
 
     def update(self):
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
         # Clear previous drawing
         self._screen.fill(self._backcolor)
 
@@ -275,7 +276,8 @@ class Control(pygame.sprite.Sprite):
         # Instance variables
         self._name = name
         self._parent = parent
-        self._controls = list()
+        self._controls = dict()
+        self._sprites = pygame.sprite.Group()
         self._position = list(position)
         self._size = list(size)
         self._image = pygame.Surface(self._size, flags=pygame.SRCALPHA)
@@ -284,28 +286,46 @@ class Control(pygame.sprite.Sprite):
 
         # Properties
         self._visible = kwargs["visible"] if "visible" in kwargs else True
-        self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else (0, 0, 0)
+        self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else self._parent.backcolor
         self._backimage = kwargs["backimage"] if "backimage" in kwargs else None
         self._borderstyle = kwargs["borderstyle"] if "borderstyle" in kwargs else BorderStyle.SOLID
         self._bordercolor = kwargs["bordercolor"] if "bordercolor" in kwargs else (0, 0, 0)
         self._borderwidth = kwargs["borderwidth"] if "borderwidth" in kwargs else 1
         self._canselect = kwargs["canselect"] if "canselect" in kwargs else False
+        self._is_selected = kwargs["is_selected"] if "is_selected" in kwargs else False
 
     def delta(self):
         pass
 
     def update(self):
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
+        # If control is not visible, then none of its children are visible either.
+        if self._visible:
+            # Fill with backcolor
+            self._image.fill(self._backcolor)
+
+            # Update children controls (sprites)
+            self._sprites.update()
+            self._sprites.draw(self._image)
+
+            #
+
+        # # Basic rendering of control: picture,
         # if self._visible:
-        #     self._image.fill(self._backcolor)
-        #     pygame.draw.rect(
-        #         self._image,
-        #         (255, 255, 255),
-        #         pygame.Rect(0, 0, self.rect.width, self.rect.height),
-        #         1
-        #     )
+        #     # TODO. Update surface size (if changed)
+        #     # Fill backcolor
+        #     # TODO. Update backimage
+        #     if self._borderstyle == BorderStyle.SOLID:
+        #         pygame.draw.rect(
+        #             self._image,
+        #             self._backcolor,
+        #             pygame.Rect(0, 0, self.rect.width, self.rect.height),
+        #             self._borderwidth
+        #         )
+        #     else:  # self._borderstyle == BorderStyle.HIDDEN:
+        #         pass
         # else:
-        #     self._image.fill(PYGAME_TRANSPARENT)
-        pass
+        #     self._image.fill(COLOR_TRANSPARENT)
 
     def handle_event(self, event):
         # Event: key pressed
@@ -322,6 +342,9 @@ class Control(pygame.sprite.Sprite):
             self.on_key_down(event)
 
         # TODO. Complete event list.
+        # Pass the event to child controls
+        for name, control in self._controls.items():
+            control.handle_event(event)
 
     def show(self):
         _past_visibility = self._visible
@@ -349,6 +372,34 @@ class Control(pygame.sprite.Sprite):
 
     def get_mouse_position(self):
         pass
+
+    def add_control(self, control):
+        self._controls[control.name] = control
+        self._sprites.add(control)
+
+    def rem_control(self, control):
+        # Remove control, if exists, from controls list.
+        if isinstance(control, str):
+            control = self._controls.pop(control, None)
+        else:
+            control = self._controls.pop(control.name, None)
+
+        # Remove the control from sprite group, if exists.
+        if control is not None:
+            self._sprites.remove(control)
+
+    def create_control(self, cls_control, constructor_kwargs):
+        # Preprocess input arguments (basic control arguments, any addtional parameters should be passed by user)
+        assert "name" in constructor_kwargs, "constructor_kwargs must have 'name' parameter."
+        assert "size" in constructor_kwargs, "constructor_kwargs must have 'size' parameter."
+        constructor_kwargs["parent"] = self
+        constructor_kwargs["position"] = constructor_kwargs["position"] if "position" in constructor_kwargs else (0, 0)
+
+        # Construct control
+        control = cls_control(**constructor_kwargs)
+
+        # Add control to window
+        self.add_control(control)
 
     # ===========================================================================
     # PROPERTIES
@@ -521,6 +572,12 @@ class Control(pygame.sprite.Sprite):
     def on_visible_changed(self, event_args):
         pass
 
+    def on_selected(self, event_args):
+        pass
+
+    def on_unselected(self, event_args):
+        pass
+
 
 class GWSim(Window):
     def __init__(self, name, size, graph, **kwargs):
@@ -582,7 +639,7 @@ class Grid(Control):
             for y in range(cols):
                 position = (cell_size[0] * x, cell_size[1] * y)
                 cell_xy = cls_cell(name=(x, y), parent=self, position=position, size=cell_size)
-                self._parent.add_control(cell_xy)
+                self.add_control(cell_xy)
 
     def construct_grid(self):
         pass
@@ -594,6 +651,9 @@ class Grid(Control):
 
 class Cell(Control):
     def update(self):
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
+        super(Cell, self).update()
+
         if self._borderstyle == BorderStyle.SOLID:
             pygame.draw.rect(
                 self.image,
