@@ -645,15 +645,14 @@ class Grid(Control):
         for x in range(rows):
             for y in range(cols):
                 position = (cell_size[0] * x, cell_size[1] * y)
-                cell_xy = cls_cell(name=(x, y), parent=self, position=position, size=cell_size)
+                cell_xy = cls_cell(
+                    name=(x, y), parent=self, position=position, size=cell_size,
+                    bordercolor=self._bordercolor, borderstyle=self._borderstyle, borderwidth=self._borderwidth
+                )
                 self.add_control(cell_xy)
 
     def construct_grid(self):
-        pass
-
-    def on_borderstyle_changed(self, event_args):
-        for cell in self._cells:
-            cell.borderstyle = event_args
+        raise NotImplementedError("User should implement this if grid is generated in custom mode.")
 
 
 class Cell(Control):
