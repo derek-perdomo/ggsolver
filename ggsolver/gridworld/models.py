@@ -181,6 +181,10 @@ class Window:
         self._title = value
 
     @property
+    def rect(self):
+        return self._screen.get_rect()
+
+    @property
     def width(self):
         return self._width
 
@@ -299,33 +303,36 @@ class Control(pygame.sprite.Sprite):
 
     def update(self):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
+
+        # Update position and size
+        # TODO. Resize surface, if applicable.
+        # FIXME. Bound movement of a control within its parent.
+        self._rect.topleft = self.position
+
         # If control is not visible, then none of its children are visible either.
         if self._visible:
-            # Fill with backcolor
+            # Fill with backcolor, backimage
             self._image.fill(self._backcolor)
+            if self._backimage is not None:     # FIXME. Check if this code works.
+                self._image.blit(self._backimage, (0, 0))
+
+            # Update borders
+            if self._borderstyle == BorderStyle.SOLID:
+                pygame.draw.rect(
+                    self._image,
+                    self._backcolor,
+                    pygame.Rect(0, 0, self.rect.width, self.rect.height),
+                    self._borderwidth
+                )
+            else:  # self._borderstyle == BorderStyle.HIDDEN:
+                pass
 
             # Update children controls (sprites)
             self._sprites.update()
             self._sprites.draw(self._image)
 
-            #
-
-        # # Basic rendering of control: picture,
-        # if self._visible:
-        #     # TODO. Update surface size (if changed)
-        #     # Fill backcolor
-        #     # TODO. Update backimage
-        #     if self._borderstyle == BorderStyle.SOLID:
-        #         pygame.draw.rect(
-        #             self._image,
-        #             self._backcolor,
-        #             pygame.Rect(0, 0, self.rect.width, self.rect.height),
-        #             self._borderwidth
-        #         )
-        #     else:  # self._borderstyle == BorderStyle.HIDDEN:
-        #         pass
-        # else:
-        #     self._image.fill(COLOR_TRANSPARENT)
+        else:
+            self._image.fill(COLOR_TRANSPARENT)
 
     def handle_event(self, event):
         # Event: key pressed
