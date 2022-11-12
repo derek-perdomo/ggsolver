@@ -8,6 +8,9 @@ Classes:
 * Character: animated + sound enabled player and non-player characters
 * LogBox (future)
 * ListBox (future)
+
+Programmer's notes:
+
 """
 
 import inspect
@@ -38,7 +41,7 @@ class Window:
         self._name = name
         self._controls = dict()
         self._sprites = pygame.sprite.Group()
-        self._title = "Window"
+        self._title = f"Window {self._name}"
         self._width = size[0]
         self._height = size[1]
         self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else (0, 0, 0)
@@ -48,6 +51,7 @@ class Window:
 
         # Initialize pygame window
         pygame.display.set_caption(self._title)
+        pygame.display.set_icon(pygame.image.load("sprites/GWSim.png"))
         if self._resizable:
             self._screen = pygame.display.set_mode([self._width, self._height])
         else:
@@ -225,7 +229,7 @@ class Window:
         self._fps = value
 
     def get_mouse_position(self):
-        pass
+        return pygame.mouse.get_pos()
 
     # ===========================================================================
     # EVENTS
@@ -282,7 +286,7 @@ class Control(pygame.sprite.Sprite):
         self._parent = parent
         self._controls = dict()
         self._sprites = pygame.sprite.Group()
-        self._position = list(position)
+        self._position = self.point_to_world(position)
         self._size = list(size)
         self._image = pygame.Surface(self._size, flags=pygame.SRCALPHA)
         self._rect = self.image.get_rect()
@@ -306,8 +310,17 @@ class Control(pygame.sprite.Sprite):
 
         # Update position and size
         # TODO. Resize surface, if applicable.
-        # FIXME. Bound movement of a control within its parent.
         self._rect.topleft = self.position
+
+        # Bound movement of children within its parent's rectangle
+        # if self._rect.left < self._parent.rect.left:
+        #     self._rect.left = self._parent.rect.left
+        # if self._rect.right > self._parent.rect.right:
+        #     self._rect.right = self._parent.rect.right
+        # if self._rect.top < self._parent.rect.top:
+        #     self._rect.top = self._parent.rect.top
+        # if self._rect.bottom > self._parent.rect.bottom:
+        #     self._rect.bottom = self._parent.rect.bottom
 
         # If control is not visible, then none of its children are visible either.
         if self._visible:
@@ -335,6 +348,20 @@ class Control(pygame.sprite.Sprite):
             self._image.fill(COLOR_TRANSPARENT)
 
     def handle_event(self, event):
+        # Get mouse position relative to current control
+        mouse_position = self.get_mouse_position()
+
+        if self.rect.collidepoint(mouse_position):
+            self.on_mouse_hover(mouse_position)
+
+            # Event: mouse down, up, click
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.on_mouse_down(mouse_position)
+                self.on_mouse_click(mouse_position)
+
+            if event.type == pygame.MOUSEBUTTONUP:
+                self.on_mouse_up(mouse_position)
+
         # Event: key pressed
         keys = pygame.key.get_pressed()
         if any(key for key in keys):
@@ -372,13 +399,17 @@ class Control(pygame.sprite.Sprite):
         pass
 
     def point_to_control(self, world_point):
-        pass
+        # TODO. Design and implement. Currently using dummy value.
+        return world_point
 
     def point_to_world(self, control_point):
-        pass
+        if isinstance(self._parent, Window):
+            return control_point
+        return [self._parent.position[0] + control_point[0], self._parent.position[1] + control_point[1]]
 
     def get_mouse_position(self):
-        pass
+        world_position = self._parent.get_mouse_position()
+        return self.point_to_control(world_position)
 
     def add_control(self, control):
         self._controls[control.name] = control
@@ -533,7 +564,6 @@ class Control(pygame.sprite.Sprite):
     def canselect(self, value):
         raise NotImplementedError("TODO. Raise resize() event.")
 
-
     # ===========================================================================
     # EVENTS
     # ===========================================================================
@@ -638,6 +668,9 @@ class Grid(Control):
         else:
             raise ValueError("GridLayout unrecognized.")
 
+    def __getitem__(self, cell):
+        return self._cells[cell]
+
     def _construct_grid(self, cls_cell):
         """ Auto grid construction. Uniform cells. """
         rows, cols = self._grid_size
@@ -649,6 +682,7 @@ class Grid(Control):
                     name=(x, y), parent=self, position=position, size=cell_size,
                     bordercolor=self._bordercolor, borderstyle=self._borderstyle, borderwidth=self._borderwidth
                 )
+                self._cells[(x, y)] = cell_xy
                 self.add_control(cell_xy)
 
     def construct_grid(self):
