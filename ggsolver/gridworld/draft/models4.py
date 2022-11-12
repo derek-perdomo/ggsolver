@@ -23,21 +23,6 @@ from typing import List
 COLOR_TRANSPARENT = pygame.Color(0, 0, 0, 0)   # The last 0 indicates 0 alpha, a transparent color
 
 
-class BorderStyle:
-    SOLID = "solid"
-    HIDDEN = "hidden"
-
-
-class GridLayout:
-    AUTO = "auto"
-    CUSTOM = "custom"
-
-
-class GameMode:
-    AUTO = "auto"
-    MANUAL = "manual"
-
-
 class Window:
     ACTIVE_WINDOWS: List['Window'] = []
 
@@ -125,10 +110,10 @@ class Window:
         # # TODO. Use multiprocessing Queue to get and send.
         # #  Do we need sender and receiver as two queues? Or just one shared queue suffices?
         # # If message is received, raise on_msg_received event.
-
-        # Pass the event to child controls
-        for name, control in self._controls.items():
-            control.handle_event(event)
+        #
+        # # Pass the event to child controls
+        # for name, control in self._controls.items():
+        #     control.handle_event(event)
 
     def run(self, args=None):
         clock = pygame.time.Clock()
@@ -351,9 +336,6 @@ class Control(pygame.sprite.Sprite):
         self._canselect = kwargs["canselect"] if "canselect" in kwargs else False
         self._is_selected = kwargs["is_selected"] if "is_selected" in kwargs else False
 
-    def __del__(self):
-        self._unregister_with_window(self)
-
     def _register_with_window(self, control):
         if isinstance(self._parent, Window):
             self._parent.add_control(control)
@@ -361,38 +343,11 @@ class Control(pygame.sprite.Sprite):
         if isinstance(self._parent, Control):
             self._parent._register_with_window(control)
 
-    def _unregister_with_window(self, control):
-        if isinstance(self._parent, Window):
-            self._parent.rem_control(control)
-
-        if isinstance(self._parent, Control):
-            self._parent._unregister_with_window(control)
-
     def delta(self):
         pass
 
     def update(self):
-        # Update position and size
-        # TODO. Resize surface, if applicable.
-        self._rect.topleft = self.position
-
-        # If control is not visible, then none of its children are visible either.
-        if self._visible:
-            # Fill with backcolor, backimage
-            self._image.fill(self._backcolor)
-            if self._backimage is not None:  # FIXME. Check if this code works.
-                self._image.blit(self._backimage, (0, 0))
-
-            # Update borders
-            if self._borderstyle == BorderStyle.SOLID:
-                pygame.draw.rect(
-                    self._image,
-                    self._backcolor,
-                    pygame.Rect(0, 0, self.rect.width, self.rect.height),
-                    self._borderwidth
-                )
-            else:  # self._borderstyle == BorderStyle.HIDDEN:
-                pass
+        pass
 
     def handle_event(self, event):
         # Get mouse position relative to current control
@@ -422,6 +377,11 @@ class Control(pygame.sprite.Sprite):
         if event.type == pygame.KEYUP:
             self.on_key_down(event)
 
+        # TODO. Complete event list.
+        # Pass the event to child controls
+        for name, control in self._controls.items():
+            control.handle_event(event)
+
     def show(self):
         _past_visibility = self._visible
         self._visible = True
@@ -441,10 +401,8 @@ class Control(pygame.sprite.Sprite):
         pass
 
     def point_to_control(self, world_point):
-        if isinstance(self._parent, Window):
-            return world_point
-        world_parent_topleft = self._parent.point_to_world(self._parent.position)
-        return [world_point[0] - world_parent_topleft[0], world_point[1] - world_parent_topleft[1]]
+        # TODO. Design and implement. Currently using dummy value.
+        return world_point
 
     def point_to_world(self, control_point):
         if isinstance(self._parent, Window):
@@ -457,6 +415,7 @@ class Control(pygame.sprite.Sprite):
 
     def add_control(self, control):
         self._controls[control.name] = control
+        # self._sprites.add(control)
 
     def rem_control(self, control):
         # Remove control, if exists, from controls list.
@@ -464,6 +423,10 @@ class Control(pygame.sprite.Sprite):
             control = self._controls.pop(control, None)
         else:
             control = self._controls.pop(control.name, None)
+
+        # Remove the control from sprite group, if exists.
+        if control is not None:
+            self._sprites.remove(control)
 
     def create_control(self, cls_control, constructor_kwargs):
         # Preprocess input arguments (basic control arguments, any addtional parameters should be passed by user)
@@ -477,32 +440,6 @@ class Control(pygame.sprite.Sprite):
 
         # Add control to window
         self.add_control(control)
-
-    def move_to(self, x, y):
-        dx = x - self.left
-        dy = y - self.top
-        self.position = [x, y]
-        for control in self._controls.values():
-            control.move_by(dx, dy)
-
-    def move_by(self, dx, dy):
-        self.move_to(self.left + dx, self.top + dy)
-
-    def move_up_by(self, dy):
-        dy = abs(dy)
-        self.move_to(self.left, self.top - dy)
-
-    def move_down_by(self, dy):
-        dy = abs(dy)
-        self.move_to(self.left, self.top + dy)
-
-    def move_left_by(self, dx):
-        dx = abs(dx)
-        self.move_to(self.left - dx, self.top)
-
-    def move_right_by(self, dx):
-        dx = abs(dx)
-        self.move_to(self.left + dx, self.top)
 
     # ===========================================================================
     # PROPERTIES
@@ -536,7 +473,7 @@ class Control(pygame.sprite.Sprite):
 
     @position.setter
     def position(self, value):
-        self._position = value
+        raise NotImplementedError("TODO. Raise resize() event.")
 
     @property
     def size(self):
@@ -552,13 +489,7 @@ class Control(pygame.sprite.Sprite):
 
     @left.setter
     def left(self, value):
-        if value < 0:
-            value = 0
-
-        if value > self._parent.width - self.width:
-            value = self._parent.width - self.width
-
-        self._position[0] = value
+        raise NotImplementedError("TODO. Raise resize() event.")
 
     @property
     def top(self):
@@ -566,13 +497,7 @@ class Control(pygame.sprite.Sprite):
 
     @top.setter
     def top(self, value):
-        if value < 0:
-            value = 0
-
-        if value > self._parent.height - self.height:
-            value = self._parent.height - self.height
-
-        self._position[1] = value
+        raise NotImplementedError("TODO. Raise resize() event.")
 
     @property
     def width(self):
@@ -762,3 +687,18 @@ class Cell(Control):
 
 class Character(Control):
     pass
+
+
+class BorderStyle:
+    SOLID = "solid"
+    HIDDEN = "hidden"
+
+
+class GridLayout:
+    AUTO = "auto"
+    CUSTOM = "custom"
+
+
+class GameMode:
+    AUTO = "auto"
+    MANUAL = "manual"
