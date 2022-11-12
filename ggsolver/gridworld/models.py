@@ -184,6 +184,14 @@ class Window:
         return self._screen
 
     @property
+    def image(self):
+        return self._screen
+
+    @property
+    def rect(self):
+        return self._screen.get_rect()
+
+    @property
     def controls(self):
         return self._controls
 
@@ -198,10 +206,6 @@ class Window:
     @title.setter
     def title(self, value):
         self._title = value
-
-    @property
-    def rect(self):
-        return self._screen.get_rect()
 
     @property
     def width(self):
@@ -335,12 +339,14 @@ class Control(pygame.sprite.Sprite):
         self._register_with_window(self)
 
         # Geometry properties
-        self._position = self.point_to_world(position)
         self._size = list(size)
-        self._level = kwargs["level"] if "level" in kwargs else (self._parent.level + 1 if isinstance(self._parent, Control) else 0)
         self._image = pygame.Surface(self._size, flags=pygame.SRCALPHA)
         self._rect = self.image.get_rect()
-        self._rect.topleft = self._position
+        self._rect.topleft = self.point_to_world(position)
+        self._level = kwargs["level"] if "level" in kwargs else \
+            (self._parent.level + 1 if isinstance(self._parent, Control) else 0)
+        self._position = list(position)
+
         # UI propertise
         self._visible = kwargs["visible"] if "visible" in kwargs else True
         self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else self._parent.backcolor
@@ -374,7 +380,7 @@ class Control(pygame.sprite.Sprite):
     def update(self):
         # Update position and size
         # TODO. Resize surface, if applicable.
-        self._rect.topleft = self.position
+        # self._rect.topleft = self.position
 
         # If control is not visible, then none of its children are visible either.
         if self._visible:
@@ -449,7 +455,8 @@ class Control(pygame.sprite.Sprite):
     def point_to_world(self, control_point):
         if isinstance(self._parent, Window):
             return control_point
-        return [self._parent.position[0] + control_point[0], self._parent.position[1] + control_point[1]]
+        # return [self._parent.position[0] + control_point[0], self._parent.position[1] + control_point[1]]
+        return self._parent.world_position[0] + control_point[0], self._parent.world_position[1] + control_point[1]
 
     def get_mouse_position(self):
         world_position = self._parent.get_mouse_position()
@@ -478,31 +485,27 @@ class Control(pygame.sprite.Sprite):
         # Add control to window
         self.add_control(control)
 
-    def move_to(self, x, y):
-        dx = x - self.left
-        dy = y - self.top
-        self.position = [x, y]
+    def move_by(self, dx, dy):
+        self._rect.left += dx
+        self._rect.top += dy
         for control in self._controls.values():
             control.move_by(dx, dy)
 
-    def move_by(self, dx, dy):
-        self.move_to(self.left + dx, self.top + dy)
-
     def move_up_by(self, dy):
         dy = abs(dy)
-        self.move_to(self.left, self.top - dy)
+        self.move_by(0, -dy)
 
     def move_down_by(self, dy):
         dy = abs(dy)
-        self.move_to(self.left, self.top + dy)
+        self.move_by(0, dy)
 
     def move_left_by(self, dx):
         dx = abs(dx)
-        self.move_to(self.left - dx, self.top)
+        self.move_by(-dx, 0)
 
     def move_right_by(self, dx):
         dx = abs(dx)
-        self.move_to(self.left + dx, self.top)
+        self.move_by(dx, 0)
 
     # ===========================================================================
     # PROPERTIES
@@ -536,7 +539,18 @@ class Control(pygame.sprite.Sprite):
 
     @position.setter
     def position(self, value):
+        dx, dy = value[0] - self._position[0], value[1] - self._position[1]
         self._position = value
+        self._rect.left += dx
+        self._rect.top += dy
+
+    @property
+    def world_position(self):
+        return self.rect.topleft
+
+    @world_position.setter
+    def world_position(self, value):
+        raise NotImplementedError
 
     @property
     def size(self):
@@ -548,7 +562,7 @@ class Control(pygame.sprite.Sprite):
 
     @property
     def left(self):
-        return self._position[0]
+        return self.position[0]
 
     @left.setter
     def left(self, value):
@@ -562,7 +576,7 @@ class Control(pygame.sprite.Sprite):
 
     @property
     def top(self):
-        return self._position[1]
+        return self.position[1]
 
     @top.setter
     def top(self, value):
@@ -696,6 +710,23 @@ class Control(pygame.sprite.Sprite):
 
     def on_unselected(self, event_args):
         pass
+
+    def on_control_moved(self, event_args):
+        x, y = event_args
+
+        if x < 0:
+            x = 0
+
+        if x + self.width > self._parent.width:
+            x = self._parent.width - self.width
+
+        if y < 0:
+            y = 0
+
+        if y + self.height > self._parent.height:
+            y = self._parent.height - self.height
+
+        self._position = [x, y]
 
 
 class Grid(Control):

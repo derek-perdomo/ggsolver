@@ -19,7 +19,7 @@ class SubGrid(Grid):
 
 
 if __name__ == '__main__':
-    window = Window(name="window1", size=(600, 600), backcolor=(245, 245, 220), fps=1)
+    window = Window(name="window1", size=(600, 600), backcolor=(245, 245, 220), fps=60)
     # control = Control(name="control1", parent=window, position=(100, 100), size=(50, 10))
 
     grid = Grid(name="grid", parent=window, position=(0, 0), size=(600, 600), grid_size=(2, 2))
