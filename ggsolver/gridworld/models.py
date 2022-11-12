@@ -14,6 +14,14 @@ Programmer's notes:
     So, let's render all sprites (using some logic) in Window itself.
     Positioning of sprites in gridworld can be tracked separately: self._controls in GWSim.
     A control is just a Sprite with special properties and events.
+
+TODO (features)
+* Keep control within bounds of their parents.
+* Make Character objects selectable.
+* Selected characters show their available actions, and show using color whether they think they are winning or not.
+    - Caveat: If P2 is selected with P1's turn, then should P2's perception of P1's action be shown?
+* Thought bubble animation. OnClick, thought bubble should zoom in. OnClick again, thought bubble should zoom out.
+* Show graphs in a separate window for understanding state of progress made by the agents.
 """
 
 import pygame
