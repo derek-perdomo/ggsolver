@@ -365,6 +365,9 @@ class Control(pygame.sprite.Sprite):
         self._canselect = kwargs["canselect"] if "canselect" in kwargs else False
         self._is_selected = kwargs["is_selected"] if "is_selected" in kwargs else False
 
+        # Event properties
+        self._keydown_pressed_keys = set()
+
     def __del__(self):
         self._unregister_with_window(self)
 
@@ -430,11 +433,18 @@ class Control(pygame.sprite.Sprite):
 
         # Event: key down
         if event.type == pygame.KEYDOWN:
-            self.on_key_down(event)
+            # FIXME: Do we need to handle modifier keys with non-modifier keys?
+            key_name = pygame.key.name(event.key)
+            if key_name not in self._keydown_pressed_keys:
+                self._keydown_pressed_keys.add(key_name)
+                self.on_key_down(event)
 
         # Event: key up
         if event.type == pygame.KEYUP:
-            self.on_key_down(event)
+            key_name = pygame.key.name(event.key)
+            if key_name in self._keydown_pressed_keys:
+                self._keydown_pressed_keys.remove(key_name)
+                self.on_key_up(event)
 
     def show(self):
         _past_visibility = self._visible

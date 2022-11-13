@@ -7,7 +7,7 @@ class SubGrid(Grid):
         # print(self.name, "update")
 
     def on_key_down(self, event_args):
-        # print("Call: Subgrid.on_key_down")
+        # print(f"Call: {self.name}.on_key_down")
         if event_args.key == pygame.K_RIGHT:
             self.move_right_by(5)
         if event_args.key == pygame.K_LEFT:
