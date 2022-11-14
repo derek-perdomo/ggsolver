@@ -20,7 +20,7 @@ class BGSprite(pygame.sprite.Sprite):
 class ImageSprite(pygame.sprite.Sprite):
     def __init__(self, x, y):
         super(ImageSprite, self).__init__()
-        image = pygame.image.load("../0.png").convert_alpha()
+        image = pygame.image.load("0.png").convert_alpha()
         self.image = pygame.Surface([50, 50])
         self.rect = self.image.get_rect()
         pygame.transform.scale(image, (50, 50), self.image)
