@@ -322,6 +322,9 @@ class DFPA(Automaton):
             dfa.from_automaton(aut=self._outcomes[i].translate())
             self._automata.append(dfa)
 
+        # Construct preference graph and cache it.
+        self._pref_graph = self._construct_pref_graph()
+
     # =========================================================================
     # IMPLEMENTATION OF ABSTRACT METHODS
     # =========================================================================
@@ -347,8 +350,12 @@ class DFPA(Automaton):
     # =========================================================================
     # SPECIAL METHODS
     # =========================================================================
-    # TODO. Should pref_graph be graph property?
-    def pref_graph(self, cache=False):
+    def pref_graph(self, force_reconstruct=False):
+        if force_reconstruct:
+            self._pref_graph = self._construct_pref_graph()
+        return self._pref_graph
+
+    def _construct_pref_graph(self):
         pref_graph = Graph()
 
         # Construct set of unique maximal elements.
@@ -387,9 +394,6 @@ class DFPA(Automaton):
 
             if cond1 and cond2:
                 pref_graph.add_edge(node_j, node_i)
-
-        if cache:
-            self._pref_graph = pref_graph
 
         return pref_graph
 
@@ -449,7 +453,7 @@ if __name__ == '__main__':
     print(f"{aut_.final((0, 1))=}")
     print(f"{aut_.final((1, 0))=}")
     print(f"{aut_.final((1, 1))=}")
-    pref_graph_ = aut_.pref_graph()
+    pref_graph_ = aut_._construct_pref_graph()
     pref_graph_.to_png("pref_graph.png", nlabel=["state", "partition"])
     aut_graph_ = aut_.graphify()
     aut_graph_.to_png("aut_graph.png", nlabel=["state"], elabel=["input"])

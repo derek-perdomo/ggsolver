@@ -4,6 +4,7 @@ import spot
 import ggsolver.interfaces.i_spot as i_spot
 from ggsolver.logic.formula import BaseFormula, ParsingError
 from ggsolver.util import apply_atoms_limit, powerset
+from ggsolver.automata import DFA
 
 
 class LTL(BaseFormula):
@@ -106,3 +107,9 @@ class ScLTL(LTL):
             return spot.are_equivalent(self.f_str, other.f_str)
         except Exception:
             return False
+
+    def translate(self):
+        aut = super(ScLTL, self).translate()
+        dfa = DFA()
+        dfa.from_automaton(aut)
+        return dfa
