@@ -1,4 +1,4 @@
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 CHANGELOG = {
@@ -19,6 +19,23 @@ CHANGELOG = {
         "Made init arguments to classes in ggsolver.automata optional.",
         "Added Automaton.from_automaton() function to construct DFA, DBA ... from SpotAutomaton."
         "Added example for translating LTL to DFA."
-    ]
+    ],
+    "0.1.5": [
+        "Pointed graphify implemented for GraphicalModel. ",
+        "SubGraph class added. ",
+        "Solvers now operate on SubGraph on given graph to construct node_winner, edge_winner properties.",
+        "GraphicalModel.states() is now REQUIRED to return a list of hashable objects.",
+        "dtptb package added for deterministic two-player turn-based games. "
+        "SWin, ASWin for algorithms for reachability and safety added.",
+        "mdp package added for qualitative Markov decision processes. ASWin, PWin algorithms for reachability added.",
+        "Added progress bars to graphify and solvers in dtptb package.",
+        "[Bugfix] input_domain stores the name of function (= graph property) that stores the input domain. Thus, "
+        "the reconstructed graphical model has the same input domain functions as the original model.",
+    ],
+    "0.1.6": [
+        "SpotAutomaton inputs `atoms` as optional parameters. "
+        "Users can specify any atoms that do not appear in the input formula.",
+        "Automaton graphify merges edges using PL formula for edge labels.",
 
+    ]
 }

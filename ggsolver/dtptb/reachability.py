@@ -8,6 +8,18 @@ logger = logging.getLogger(__name__)
 
 
 class SWinReach(Solver):
+    """
+    Computes sure winning region for player 1 or player 2 to reach a set of final states in a deterministic
+    two-player turn-based game.
+
+    Implements Zielonka's recursive algorithm.
+
+    :param graph: (Graph or SubGraph instance) A graph or subgraph of a deterministic two-player turn-based game.
+    :param final: (Iterable) The set of final states. By default, the final states are determined using
+        node property "final" of the graph.
+    :param player: (int) The player who has the reachability objective.
+        Value should be 1 for player 1, and 2 for player 2.
+    """
     def __init__(self, graph, final=None, player=1, **kwargs):
         if not graph["is_deterministic"]:
             logger.warning(ColoredMsg.warn(f"dtptb.SWinReach expects deterministic game graph. Input parameters: "
@@ -26,14 +38,17 @@ class SWinReach(Solver):
         self._solution["rank"] = self._rank
 
     def reset(self):
+        """ Resets the solver to initial state. """
         super(SWinReach, self).reset()
         self._rank = NodePropertyMap(self._solution)
         self._is_solved = False
 
     def get_final_states(self):
+        """ Determines the final states using "final" property of the input graph. """
         return {uid for uid in self.graph().nodes() if self.graph()["final"][uid]}
 
     def solve(self):
+        """ Implements Zielonka's recursive algorithm to determine winning nodes and edges for each player. """
         # Reset solver
         self.reset()
 
@@ -86,14 +101,29 @@ class SWinReach(Solver):
 
 
 class SWinSafe(SWinReach):
+    """
+    Computes sure winning region for player 1 or player 2 to remain within a set of final states in a deterministic
+    two-player turn-based game.
+
+    Solves the dual reachability game to determine the winning nodes and edges in the safety game.
+
+    :param graph: (Graph or SubGraph instance) A graph or subgraph of a deterministic two-player turn-based game.
+    :param final: (Iterable) The set of final states. By default, the final states are determined using
+        node property "final" of the graph.
+    :param player: (int) The player who has the reachability objective.
+        Value should be 1 for player 1, and 2 for player 2.
+    """
     def __init__(self, graph, final=None, player=1, **kwargs):
         super(SWinSafe, self).__init__(graph, **kwargs)
         self._final = final if final is not None else self.get_final_states()
 
     def get_final_states(self):
+        """ Determines the final states using "final" property of the input graph. """
         return {uid for uid in self.graph().nodes() if self.graph()["final"][uid]}
 
     def solve(self):
+        """ Solves the dual reachability game to solve the safety game. """
+
         # Reset solver
         self.reset()
 

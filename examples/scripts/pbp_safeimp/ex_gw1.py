@@ -1,14 +1,10 @@
 import itertools
-import json
 
-from ggsolver.inc_pbp.models import PrefModel, ImprovementMDP
-from ggsolver.inc_pbp.reachability import SASIReach
+from ggsolver.pbp.safeimp.models import PrefModel, ImprovementMDP
+from ggsolver.pbp.safeimp.reachability import SASIReach
 from ggsolver.models import register_property
 from ggsolver.mdp.models import QualitativeMDP
 from ggsolver.gridworld import util
-
-import logging
-logging.basicConfig(level=logging.ERROR)
 
 
 class MDPGridworld(QualitativeMDP):
@@ -125,35 +121,36 @@ if __name__ == '__main__':
     from pprint import pprint
 
     outcomes = {
-        0: (1, 4),
-        1: (1, 1),
-        2: (3, 3),
-        3: (3, 4),
-        4: (4, 3),
-        5: (4, 4),
-        6: (3, 0),
+        0: (0, 0),
+        1: (2, 3),
+        2: (0, 4),
+        3: (2, 0),
+        4: (5, 0),
+        5: (3, 0),
+        6: (5, 5),
 
     }
 
     gw = MDPGridworld(
-        dim=(5, 5),
-        batt=7,
+        dim=(6, 6),
+        batt=10,
         obstacles=[],
         goals=list(outcomes.values()),
         accessibility_trans={
-            outcomes[0]: [outcomes[1], outcomes[1], outcomes[2]],   # 0
-            outcomes[1]: [outcomes[6]],                             # 1
-            outcomes[2]: [outcomes[4], outcomes[5]],                # 2
-            outcomes[3]: [outcomes[4], outcomes[5]],                # 3
-            outcomes[4]: [],                                        # 4
-            outcomes[5]: [],                                        # 5
-            outcomes[6]: []                                         # 6
+            outcomes[0]: [],                                # 0 (E)
+            outcomes[1]: [outcomes[2], outcomes[3]],        # 1
+            outcomes[2]: [outcomes[4], outcomes[5]],        # 2
+            outcomes[3]: [outcomes[6]],                     # 3
+            outcomes[4]: [],                                # 4
+            outcomes[5]: [],                                # 5
+            outcomes[6]: []                                 # 6
         }
     )
-    # gw.initialize((0, 1, 1, (True, True, False, False, False, False, False)))
+    gw.initialize((0, 1, 1, (True, True, False, False, False, False, False)))
     graph = gw.graphify()
-    graph.save(fpath="mdp_5_5.model", overwrite=True)
-    # print(graph.number_of_nodes(), graph.number_of_edges())
+    print(graph.number_of_nodes(), graph.number_of_edges())
+    graph = gw.graphify(True)
+    print(graph.number_of_nodes(), graph.number_of_edges())
 
     pprint(len(gw.states()))
     pprint(gw.actions())
@@ -187,15 +184,8 @@ if __name__ == '__main__':
     )
 
     imdp = ImprovementMDP(gw, pref)
-    imdp_graph = imdp.graphify(base_only=True)
-    with open("mp_outcomes.json", "w") as file:
-
-        json.dump({str(st): str(val) for st, val in imdp._mp_outcomes.items()}, file)
-    print("Graphify done.")
-    # graph.save(fpath="imdp_5_5.model", overwrite=True)
+    imdp_graph = imdp.graphify()
     final_nodes = {node for node in imdp_graph.nodes() if imdp_graph["state"][node][1] == 1}
     sasi = SASIReach(imdp_graph, final=final_nodes)
     sasi.solve()
-
-
-    # pprint(sasi.win1())
+    print(len(sasi.win1()))

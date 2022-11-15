@@ -3,7 +3,7 @@ FROM debian:bullseye
 # The version is the same as ggsolver version. It is updated automatically by rebuild.py
 LABEL maintainer="Abhishek N. Kulkarni" \
         email="abhi.bp1993@gmail.com" \
-		version="0.1.4"
+		version="0.1.5"
 
 
 # Install python
@@ -46,3 +46,6 @@ RUN pip3 install jupyterlab
 # Install dd (binary decision diagram tool)
 RUN pip3 install dd
 RUN pip3 install tqdm
+
+# Install sphinx documentation packages
+RUN pip3 install cloud-sptheme
