@@ -77,7 +77,10 @@ class Window:
 
         # Initialize pygame window
         pygame.display.set_caption(self._title)
-        pygame.display.set_icon(pygame.image.load("sprites/GWSim.png"))
+        try:
+            pygame.display.set_icon(pygame.image.load("sprites/GWSim.png"))
+        except FileNotFoundError:
+            pass
         self._screen = pygame.display.set_mode([self.width, self.height], pygame.RESIZABLE)
 
         # Add current window to active windows
