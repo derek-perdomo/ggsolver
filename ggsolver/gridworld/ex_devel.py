@@ -17,6 +17,9 @@ class SubGrid(Grid):
         if event_args.key == pygame.K_DOWN:
             self.move_down_by(5)
 
+    def on_mouse_click(self, event_args):
+        print(f"Call: {self.name}.on_mouse_click")
+
 
 if __name__ == '__main__':
     window = Window(name="window1", size=(600, 600), backcolor=(245, 245, 220), fps=60)
@@ -27,6 +30,7 @@ if __name__ == '__main__':
 
     sub_grid = SubGrid(name="sub-grid", parent=grid[0, 0], position=(0, 0), size=(50, 50), grid_size=(2, 1), backcolor=(152, 245, 255))
     grid[0, 0].add_control(sub_grid)
+
     sub_grid2 = SubGrid(name="sub-grid2", parent=grid[1, 1], position=(0, 0), size=(50, 50), grid_size=(1, 2), backcolor=(188,238,104))
     grid[1, 1].add_control(sub_grid2)
 
