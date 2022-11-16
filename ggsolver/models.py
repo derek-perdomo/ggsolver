@@ -226,6 +226,7 @@ class GraphicalModel:
                 state = queue.pop()
                 visited.add(state)
                 uid = self.__states[state]
+                np_state[uid] = state
 
                 # Apply all inputs to state
                 for inp in inputs:
@@ -240,7 +241,7 @@ class GraphicalModel:
                         else:
                             vid = graph.add_node()
                             self.__states[to_state] = vid
-                            np_state[uid] = state
+                            # np_state[uid] = state
                             queue.append(to_state)
 
                         # Add edge to graph
