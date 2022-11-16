@@ -417,17 +417,20 @@ class GraphicalModel:
         else:
             self._gen_underlying_graph_unpointed(graph)
 
-        # Add node properties
-        for p_name in node_props:
-            self._add_node_prop_to_graph(graph, p_name)
+        if base_only:
+            # Add node properties
+            for p_name in node_props:
+                self._add_node_prop_to_graph(graph, p_name)
 
-        # Add edge properties
-        for p_name in edge_props:
-            self._add_edge_prop_to_graph(graph, p_name)
+            # Add edge properties
+            for p_name in edge_props:
+                self._add_edge_prop_to_graph(graph, p_name)
 
-        # Add graph properties
-        for p_name in graph_props:
-            self._add_graph_prop_to_graph(graph, p_name)
+            # Add graph properties
+            for p_name in graph_props:
+                self._add_graph_prop_to_graph(graph, p_name)
+        else:
+            print(util.BColors.WARNING, f"[WARN] Ignoring node, edge and graph (base_only: True)", util.BColors.ENDC)
 
         print(util.BColors.OKGREEN, f"[SUCCESS] {graph} generated.", util.BColors.ENDC)
         return graph
