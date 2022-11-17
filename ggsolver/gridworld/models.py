@@ -8,10 +8,14 @@ TODO. State machine: Connects ggsolver game graphs with pygame simulation.
     * Make serializable to save and replay.
 
 TODO. Reorganize event system with three ideas:
-    * Events have handlers that can be registered with the event.
+    [+] Events are pygame.Event objects.
+    [+] Each Window listens to a subset of events from WINDOW_EVENTS.
+    [+] Users can register new handlers for any event from WINDOW_EVENTS.
+    * Users can register new handlers for any event from Control.AVAILABLE_EVENTS.
+    * Each control listens to a subset of events from Control.AVAILABLE_EVENTS.
     * All Controls have default handlers that are called first, then the user handlers.
-    * An event is triggered for a Control object if it is in the "scope" of that Control object.
-    * Events are pygame.Event objects.
+    * An event is triggered for a Control if and only if it is in the "scope" of that Control object.
+        E.g. mouse_click occurs if it occurs over that control.
     * Event handler receives `event_args` dictionary with relevant information.
     * `event_args` contains `sender: <sending object>` entry.
     * For keyboard events, `event_args` contains `key_code`s and `modifier` keys as str, not as pygame objects.
