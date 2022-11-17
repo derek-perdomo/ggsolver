@@ -1,36 +1,63 @@
 """
-Classes:
-* Window: base window with communication capabilities.
-* Control: base control with event system + surface rendering etc.
-* GWSim: Window that runs a state machine + some special key-bindings for mode, stepping etc.
-* Grid: gridworld control
-* Cell: cell of gridworld (a control)
-* Character: animated + sound enabled player and non-player characters
-* LogBox (future)
-* ListBox (future)
+TODO. State machine: Connects ggsolver game graphs with pygame simulation.
+    [+] State-based interface. That is, all user functions input and output states, actions
+        even though the state machine is constructed using a game graph (Graph object).
+    [+] Expose methods to interact with state machine: step_forward, step_backward, ...
+    [+] Complete step_forward function (see gridworld package impl).
+    [+] Limit history.
+    * Make serializable to save and replay.
 
-Programmer's notes:
-* Nested sprites architecture is not good w.r.t. rendering. It seems pygame is not designed for that :)
-    So, let's render all sprites (using some logic) in Window itself.
-    Positioning of sprites in gridworld can be tracked separately: self._controls in GWSim.
-    A control is just a Sprite with special properties and events.
+TODO. Reorganize event system with three ideas:
+    * Events have handlers that can be registered with the event.
+    * All Controls have default handlers that are called first, then the user handlers.
+    * An event is triggered for a Control object if it is in the "scope" of that Control object.
+    * Events are pygame.Event objects.
+    * Event handler receives `event_args` dictionary with relevant information.
+    * `event_args` contains `sender: <sending object>` entry.
+    * For keyboard events, `event_args` contains `key_code`s and `modifier` keys as str, not as pygame objects.
+    * Double click event.
 
-TODO (features)
-* Keep control within bounds of their parents.
-* Make Character objects selectable.
-* Selected characters show their available actions, and show using color whether they think they are winning or not.
-    - Caveat: If P2 is selected with P1's turn, then should P2's perception of P1's action be shown?
-* Thought bubble animation. OnClick, thought bubble should zoom in. OnClick again, thought bubble should zoom out.
-* Show graphs in a separate window for understanding state of progress made by the agents.
+
+TODO. General features
+    * Anchors for positioning Controls within Parent.
+    * Controls are "Hoverable", "Selectable", "Clickable", "Draggable", "Hidden/Visible"
+    * Default resize event.
+    * Connection to GUI controls.
+    * Control has `move, move_by` methods.
+    * Control has `change_parent` method.
+    * Grid has `move_north, move_south, ...` methods.
+    * All objects are rendered with respect to their parent.
+    * Pop-up images (non-blocking).
+    * Pop-up messages (blocking or non-blocking).
+    * Pop-up input box (blocking or non-blocking).
+    * Thought-bubble control (attached to Character).
+    * Animated Characters.
+    * Battery animated control.
+        - Shows number of remaining levels.
+        - Shows bars (if max battery level is exactly what is available in sprite sheet).
+
 """
-
+import inspect
 import pygame
+import random
+
+
+from ggsolver import util
+from multiprocessing import Process
+from scipy.stats import rv_discrete
 from typing import List
 
 
+# ===========================================================================================
+# GLOBALS
+# ===========================================================================================
+
+GWSIM_EVENTS = pygame.USEREVENT
 COLOR_TRANSPARENT = pygame.Color(0, 0, 0, 0)   # The last 0 indicates 0 alpha, a transparent color
 
-
+# ===========================================================================================
+# ENUMERATIONS
+# ===========================================================================================
 class BorderStyle:
     SOLID = "solid"
     HIDDEN = "hidden"
