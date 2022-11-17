@@ -329,35 +329,439 @@ class Window:
         # print(f"Called: {inspect.stack()[0][3]}")
 
 
-class GWSim(Window):
-    def __init__(self, name, size, graph, **kwargs):
+class StateMachine:
+    def __init__(self, graph):
         """
-        graph: (ggsolver.graph.Graph) game graph
-
-        Special kwargs:
-        * init_node: (int) Initial node of state machine.
-        * step_frequency: (int) Frequency with which the state machine should be stepped.
-        * mode: (GameMode) Mode of operation for simulation.
+        Programmer's Notes:
+            * Assume a graph property "actions" is available since game is gridworld.
         """
-        super(GWSim, self).__init__(name, size, **kwargs)
-
-        # Load game graph
-        self._graph = graph
-        self._state_to_node = dict()
-        self._cache_state_to_node()
-
         # State machine
-        self._curr_state = None
+        self._graph = graph
+        self._curr_time_step = 0
         self._state_history = []
         self._action_history = []
         self._memory_limit = float("inf")
-        self._time_step = 0
-        self._time_reversed = False
 
-    def _cache_state_to_node(self):
+        # Cache
+        self._state_to_node = dict()
+        self._actions = self._graph["actions"]
+        self._cache_state_to_node()
+        
+    def initialize(self, state):
+        node = self.state_to_node(state)
+        if node in self._graph.nodes():
+            self.reset()
+            self._state_history.append(state)
+
+    def reset(self):
         pass
 
-    # TODO. Add properties about state machine.
+    def step_forward(self, act, choice_function=None, *args, **kwargs):
+        """
+        One-step forward.
+
+        :param choice_function: (function) A function that inputs list of states and returns a single state.
+
+        kwargs:
+            * `override_act`: (bool) When len(state hist) > curr_time_step AND override_act is True,
+                the previously witnessed future is cleared and the game restarts at current point. (Default: False)
+        """
+        # Was the game stepped backward?
+        if len(self._state_history) - 1 > self._curr_time_step:
+            override_act = kwargs["override_act"] if "override_act" in kwargs else False
+            if override_act:
+                self._state_history = self._state_history[0: self._curr_time_step + 1]
+                self._action_history = self._action_history[0: self._curr_time_step + 1]
+            else:
+                self._curr_time_step += 1
+                return
+
+        # Validate action
+        if act not in self._actions:
+            raise ValueError(f"SM.step_forward called with invalid action: {act}. Acceptable: {self._actions}.")
+
+        # If choice function is not provided by user, use default
+        choice_function = choice_function if choice_function is not None else self._default_choice_function
+
+        # Get current node and its out_edges
+        curr_node = self.state_to_node(self.curr_state)
+        out_edges = self._graph.out_edges(curr_node)
+
+        # Determine next state
+        next_state = None
+        if self._graph["is_deterministic"]:
+            for uid, vid, key in out_edges:
+                if self._graph["input"][uid, vid, key] == act:
+                    next_state = self.node_to_state(vid)
+                    break
+
+        else:  # either non-deterministic or probabilistic
+            successors = []
+            for uid, vid, key in out_edges:
+                if self._graph["input"][uid, vid, key] == act:
+                    successors.append(self.node_to_state(vid))
+
+            next_state = choice_function(successors, *args, **kwargs)
+
+        # Update current state, histories and time
+        self._state_history.append(next_state)
+        self._action_history.append(act)
+        if len(self._state_history) > self._memory_limit:
+            self._state_history.pop(0)
+            self._action_history.pop(0)
+        else:
+            self._curr_time_step += 1
+
+    def step_forward_n(self, actions, n):
+        """
+        Step forward `n`-steps.
+        Note: `n` is a param because actions are often list/tuple, which could lead to confusion.
+        """
+        assert len(actions) == n
+        for act in actions:
+            self.step_forward(act)
+
+    def step_backward(self, n=1, clear_history=False):
+        """
+        Step backward by `n` steps.
+        When clear_history is True, the last `n` steps are cleared.
+
+        Note: initial state cannot be cleared. It must be reinitialized using initialize() function.
+        """
+        if self._curr_time_step - n < 0:
+            # TODO. Show a warning message.
+            return
+
+        if clear_history:
+            self._state_history = self._state_history[:len(self._state_history) - n]
+            self._action_history = self._action_history[:len(self._action_history) - n]
+            self._curr_time_step -= n
+
+        else:
+            self._curr_time_step -= n
+
+    def state_to_node(self, state):
+        return self._state_to_node[state]
+
+    def node_to_state(self, node):
+        return self._graph["state"][node]
+
+    def _cache_state_to_node(self):
+        np_state = self._graph["state"]
+        for node in self._graph.nodes():
+            self._state_to_node[np_state[node]] = node
+
+    def _default_choice_function(self, choices, *args, **kwargs):
+        if isinstance(choices, rv_discrete):
+            # TODO. Need to figure out how to use scipy rv_discrete.
+            raise NotImplementedError("Need to figure out how to use scipy rv_discrete.")
+        else:
+            return random.choice(choices)
+
+    def states(self):
+        return (self.node_to_state(node) for node in self._graph.nodes())
+
+    def actions(self):
+        return self._actions
+
+    def delta(self, state, act):
+        """
+        Returns a list of next states possible on applying the action at given state.
+
+        Programmer's Note:
+            * This function is only used for inspection purposes. It does not affect "step" functions.
+        """
+        # Get current node and its out_edges
+        curr_node = self.state_to_node(self.curr_state)
+        out_edges = self._graph.out_edges(curr_node)
+
+        successors = []
+        for uid, vid, key in out_edges:
+            if self._graph["input"][uid, vid, key] == act:
+                successors.append(self.node_to_state(vid))
+
+        return successors
+
+    def get_node_property(self, p_name, state):
+        return self._graph[p_name][self.state_to_node(state)]
+
+    def get_edge_property(self, p_name, from_state, act, to_state):
+        from_node = self.state_to_node(from_state)
+        to_node = self.state_to_node(to_state)
+        for uid, vid, key in self._graph.out_edges(from_node):
+            if vid == to_node and self._graph["input"][uid, vid, key] == act:
+                return self._graph[p_name][uid, vid, key]
+        raise ValueError(f"Edge property:{p_name} is undefined for transition (u:{from_state}, v:{to_state}, a:{act})")
+
+    def get_graph_property(self, p_name):
+        return self._graph[p_name]
+
+    @property
+    def curr_state(self):
+        return self._state_history[self._curr_time_step]
+
+
+class Window:
+    E_SM_UPDATE = "sm_update"
+
+    def __init__(self, name, size, **kwargs):
+        """
+        :param name: (str) Name of window
+        :param size: (tuple[int, int]) Size of window
+
+        kwargs:
+        * sim: (GWSim) The simulator who controls the window.
+        * title: (str) Window title (Default: "Window")
+        * resizable: (bool) Can the window be resized? (Default: False)
+        * visible: (bool) Is the window visible? (Default: True) [Note: this minimizes the display.]
+        * frame_rate: (float) Frames per second for pygame rendering. (Default: 60)
+        * sm_update_rate: (float) State machine updates per second. (Default: 1)
+        * backcolor: (tuple[int, int, int]) Default backcolor of window. (Default: (0, 0, 0))
+        """
+        # Instance variables
+        self._sim = None
+        self._name = name
+        self._controls = dict()
+        self._sprites = pygame.sprite.LayeredUpdates()
+        self._size = size
+        self._title = kwargs["title"] if "title" in kwargs else f"Window({name})"
+        self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else (0, 0, 0)
+        self._resizable = kwargs["resizable"] if "resizable" in kwargs else False
+        self._frame_rate = kwargs["frame_rate"] if "frame_rate" in kwargs else 60
+        self._sm_update_rate = kwargs["sm_update_rate"] if "sm_update_rate" in kwargs else 1
+        self._visible = kwargs["visible"] if "visible" in kwargs else True
+        self._running = False
+
+        # TODO: Events parameters
+        #   Registry of events
+        self._events = set()
+        self._handlers = {
+            self.E_SM_UPDATE: [self.run, self.sm_update]
+        }
+
+    # ============================================================================================
+    # PUBLIC METHODS
+    # ============================================================================================
+    def run(self):
+        # Initialize pygame
+        pygame.init()
+
+        # Set window parameters
+        pygame.display.set_caption(self._title)
+        try:
+            pygame.display.set_icon(pygame.image.load("sprites/GWSim.png"))
+        except FileNotFoundError:
+            pass
+        screen = pygame.display.set_mode([self.width, self.height], pygame.RESIZABLE)
+
+        # TODO. Initialize events and handlers
+        events = {
+            self.E_SM_UPDATE: pygame.event.Event(GWSIM_EVENTS, id=self.E_SM_UPDATE, sender=self)
+        }
+
+        # Clock and timer related stuff
+        clock = pygame.time.Clock()
+        pygame.time.set_timer(events[self.E_SM_UPDATE], self._sm_update_rate * 1000)      # FIXME. Temp. code.
+
+        # Start rendering loop
+        self._running = True
+        while self._running:
+            # Event handling
+            for event in pygame.event.get():
+                # Handle special events here, else delegate to process_event.
+                if event.type == GWSIM_EVENTS and event.id == self.E_SM_UPDATE:
+                    self.sm_update()
+                else:
+                    self.process_event(event)
+
+            # Update screen
+            self.render_update(screen)
+
+            # Set FPS
+            clock.tick(self._frame_rate)
+
+    # ============================================================================================
+    # EVENT HANDLERS
+    # ============================================================================================
+    def sm_update(self):
+        print(f"Called: {self}.{inspect.stack()[0][3]}")
+
+    def process_event(self, event):
+        print(f"Called: {self}.{inspect.stack()[0][3]}")
+
+    def render_update(self, screen):
+        print(f"Called: {self}.{inspect.stack()[0][3]}")
+
+    def get_event_handlers(self, event):
+        """ Gets the handlers for the given event. """
+        pass
+
+    # ============================================================================================
+    # PROPERTIES
+    # ============================================================================================
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def events(self):
+        return self._events
+
+    @property
+    def gwsim(self):
+        return self._sim
+
+    @gwsim.setter
+    def gwsim(self, sim):
+        assert isinstance(sim, GWSim)
+        self._sim = sim
+
+    @property
+    def controls(self):
+        return self._controls
+
+    @property
+    def title(self):
+        return self._title
+
+    @title.setter
+    def title(self, value):
+        self._title = value
+
+    @property
+    def width(self):
+        return self._size[0]
+
+    @width.setter
+    def width(self, value):
+        raise NotImplementedError("TODO. Raise resize() event.")
+
+    @property
+    def height(self):
+        return self._size[1]
+
+    @height.setter
+    def height(self, value):
+        raise NotImplementedError("TODO. Raise resize() event.")
+
+    @property
+    def resizable(self):
+        return self._resizable
+
+    @resizable.setter
+    def resizable(self, value):
+        raise NotImplementedError("TODO. Raise resize() event.")
+
+    @property
+    def backcolor(self):
+        return self._backcolor
+
+    @backcolor.setter
+    def backcolor(self, value):
+        self._backcolor = value
+
+    @property
+    def frame_rate(self):
+        return self._frame_rate
+
+    @frame_rate.setter
+    def frame_rate(self, value):
+        self._frame_rate = value
+
+    @property
+    def sm_update_rate(self):
+        return self._sm_update_rate
+
+    @sm_update_rate.setter
+    def sm_update_rate(self, value):
+        self._sm_update_rate = value
+
+
+class GWSim(StateMachine):
+    """
+    Is a collection of
+    * State machine: All windows display something based on the same state machine.
+    * Windows: List of windows.
+    """
+    def __init__(self, graph, windows, **kwargs):
+        """
+        kwargs:
+            * `len_history`: Maximum length of history to store. (Default: float("inf"))
+            * `init_state`: Initial state. (Default: None)
+            * `main_window`: Name of the main window. (Default: windows[0].name)
+
+        Notes:
+            * main_window determines the GWSim's stepping and speed etc.
+        """
+        super(GWSim, self).__init__(graph)
+
+        # Initialize windows
+        assert all(isinstance(window, Window) for window in windows), "Windows must be an iterable of Windows."
+        self._windows = {window.name: window for window in windows}
+        self._main_window = kwargs["main_window"] if "main_window" in kwargs else windows[0].name
+        for window in self._windows.values():
+            window.gwsim = self
+
+    def __getitem__(self, name):
+        """ Gets the window corresponding to the name. """
+        return self._windows[name]
+
+    def add_window(self, window: Window):
+        self._windows[window.name] = window
+
+    def rem_window(self, window: Window):
+        self._windows.pop(window.name, None)
+
+    def step_forward(self, act):
+        """ One-step forward. """
+        pass
+
+    def step_backward(self, n):
+        """ Step backward by `n` steps. """
+        pass
+
+    def run(self):
+        processes = dict()
+
+        for name, window in self._windows.items():
+            process = Process(target=window.run)
+            process.daemon = True
+            processes[name] = process
+
+        for _, process in processes.items():
+            process.start()
+
+        while True:
+            # Check if we should terminate processes.
+            if not processes[self._main_window].is_alive():
+                print(util.ColoredMsg.ok(f"[INFO] Main window closed."))
+                for name, process in processes.items():
+                    if process.is_alive():
+                        process.kill()
+                        print(util.ColoredMsg.ok(f"[INFO] Closing window: {name}."))
+                break
+
+            # TODO. Process messages and events.
+
+    @property
+    def step_counter(self):
+        """ Get current step counter. """
+        return
+
+    @step_counter.setter
+    def step_counter(self, n):
+        """ Move step counter to `n` time step. Useful for replay. """
+        pass
+
+    @property
+    def curr_state(self):
+        """ Gets the current state of the game. """
+        return
+
+    @curr_state.setter
+    def curr_state(self, state):
+        """ Sets the current state to given state. """
+        pass
 
 
 class Control(pygame.sprite.Sprite):
