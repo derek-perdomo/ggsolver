@@ -43,6 +43,8 @@ TODO. General features
 
 """
 import inspect
+import sys
+
 import pygame
 import random
 
@@ -57,8 +59,75 @@ from typing import List
 # GLOBALS
 # ===========================================================================================
 
-GWSIM_EVENTS = pygame.USEREVENT
 COLOR_TRANSPARENT = pygame.Color(0, 0, 0, 0)   # The last 0 indicates 0 alpha, a transparent color
+
+
+E_NAME_QUIT = "PygameEvent(Game Quit)"
+E_NAME_KEYPRESS = "PygameEvent(Key Pressed)"
+E_NAME_KEYDOWN = "PygameEvent(Key Down)"
+E_NAME_KEYUP = "PygameEvent(Key Up)"
+E_NAME_RESIZE = "PygameEvent(Resize)"
+E_NAME_MOUSEMOTION = "PygameEvent(Mouse Moved)"
+E_NAME_MOUSEBUTTONDOWN = "PygameEvent(Mouse Button Down)"
+E_NAME_MOUSEBUTTONUP = "PygameEvent(Mouse Button Up)"
+E_NAME_MOUSEBUTTONPRESS = "PygameEvent(Mouse Button Pressed)"
+E_NAME_MOUSEWHEEL = "PygameEvent(Mouse Wheel)"
+E_NAME_WINDOWMINIMIZED = "PygameEvent(Window Minimized)"
+E_NAME_WINDOWMAXIMIZED = "PygameEvent(Window Maximized)"
+E_NAME_WINDOWFOCUSGAINED = "PygameEvent(Window Focus Gained)"
+E_NAME_WINDOWFOCUSLOST = "PygameEvent(Window Focus Lost)"
+E_NAME_WINDOWMOVED = "PygameEvent(Window Moved)"
+E_NAME_WINDOWRESIZED = "PygameEvent(Window Resized)"
+E_NAME_WINDOWENTER = "PygameEvent(Mouse Entered Window)"
+E_NAME_WINDOWLEAVE = "PygameEvent(Mouse Left Window)"
+E_NAME_WINDOWCLOSE = "PygameEvent(Window Closed)"
+
+
+GWSIM_EVENTS = pygame.USEREVENT
+
+E_NAME_SMUPDATE = "GWSimEvent(StateMachine Update)"
+E_NAME_CELLCHANGED = "GWSimEvent(Cell Changed)"
+E_NAME_MOUSECLICK = "GWSimEvent(Mouse Click)"
+E_NAME_MOUSEDOUBLECLICK = "GWSimEvent(Mouse Double Click)"
+E_NAME_MOUSEHOVER = "GWSimEvent(Mouse Hover)"
+E_NAME_WINDOWRESIZABILITYCHANGED = "GWSimEvent(Window Resizability Changed)"
+
+E_CELLCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_CELLCHANGED)
+E_MOUSECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSECLICK)
+E_MOUSEDOUBLECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEDOUBLECLICK)
+E_MOUSEHOVER = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEHOVER)
+E_SMUPDATE = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_SMUPDATE)
+E_WINDOWRESIZABILITYCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_WINDOWRESIZABILITYCHANGED)
+
+
+CONTROL_EVENTS = [
+    E_NAME_KEYPRESS,
+    E_NAME_KEYDOWN,
+    E_NAME_KEYUP,
+    E_NAME_RESIZE,
+    E_NAME_MOUSEMOTION,
+    E_NAME_MOUSEBUTTONDOWN,
+    E_NAME_MOUSEBUTTONUP,
+    E_NAME_MOUSEBUTTONPRESS,
+    E_NAME_MOUSEWHEEL,
+]
+
+WINDOW_EVENTS = [
+    E_NAME_QUIT,
+    E_NAME_WINDOWMINIMIZED,
+    E_NAME_WINDOWMAXIMIZED,
+    E_NAME_WINDOWFOCUSLOST,
+    E_NAME_WINDOWFOCUSGAINED,
+    E_NAME_WINDOWMOVED,
+    E_NAME_WINDOWRESIZED,
+    E_NAME_WINDOWENTER,
+    E_NAME_WINDOWLEAVE,
+    E_NAME_WINDOWCLOSE,
+    E_NAME_WINDOWRESIZABILITYCHANGED,
+    E_NAME_SMUPDATE,
+    E_NAME_KEYDOWN,
+    E_NAME_KEYUP,
+]
 
 
 # ===========================================================================================
@@ -548,8 +617,6 @@ class StateMachine:
 
 
 class Window:
-    E_SM_UPDATE = "sm_update"
-
     def __init__(self, name, size, **kwargs):
         """
         :param name: (str) Name of window
@@ -563,13 +630,17 @@ class Window:
         * frame_rate: (float) Frames per second for pygame rendering. (Default: 60)
         * sm_update_rate: (float) State machine updates per second. (Default: 1)
         * backcolor: (tuple[int, int, int]) Default backcolor of window. (Default: (0, 0, 0))
+
+        Programmer's Note:
+            * Since SM is a special element, Window handles the SMUPDATE event with sm_update() function.
+                Users are not allowed to add any more handlers to this event.
         """
         # Instance variables
         self._sim = None
         self._name = name
         self._controls = dict()
         self._sprites = pygame.sprite.LayeredUpdates()
-        self._size = size
+        self._size = pygame.math.Vector2(*size)
         self._title = kwargs["title"] if "title" in kwargs else f"Window({name})"
         self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else (0, 0, 0)
         self._resizable = kwargs["resizable"] if "resizable" in kwargs else False
@@ -580,9 +651,22 @@ class Window:
 
         # TODO: Events parameters
         #   Registry of events
-        self._events = set()
+        self._events = set(WINDOW_EVENTS)
         self._handlers = {
-            self.E_SM_UPDATE: [self.run, self.sm_update]
+            E_NAME_QUIT: [self._on_exit],
+            E_NAME_WINDOWMINIMIZED: [],
+            E_NAME_WINDOWMAXIMIZED: [],
+            E_NAME_WINDOWFOCUSLOST: [],
+            E_NAME_WINDOWFOCUSGAINED: [],
+            E_NAME_WINDOWMOVED: [],
+            E_NAME_WINDOWRESIZED: [self._on_window_resized],
+            E_NAME_WINDOWENTER: [],
+            E_NAME_WINDOWLEAVE: [],
+            E_NAME_WINDOWCLOSE: [],
+            E_NAME_WINDOWRESIZABILITYCHANGED: [self._on_window_resized],
+            E_NAME_KEYDOWN: [],
+            E_NAME_KEYUP: [],
+            # E_NAME_SMUPDATE: no handlers are accepted.
         }
 
     # ============================================================================================
@@ -603,6 +687,17 @@ class Window:
         if control is not None:
             self._sprites.remove(control)
 
+    def add_event(self, event_name, default_handler=None):
+        if event_name not in self._events:
+            self._events.add(event_name)
+            if default_handler is not None:
+                self._handlers.update({event_name: [default_handler]})
+            else:
+                self._handlers.update({event_name: []})
+
+    def register_handler(self, event_name, handler):
+        self._handlers[event_name].append(handler)
+
     def run(self):
         # Initialize pygame
         pygame.init()
@@ -617,23 +712,19 @@ class Window:
 
         # TODO. Initialize events and handlers
         events = {
-            self.E_SM_UPDATE: pygame.event.Event(GWSIM_EVENTS, id=self.E_SM_UPDATE, sender=self)
+            # self.E_SM_UPDATE: pygame.event.Event(GWSIM_EVENTS, id=self.E_SM_UPDATE, sender=self)
         }
 
         # Clock and timer related stuff
         clock = pygame.time.Clock()
-        pygame.time.set_timer(events[self.E_SM_UPDATE], self._sm_update_rate * 1000)      # FIXME. Temp. code.
+        # pygame.time.set_timer(events[self.E_SM_UPDATE], self._sm_update_rate * 1000)      # FIXME. Temp. code.
 
         # Start rendering loop
         self._running = True
         while self._running:
             # Event handling
             for event in pygame.event.get():
-                # Handle special events here, else delegate to process_event.
-                if event.type == GWSIM_EVENTS and event.id == self.E_SM_UPDATE:
-                    self.sm_update()
-                else:
-                    self.process_event(event)
+                self.process_event(event)
 
             # Update screen
             self.render_update(screen)
@@ -648,10 +739,76 @@ class Window:
         print(f"Called: {self}.{inspect.stack()[0][3]}")
 
     def process_event(self, event):
-        print(f"Called: {self}.{inspect.stack()[0][3]}")
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
+        # For all window events, the sender is self.
+        sender = self
+
+        # Since state machine is a special element of Window, we handle it separately.
+        if event.type == GWSIM_EVENTS and event.name == E_SMUPDATE:
+            self.sm_update()
+
+        if event.type == GWSIM_EVENTS and event.name == E_NAME_WINDOWRESIZABILITYCHANGED:
+            for handler in self._handlers[E_NAME_QUIT]:
+                handler(sender, {"width": self.width, "height": self.height})
+
+        if event.type == pygame.QUIT:
+            for handler in self._handlers[E_NAME_QUIT]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWRESIZED:
+            for handler in self._handlers[E_NAME_WINDOWRESIZED]:
+                handler(sender, {"width": event.x, "height": event.y})
+
+        if event.type == pygame.WINDOWMINIMIZED:
+            for handler in self._handlers[E_NAME_WINDOWMINIMIZED]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWMAXIMIZED:
+            for handler in self._handlers[E_NAME_WINDOWMAXIMIZED]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWENTER:
+            for handler in self._handlers[E_NAME_WINDOWENTER]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWLEAVE:
+            for handler in self._handlers[E_NAME_WINDOWLEAVE]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWFOCUSGAINED:
+            for handler in self._handlers[E_NAME_WINDOWFOCUSGAINED]:
+                handler(sender, dict())
+
+        if event.type == pygame.WINDOWFOCUSLOST:
+            for handler in self._handlers[E_NAME_WINDOWFOCUSLOST]:
+                handler(sender, dict())
+
+        if event.type == pygame.KEYDOWN:
+            for handler in self._handlers[E_NAME_KEYDOWN]:
+                handler(sender, {"key": event.key, "modifiers": event.mod})
+
+        if event.type == pygame.KEYUP:
+            for handler in self._handlers[E_NAME_KEYUP]:
+                handler(sender, {"key": event.key, "modifiers": event.mod})
+
+        if event.type == pygame.WINDOWMOVED:
+            for handler in self._handlers[E_NAME_WINDOWMOVED]:
+                handler(sender, {"key": event.key, "modifiers": event.mod})
+
+        if event.type == pygame.WINDOWCLOSE:
+            for handler in self._handlers[E_NAME_WINDOWCLOSE]:
+                handler(sender, {"key": event.key, "modifiers": event.mod})
+
+        # Pass the event to child controls
+        for name, control in self._controls.items():
+            control.process_event(event)
 
     def render_update(self, screen):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
+        if self.resizable:
+            screen = pygame.display.set_mode(self.size, pygame.RESIZABLE)
+        else:
+            screen = pygame.display.set_mode(self.size)
 
         # Clear previous drawing
         screen.fill(self._backcolor)
@@ -700,6 +857,14 @@ class Window:
         self._title = value
 
     @property
+    def size(self):
+        return self._size
+
+    @size.setter
+    def size(self, value: pygame.math.Vector2):
+        self._size = value
+
+    @property
     def width(self):
         return self._size[0]
 
@@ -721,7 +886,8 @@ class Window:
 
     @resizable.setter
     def resizable(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._resizable = value
+        pygame.event.post(E_WINDOWRESIZABILITYCHANGED)
 
     @property
     def backcolor(self):
@@ -746,6 +912,18 @@ class Window:
     @sm_update_rate.setter
     def sm_update_rate(self, value):
         self._sm_update_rate = value
+
+    # ============================================================================================
+    # DEFAULT EVENT HANDLERS
+    # ============================================================================================
+    def _on_exit(self, sender, event_args, *args, **kwargs):
+        print(f"Called: {self}.{inspect.stack()[0][3]}")
+        self._running = False
+
+    def _on_window_resized(self, sender, event_args, *args, **kwargs):
+        print(f"Called: {self}.{inspect.stack()[0][3]}")
+        if self.resizable:
+            self._size = pygame.math.Vector2(event_args["width"], event_args["height"])
 
 
 class GWSim(StateMachine):
