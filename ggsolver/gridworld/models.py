@@ -16,17 +16,18 @@ TODO. Reorganize event system with three ideas:
     * `event_args` contains `sender: <sending object>` entry.
     * For keyboard events, `event_args` contains `key_code`s and `modifier` keys as str, not as pygame objects.
     * Double click event.
+    * Default resize event.
 
 
 TODO. General features
-    * Anchors for positioning Controls within Parent.
+    [+] All positions are pygame.math.Vector2
+    [+] All objects are rendered with respect to their parent.
+    [+] Anchors for positioning Controls within Parent.
     * Controls are "Hoverable", "Selectable", "Clickable", "Draggable", "Hidden/Visible"
-    * Default resize event.
     * Connection to GUI controls.
     * Control has `move, move_by` methods.
     * Control has `change_parent` method.
     * Grid has `move_north, move_south, ...` methods.
-    * All objects are rendered with respect to their parent.
     * Pop-up images (non-blocking).
     * Pop-up messages (blocking or non-blocking).
     * Pop-up input box (blocking or non-blocking).
@@ -55,6 +56,7 @@ from typing import List
 GWSIM_EVENTS = pygame.USEREVENT
 COLOR_TRANSPARENT = pygame.Color(0, 0, 0, 0)   # The last 0 indicates 0 alpha, a transparent color
 
+
 # ===========================================================================================
 # ENUMERATIONS
 # ===========================================================================================
@@ -73,10 +75,15 @@ class GameMode:
     MANUAL = "manual"
 
 
+class AnchorStyle:
+    NONE = "None"
+    TOP_LEFT = "Top-left"
+    CENTER = "Center"
+
+
 # ===========================================================================================
 # SIMULATION OBJECTS
 # ===========================================================================================
-
 class Window2:
     ACTIVE_WINDOWS: List['Window'] = []
 
@@ -520,6 +527,21 @@ class StateMachine:
     def curr_state(self):
         return self._state_history[self._curr_time_step]
 
+    @curr_state.setter
+    def curr_state(self, state):
+        """ Sets the current state to given state. """
+        pass
+
+    @property
+    def step_counter(self):
+        """ Get current step counter. """
+        return
+
+    @step_counter.setter
+    def step_counter(self, n):
+        """ Move step counter to `n` time step. Useful for replay. """
+        pass
+
 
 class Window:
     E_SM_UPDATE = "sm_update"
@@ -562,6 +584,21 @@ class Window:
     # ============================================================================================
     # PUBLIC METHODS
     # ============================================================================================
+    def add_control(self, control):
+        self._controls[control.name] = control
+        self._sprites.add(control)
+
+    def rem_control(self, control):
+        # Remove control, if exists, from controls list.
+        if isinstance(control, str):
+            control = self._controls.pop(control, None)
+        else:
+            control = self._controls.pop(control.name, None)
+
+        # Remove the control from sprite group, if exists.
+        if control is not None:
+            self._sprites.remove(control)
+
     def run(self):
         # Initialize pygame
         pygame.init()
@@ -610,7 +647,17 @@ class Window:
         print(f"Called: {self}.{inspect.stack()[0][3]}")
 
     def render_update(self, screen):
-        print(f"Called: {self}.{inspect.stack()[0][3]}")
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
+
+        # Clear previous drawing
+        screen.fill(self._backcolor)
+
+        # Update all controls (sprites)
+        self._sprites.update()
+        self._sprites.draw(screen)
+
+        # Update screen
+        pygame.display.flip()
 
     def get_event_handlers(self, event):
         """ Gets the handlers for the given event. """
@@ -703,6 +750,53 @@ class GWSim(StateMachine):
     * State machine: All windows display something based on the same state machine.
     * Windows: List of windows.
     """
+    def __init__(self, graph, window, **kwargs):
+        """
+        kwargs:
+            * `len_history`: Maximum length of history to store. (Default: float("inf"))
+            * `init_state`: Initial state. (Default: None)
+            * `main_window`: Name of the main window. (Default: windows[0].name)
+
+        Notes:
+            * main_window determines the GWSim's stepping and speed etc.
+        """
+        super(GWSim, self).__init__(graph)
+
+        # Initialize windows
+        assert isinstance(window, Window), "Window must be an instance of Windows."
+        self._windows = {window.name: window}
+        self._main_window = window.name
+        for window in self._windows.values():
+            window.gwsim = self
+
+    def __getitem__(self, name):
+        """ Gets the window corresponding to the name. """
+        return self._windows[name]
+
+    def add_window(self, window: Window):
+        self._windows[window.name] = window
+
+    def rem_window(self, window: Window):
+        self._windows.pop(window.name, None)
+
+    # def step_forward(self, act, choice_function=None, *args, **kwargs):
+    #     """ One-step forward. """
+    #     pass
+    #
+    # def step_backward(self, n):
+    #     """ Step backward by `n` steps. """
+    #     pass
+
+    def run(self):
+        self._windows[self._main_window].run()
+
+
+class GWSimMultiWindow(StateMachine):
+    """
+    Is a collection of
+    * State machine: All windows display something based on the same state machine.
+    * Windows: List of windows.
+    """
     def __init__(self, graph, windows, **kwargs):
         """
         kwargs:
@@ -787,9 +881,15 @@ class GWSim(StateMachine):
 class Control(pygame.sprite.Sprite):
     def __init__(self, name, parent, position, size, **kwargs):
         """
-        :param name:
+        :param name: (Hashable object) Unique identifier of the control.
+        :param parent: (Window or Control) Parent of the current control.
+        :param position: (tuple[int, int] / pygame.math.Vector2)
+            Location of top-left point of self w.r.t. parent's top-left point.
+        :param size: (tuple[int, int] / pygame.math.Vector2) Size of control.
+
         kwargs:
-        * visible: (bool) Whether control is visible (Default: True)
+            * visible: (bool) Whether control is visible (Default: True)
+            * anchor: (AnchorStyle) Whether control is visible (Default: None)
         """
         super(Control, self).__init__()
 
@@ -801,15 +901,16 @@ class Control(pygame.sprite.Sprite):
         self._register_with_window(self)
 
         # Geometry properties
-        self._size = list(size)
+        self._anchor = kwargs["anchor"] if "anchor" in kwargs else AnchorStyle.NONE
+        self._position = pygame.math.Vector2(*position)
+        self._size = pygame.math.Vector2(*size)
         self._image = pygame.Surface(self._size, flags=pygame.SRCALPHA)
         self._rect = self.image.get_rect()
         self._rect.topleft = self.point_to_world(position)
         self._level = kwargs["level"] if "level" in kwargs else \
             (self._parent.level + 1 if isinstance(self._parent, Control) else 0)
-        self._position = list(position)
 
-        # UI propertise
+        # UI properties
         self._visible = kwargs["visible"] if "visible" in kwargs else True
         self._backcolor = kwargs["backcolor"] if "backcolor" in kwargs else self._parent.backcolor
         self._backimage = kwargs["backimage"] if "backimage" in kwargs else None
@@ -824,6 +925,9 @@ class Control(pygame.sprite.Sprite):
 
     def __del__(self):
         self._unregister_with_window(self)
+
+    def __str__(self):
+        return f"<{self.__class__.__name__} name={self.name}>"
 
     def _register_with_window(self, control):
         if isinstance(self._parent, Window):
@@ -845,10 +949,10 @@ class Control(pygame.sprite.Sprite):
     def update(self):
         # Update position and size
         # TODO. Resize surface, if applicable.
-        # self._rect.topleft = self.position
+        self._rect.topleft = self.point_to_world(self.position)
 
         # If control is not visible, then none of its children are visible either.
-        if self._visible:
+        if self.visible:
             # Fill with backcolor, backimage
             self._image.fill(self._backcolor)
             if self._backimage is not None:  # FIXME. Check if this code works.
@@ -918,21 +1022,24 @@ class Control(pygame.sprite.Sprite):
     def draw_to_png(self, filename):
         pass
 
-    def point_to_control(self, world_point):
+    def point_to_local(self, world_point: pygame.math.Vector2):
         if isinstance(self._parent, Window):
             return world_point
-        world_parent_topleft = self._parent.point_to_world(self._parent.position)
-        return [world_point[0] - world_parent_topleft[0], world_point[1] - world_parent_topleft[1]]
+        parent_topleft_world = self._parent.point_to_world(self._parent.position)
+        # return world_point[0] - world_parent_topleft[0], world_point[1] - world_parent_topleft[1]
+        return world_point - parent_topleft_world
 
-    def point_to_world(self, control_point):
+    def point_to_world(self, control_point: pygame.math.Vector2):
         if isinstance(self._parent, Window):
             return control_point
-        # return [self._parent.position[0] + control_point[0], self._parent.position[1] + control_point[1]]
-        return self._parent.world_position[0] + control_point[0], self._parent.world_position[1] + control_point[1]
+        # return self._parent.world_position[0] + control_point[0], self._parent.world_position[1] + control_point[1]
+        return self.parent.point_to_world(self.parent.position) + control_point
 
     def get_mouse_position(self):
-        world_position = self._parent.get_mouse_position()
-        return self.point_to_control(world_position)
+        # TODO. with Events.
+        raise NotImplementedError("TODO with Events.")
+        # world_position = self._parent.get_mouse_position()
+        # return self.point_to_local(world_position)
 
     def add_control(self, control):
         self._controls[control.name] = control
@@ -957,27 +1064,28 @@ class Control(pygame.sprite.Sprite):
         # Add control to window
         self.add_control(control)
 
-    def move_by(self, dx, dy):
-        self._rect.left += dx
-        self._rect.top += dy
+    def move_by(self, vec: pygame.math.Vector2):
+        self.position = self.position + vec
+        # self._rect.left += dx
+        # self._rect.top += dy
         for control in self._controls.values():
-            control.move_by(dx, dy)
+            control.move_by(vec)
 
     def move_up_by(self, dy):
         dy = abs(dy)
-        self.move_by(0, -dy)
+        self.move_by(pygame.math.Vector2(0, -dy))
 
     def move_down_by(self, dy):
         dy = abs(dy)
-        self.move_by(0, dy)
+        self.move_by(pygame.math.Vector2(0, dy))
 
     def move_left_by(self, dx):
         dx = abs(dx)
-        self.move_by(-dx, 0)
+        self.move_by(pygame.math.Vector2(-dx, 0))
 
     def move_right_by(self, dx):
         dx = abs(dx)
-        self.move_by(dx, 0)
+        self.move_by(pygame.math.Vector2(dx, 0))
 
     # ===========================================================================
     # PROPERTIES
@@ -1006,31 +1114,43 @@ class Control(pygame.sprite.Sprite):
         return self._name
 
     @property
+    def world_position(self):
+        return self.point_to_world(self.position)
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @parent.setter
+    def parent(self, value):
+        self._parent = value
+
+    @property
     def position(self):
-        return self._position
+        """ Gets the location of top-left point of rectangle w.r.t. parent. """
+        if self._anchor == AnchorStyle.NONE:
+            return self._position
+        elif self._anchor == AnchorStyle.TOP_LEFT:
+            return pygame.math.Vector2(0, 0)
+        elif self._anchor == AnchorStyle.CENTER:
+            parent_size = self.parent.size
+            self_size = self.size
+            return pygame.math.Vector2(0.5 * (parent_size - self_size))
+        else:
+            raise NotImplementedError(f"Unsupported AnchorStyle: {self._anchor}")
 
     @position.setter
     def position(self, value):
-        dx, dy = value[0] - self._position[0], value[1] - self._position[1]
+        """ Gets the location of top-left point of rectangle w.r.t. parent. """
         self._position = value
-        self._rect.left += dx
-        self._rect.top += dy
-
-    @property
-    def world_position(self):
-        return self.rect.topleft
-
-    @world_position.setter
-    def world_position(self, value):
-        raise NotImplementedError
 
     @property
     def size(self):
         return self._size
 
     @size.setter
-    def size(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+    def size(self, value: pygame.math.Vector2):
+        self._size = value
 
     @property
     def left(self):
@@ -1038,13 +1158,7 @@ class Control(pygame.sprite.Sprite):
 
     @left.setter
     def left(self, value):
-        if value < 0:
-            value = 0
-
-        if value > self._parent.width - self.width:
-            value = self._parent.width - self.width
-
-        self._position[0] = value
+        self.position = pygame.math.Vector2(value, self.position[1])
 
     @property
     def top(self):
@@ -1052,13 +1166,7 @@ class Control(pygame.sprite.Sprite):
 
     @top.setter
     def top(self, value):
-        if value < 0:
-            value = 0
-
-        if value > self._parent.height - self.height:
-            value = self._parent.height - self.height
-
-        self._position[1] = value
+        self.position = pygame.math.Vector2(self.position[0], value)
 
     @property
     def width(self):
@@ -1066,7 +1174,7 @@ class Control(pygame.sprite.Sprite):
 
     @width.setter
     def width(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self.size = pygame.math.Vector2(value, self.position[1])
 
     @property
     def height(self):
@@ -1074,7 +1182,7 @@ class Control(pygame.sprite.Sprite):
 
     @height.setter
     def height(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self.size = pygame.math.Vector2(self.position[0], value)
 
     @property
     def visible(self):
@@ -1082,7 +1190,7 @@ class Control(pygame.sprite.Sprite):
 
     @visible.setter
     def visible(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._visible = value
 
     @property
     def backcolor(self):
@@ -1090,7 +1198,7 @@ class Control(pygame.sprite.Sprite):
 
     @backcolor.setter
     def backcolor(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._backcolor = value
 
     @property
     def backimage(self):
@@ -1098,7 +1206,7 @@ class Control(pygame.sprite.Sprite):
 
     @backimage.setter
     def backimage(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._backimage = value
 
     @property
     def borderstyle(self):
@@ -1106,7 +1214,7 @@ class Control(pygame.sprite.Sprite):
 
     @borderstyle.setter
     def borderstyle(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._borderstyle = value
 
     @property
     def borderwidth(self):
@@ -1114,7 +1222,7 @@ class Control(pygame.sprite.Sprite):
 
     @borderwidth.setter
     def borderwidth(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._borderwidth = value
 
     @property
     def bordercolor(self):
@@ -1122,15 +1230,15 @@ class Control(pygame.sprite.Sprite):
 
     @bordercolor.setter
     def bordercolor(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+        self._bordercolor = value
 
     @property
-    def canselect(self):
+    def can_select(self):
         return self._canselect
 
-    @canselect.setter
-    def canselect(self, value):
-        raise NotImplementedError("TODO. Raise resize() event.")
+    @can_select.setter
+    def can_select(self, value):
+        self.can_select = value
 
     # ===========================================================================
     # EVENTS
