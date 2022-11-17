@@ -418,7 +418,7 @@ class GraphicalModel:
         else:
             self._gen_underlying_graph_unpointed(graph)
 
-        if base_only:
+        if not base_only:
             # Add node properties
             for p_name in node_props:
                 self._add_node_prop_to_graph(graph, p_name)
