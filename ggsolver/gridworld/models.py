@@ -23,10 +23,10 @@ TODO. General features
     [+] All positions are pygame.math.Vector2
     [+] All objects are rendered with respect to their parent.
     [+] Anchors for positioning Controls within Parent.
+    [+] Control has `move, move_by` methods.
+    [+] Control's parent can be changed using property setter
     * Controls are "Hoverable", "Selectable", "Clickable", "Draggable", "Hidden/Visible"
     * Connection to GUI controls.
-    * Control has `move, move_by` methods.
-    * Control has `change_parent` method.
     * Grid has `move_north, move_south, ...` methods.
     * Pop-up images (non-blocking).
     * Pop-up messages (blocking or non-blocking).
