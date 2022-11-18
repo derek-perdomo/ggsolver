@@ -2,6 +2,7 @@ import inspect
 import pygame
 import random
 import scipy.stats as stats
+import ggsolver.gridworld.color_util as colors
 
 # ===========================================================================================
 # GLOBALS
@@ -1001,5 +1002,68 @@ class Control(pygame.sprite.Sprite):
     def move_right_by(self, dx):
         dx = abs(dx)
         self.move_by(pygame.math.Vector2(dx, 0))
+
+
+class Grid(Control):
+    def __init__(self, name, parent, position, size, grid_size, **kwargs):
+        """
+        Special kwargs:
+        * cls_cell: (Cell) The class (Cell or derived from Cell) that is used to construct background cells in grid.
+        """
+        super(Grid, self).__init__(name, parent, position, size, **kwargs)
+
+        # Grid
+        self._grid_size = grid_size
+        self._controls = dict()
+        self._sprites = {
+            (x, y): pygame.sprite.LayeredUpdates() for x in range(grid_size[0]) for y in range(grid_size[1])
+        }
+        self._grid_layout = kwargs["grid_layout"] if "grid_layout" in kwargs else GridLayout.AUTO
+        self._cls_cell = kwargs["cls_cell"] if "cls_cell" in kwargs else Cell
+
+        if self._grid_layout == GridLayout.AUTO:
+            self._construct_grid(self._cls_cell)
+        elif self._grid_layout == GridLayout.CUSTOM:
+            self.construct_grid()
+        else:
+            raise ValueError("GridLayout unrecognized.")
+
+    def __getitem__(self, cell):
+        return self._controls[cell]
+
+    def _construct_grid(self, cls_cell):
+        """ Auto grid construction. Uniform cells. """
+        rows, cols = self._grid_size
+        cell_size = (self.width // rows, self.height // cols)
+        for x in range(rows):
+            for y in range(cols):
+                position = (cell_size[0] * x, cell_size[1] * y)
+                cell_xy = cls_cell(
+                    name=(x, y), parent=self, position=position, size=cell_size,
+                    bordercolor=self._bordercolor, borderstyle=self._borderstyle, borderwidth=self._borderwidth,
+                    level=0
+                )
+                self._controls[(x, y)] = cell_xy
+                self._sprites[(x, y)].add(cell_xy)
+
+    def construct_grid(self):
+        raise NotImplementedError("User should implement this if grid is generated in custom mode.")
+
+
+class Cell(Control):
+    def update(self):
+        # print(f"Called: {self}.{inspect.stack()[0][3]}")
+        super(Cell, self).update()
+
+        if self._borderstyle == BorderStyle.SOLID:
+            pygame.draw.rect(
+                self.image,
+                self._bordercolor,
+                pygame.Rect(0, 0, self.rect.width, self.rect.height),
+                self._borderwidth
+            )
+        else:
+            self.image.fill(colors.COLOR_TRANSPARENTAN)
+
 
 

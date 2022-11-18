@@ -80,5 +80,15 @@ if __name__ == '__main__':
 
     )
 
+    grid = Grid(
+        name="grid1",
+        parent=window,
+        position=(0, 0),
+        size=(200, 200),
+        grid_size=(2, 2),
+        backcolor=colors.BEIGE,
+        anchor=AnchorStyle.CENTER,
+    )
+
     sim = GWSim(graph, window)
     sim.run()
