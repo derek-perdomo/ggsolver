@@ -32,6 +32,9 @@ class JobstmannGame(Game):
         else:
             return 2
 
+def window_on_key_down(sender, args):
+    print("test. ok")
+
 
 if __name__ == '__main__':
     game = JobstmannGame(final={3, 5, 6})
@@ -44,7 +47,9 @@ if __name__ == '__main__':
         backcolor=colors.AQUA,
         frame_rate=5,
         sm_update_rate=2,
+        resizable=True
     )
+    window.register_handler(pygame.MOUSEBUTTONDOWN, window_on_key_down)
 
     # control1 = Control(name="control1", parent=window, position=(100, 100), size=(100, 100), backcolor=colors.RED1)
     # control2 = Control(name="control2", parent=control1, position=(50, 50), size=(20, 20), backcolor=colors.GREEN,

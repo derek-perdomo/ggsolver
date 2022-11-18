@@ -2,7 +2,7 @@ import inspect
 import itertools
 
 import ggsolver.util as util
-from ggsolver.gridworld.models import *
+from ggsolver.gridworld.models2 import *
 from ggsolver.models import Game
 
 
