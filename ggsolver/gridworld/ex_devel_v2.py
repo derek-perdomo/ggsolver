@@ -43,12 +43,12 @@ if __name__ == '__main__':
         size=(600, 600),
         backcolor=colors.AQUA,
         frame_rate=5,
-        sm_update_rate=1,
+        sm_update_rate=2,
     )
 
-    control1 = Control(name="control1", parent=window, position=(100, 100), size=(100, 100), backcolor=colors.RED1)
-    control2 = Control(name="control2", parent=control1, position=(50, 50), size=(20, 20), backcolor=colors.GREEN,
-                       anchor=AnchorStyle.CENTER)
+    # control1 = Control(name="control1", parent=window, position=(100, 100), size=(100, 100), backcolor=colors.RED1)
+    # control2 = Control(name="control2", parent=control1, position=(50, 50), size=(20, 20), backcolor=colors.GREEN,
+    #                    anchor=AnchorStyle.CENTER)
 
     sim = GWSim(graph, window)
     sim.run()

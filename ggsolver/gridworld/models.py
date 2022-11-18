@@ -11,6 +11,9 @@ TODO. Reorganize event system with three ideas:
     [+] Events are pygame.Event objects.
     [+] Each Window listens to a subset of events from WINDOW_EVENTS.
     [+] Users can register new handlers for any event from WINDOW_EVENTS.
+    [-] Each control has events and handlers variable.
+        events: {event_name: event_condition}
+        handler: {event_name: list_of_handlers}
     * Users can register new handlers for any event from Control.AVAILABLE_EVENTS.
     * Each control listens to a subset of events from Control.AVAILABLE_EVENTS.
     * All Controls have default handlers that are called first, then the user handlers.
@@ -62,72 +65,108 @@ from typing import List
 COLOR_TRANSPARENT = pygame.Color(0, 0, 0, 0)   # The last 0 indicates 0 alpha, a transparent color
 
 
-E_NAME_QUIT = "PygameEvent(Game Quit)"
-E_NAME_KEYPRESS = "PygameEvent(Key Pressed)"
-E_NAME_KEYDOWN = "PygameEvent(Key Down)"
-E_NAME_KEYUP = "PygameEvent(Key Up)"
-E_NAME_RESIZE = "PygameEvent(Resize)"
-E_NAME_MOUSEMOTION = "PygameEvent(Mouse Moved)"
-E_NAME_MOUSEBUTTONDOWN = "PygameEvent(Mouse Button Down)"
-E_NAME_MOUSEBUTTONUP = "PygameEvent(Mouse Button Up)"
-E_NAME_MOUSEBUTTONPRESS = "PygameEvent(Mouse Button Pressed)"
-E_NAME_MOUSEWHEEL = "PygameEvent(Mouse Wheel)"
-E_NAME_WINDOWMINIMIZED = "PygameEvent(Window Minimized)"
-E_NAME_WINDOWMAXIMIZED = "PygameEvent(Window Maximized)"
-E_NAME_WINDOWFOCUSGAINED = "PygameEvent(Window Focus Gained)"
-E_NAME_WINDOWFOCUSLOST = "PygameEvent(Window Focus Lost)"
-E_NAME_WINDOWMOVED = "PygameEvent(Window Moved)"
-E_NAME_WINDOWRESIZED = "PygameEvent(Window Resized)"
-E_NAME_WINDOWENTER = "PygameEvent(Mouse Entered Window)"
-E_NAME_WINDOWLEAVE = "PygameEvent(Mouse Left Window)"
-E_NAME_WINDOWCLOSE = "PygameEvent(Window Closed)"
+# ===========================================================================================
+# EVENTS
+#   Define custom events called GWSIM_EVENTS.
+#   Each GWSIM_EVENT has a unique id, name, and the name of sender who triggered this event.
+#
+#   The following E_XYZ event names provide the unique id and name of event.
+#   The sender and other arguments are determined while posting the event.
+#   See the process_custom_events() functions in Window, Control classes.
+# ===========================================================================================
 
+E_SM_UPDATE = pygame.USEREVENT + 1
+GWSIM_EVENTS = pygame.USEREVENT + 2
+GWSIM_EVENTS_ID = {
+    "E_QUIT": 0,
+    "E_KEYPRESS": 1,
+    "E_KEYDOWN": 2,
+    "E_KEYUP": 3,
+    "E_RESIZE": 4,
+    "E_MOUSEMOTION": 5,
+    "E_MOUSEBUTTONDOWN": 6,
+    "E_MOUSEBUTTONUP": 7,
+    "E_MOUSEBUTTONPRESS": 8,
+    "E_MOUSEWHEEL": 9,
+    "E_WINDOWMINIMIZED": 10,
+    "E_WINDOWMAXIMIZED": 11,
+    "E_WINDOWFOCUSGAINED": 12,
+    "E_WINDOWFOCUSLOST": 13,
+    "E_WINDOWMOVED": 14,
+    "E_WINDOWRESIZED": 15,
+    "E_WINDOWENTER": 16,
+    "E_WINDOWLEAVE": 17,
+    "E_WINDOWCLOSE": 18,
+    "E_NAME_CELLCHANGED": 20,
+    "E_NAME_MOUSECLICK": 21,
+    "E_NAME_MOUSEDOUBLECLICK": 22,
+    "E_NAME_MOUSEHOVER": 23,
+    "E_NAME_WINDOWRESIZABILITYCHANGED": 24,
+}
 
-GWSIM_EVENTS = pygame.USEREVENT
+# E_NAME_QUIT = "PygameEvent(Game Quit)"
+# E_NAME_KEYPRESS = "PygameEvent(Key Pressed)"
+# E_NAME_KEYDOWN = "PygameEvent(Key Down)"
+# E_NAME_KEYUP = "PygameEvent(Key Up)"
+# E_NAME_RESIZE = "PygameEvent(Resize)"
+# E_NAME_MOUSEMOTION = "PygameEvent(Mouse Moved)"
+# E_NAME_MOUSEBUTTONDOWN = "PygameEvent(Mouse Button Down)"
+# E_NAME_MOUSEBUTTONUP = "PygameEvent(Mouse Button Up)"
+# E_NAME_MOUSEBUTTONPRESS = "PygameEvent(Mouse Button Pressed)"
+# E_NAME_MOUSEWHEEL = "PygameEvent(Mouse Wheel)"
+# E_NAME_WINDOWMINIMIZED = "PygameEvent(Window Minimized)"
+# E_NAME_WINDOWMAXIMIZED = "PygameEvent(Window Maximized)"
+# E_NAME_WINDOWFOCUSGAINED = "PygameEvent(Window Focus Gained)"
+# E_NAME_WINDOWFOCUSLOST = "PygameEvent(Window Focus Lost)"
+# E_NAME_WINDOWMOVED = "PygameEvent(Window Moved)"
+# E_NAME_WINDOWRESIZED = "PygameEvent(Window Resized)"
+# E_NAME_WINDOWENTER = "PygameEvent(Mouse Entered Window)"
+# E_NAME_WINDOWLEAVE = "PygameEvent(Mouse Left Window)"
+# E_NAME_WINDOWCLOSE = "PygameEvent(Window Closed)"
 
-E_NAME_SMUPDATE = "GWSimEvent(StateMachine Update)"
-E_NAME_CELLCHANGED = "GWSimEvent(Cell Changed)"
-E_NAME_MOUSECLICK = "GWSimEvent(Mouse Click)"
-E_NAME_MOUSEDOUBLECLICK = "GWSimEvent(Mouse Double Click)"
-E_NAME_MOUSEHOVER = "GWSimEvent(Mouse Hover)"
-E_NAME_WINDOWRESIZABILITYCHANGED = "GWSimEvent(Window Resizability Changed)"
+# E_NAME_SMUPDATE = "GWSimEvent(StateMachine Update)"
+# E_NAME_CELLCHANGED = "GWSimEvent(Cell Changed)"
+# E_NAME_MOUSECLICK = "GWSimEvent(Mouse Click)"
+# E_NAME_MOUSEDOUBLECLICK = "GWSimEvent(Mouse Double Click)"
+# E_NAME_MOUSEHOVER = "GWSimEvent(Mouse Hover)"
+# E_NAME_WINDOWRESIZABILITYCHANGED = "GWSimEvent(Window Resizability Changed)"
+#
+# E_CELLCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_CELLCHANGED)
+# E_MOUSECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSECLICK)
+# E_MOUSEDOUBLECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEDOUBLECLICK)
+# E_MOUSEHOVER = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEHOVER)
+# E_SMUPDATE = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_SMUPDATE)
+# E_WINDOWRESIZABILITYCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_WINDOWRESIZABILITYCHANGED)
 
-E_CELLCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_CELLCHANGED)
-E_MOUSECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSECLICK)
-E_MOUSEDOUBLECLICK = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEDOUBLECLICK)
-E_MOUSEHOVER = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_MOUSEHOVER)
-E_SMUPDATE = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_SMUPDATE)
-E_WINDOWRESIZABILITYCHANGED = pygame.event.Event(GWSIM_EVENTS, name=E_NAME_WINDOWRESIZABILITYCHANGED)
-
-
-CONTROL_EVENTS = [
-    E_NAME_KEYPRESS,
-    E_NAME_KEYDOWN,
-    E_NAME_KEYUP,
-    E_NAME_RESIZE,
-    E_NAME_MOUSEMOTION,
-    E_NAME_MOUSEBUTTONDOWN,
-    E_NAME_MOUSEBUTTONUP,
-    E_NAME_MOUSEBUTTONPRESS,
-    E_NAME_MOUSEWHEEL,
-]
-
-WINDOW_EVENTS = [
-    E_NAME_QUIT,
-    E_NAME_WINDOWMINIMIZED,
-    E_NAME_WINDOWMAXIMIZED,
-    E_NAME_WINDOWFOCUSLOST,
-    E_NAME_WINDOWFOCUSGAINED,
-    E_NAME_WINDOWMOVED,
-    E_NAME_WINDOWRESIZED,
-    E_NAME_WINDOWENTER,
-    E_NAME_WINDOWLEAVE,
-    E_NAME_WINDOWCLOSE,
-    E_NAME_WINDOWRESIZABILITYCHANGED,
-    E_NAME_SMUPDATE,
-    E_NAME_KEYDOWN,
-    E_NAME_KEYUP,
-]
+#
+# CONTROL_EVENTS = [
+#     E_NAME_KEYPRESS,
+#     E_NAME_KEYDOWN,
+#     E_NAME_KEYUP,
+#     E_NAME_RESIZE,
+#     E_NAME_MOUSEMOTION,
+#     E_NAME_MOUSEBUTTONDOWN,
+#     E_NAME_MOUSEBUTTONUP,
+#     E_NAME_MOUSEBUTTONPRESS,
+#     E_NAME_MOUSEWHEEL,
+# ]
+#
+# WINDOW_EVENTS = [
+#     E_NAME_QUIT,
+#     E_NAME_WINDOWMINIMIZED,
+#     E_NAME_WINDOWMAXIMIZED,
+#     E_NAME_WINDOWFOCUSLOST,
+#     E_NAME_WINDOWFOCUSGAINED,
+#     E_NAME_WINDOWMOVED,
+#     E_NAME_WINDOWRESIZED,
+#     E_NAME_WINDOWENTER,
+#     E_NAME_WINDOWLEAVE,
+#     E_NAME_WINDOWCLOSE,
+#     E_NAME_WINDOWRESIZABILITYCHANGED,
+#     E_NAME_SMUPDATE,
+#     E_NAME_KEYDOWN,
+#     E_NAME_KEYUP,
+# ]
 
 
 # ===========================================================================================
@@ -256,7 +295,7 @@ class Window2:
 
         # Pass the event to child controls
         for name, control in self._controls.items():
-            control.handle_event(event)
+            control.process_event(event)
 
     def run(self, args=None):
         # Initialize pygame
@@ -651,22 +690,21 @@ class Window:
 
         # TODO: Events parameters
         #   Registry of events
-        self._events = set(WINDOW_EVENTS)
+        # self._events = set(WINDOW_EVENTS)
         self._handlers = {
-            E_NAME_QUIT: [self._on_exit],
-            E_NAME_WINDOWMINIMIZED: [],
-            E_NAME_WINDOWMAXIMIZED: [],
-            E_NAME_WINDOWFOCUSLOST: [],
-            E_NAME_WINDOWFOCUSGAINED: [],
-            E_NAME_WINDOWMOVED: [],
-            E_NAME_WINDOWRESIZED: [self._on_window_resized],
-            E_NAME_WINDOWENTER: [],
-            E_NAME_WINDOWLEAVE: [],
-            E_NAME_WINDOWCLOSE: [],
-            E_NAME_WINDOWRESIZABILITYCHANGED: [self._on_window_resized],
-            E_NAME_KEYDOWN: [],
-            E_NAME_KEYUP: [],
-            # E_NAME_SMUPDATE: no handlers are accepted.
+            # Pygame inbuilt events
+            pygame.QUIT: [self._on_exit],
+            pygame.WINDOWRESIZED: [self._on_window_resized],
+            pygame.WINDOWMINIMIZED: [],
+            pygame.WINDOWMAXIMIZED: [],
+            pygame.WINDOWENTER: [],
+            pygame.WINDOWLEAVE: [],
+            pygame.WINDOWFOCUSGAINED: [],
+            pygame.WINDOWFOCUSLOST: [],
+            pygame.WINDOWMOVED: [],
+            pygame.WINDOWCLOSE: [],
+            # Custom events
+            (GWSIM_EVENTS, GWSIM_EVENTS_ID["E_NAME_WINDOWRESIZABILITYCHANGED"]): [self._on_window_resized],
         }
 
     # ============================================================================================
@@ -710,26 +748,34 @@ class Window:
             pass
         screen = pygame.display.set_mode([self.width, self.height], pygame.RESIZABLE)
 
-        # TODO. Initialize events and handlers
-        events = {
-            # self.E_SM_UPDATE: pygame.event.Event(GWSIM_EVENTS, id=self.E_SM_UPDATE, sender=self)
-        }
-
         # Clock and timer related stuff
         clock = pygame.time.Clock()
-        # pygame.time.set_timer(events[self.E_SM_UPDATE], self._sm_update_rate * 1000)      # FIXME. Temp. code.
+        pygame.time.set_timer(
+            pygame.event.Event(
+                E_SM_UPDATE,
+                id=0,
+                name="E_SM_UPDATE",
+                sender=self.name,
+                update_rate=self._sm_update_rate),
+            int(self._sm_update_rate * 1000)
+        )
 
         # Start rendering loop
         self._running = True
         while self._running:
-            # Event handling
-            for event in pygame.event.get():
-                self.process_event(event)
+            # Update state machine
+            for event in pygame.event.get(eventtype=E_SM_UPDATE):
+                self.sm_update()
+
+            # Handle events
+            self.process_window_events()
+            # self.trigger_gwsim_events()
+            # self.process_gwsim_events()
 
             # Update screen
             self.render_update(screen)
 
-            # Set FPS
+            # Control FPS
             clock.tick(self._frame_rate)
 
     # ============================================================================================
@@ -738,70 +784,252 @@ class Window:
     def sm_update(self):
         print(f"Called: {self}.{inspect.stack()[0][3]}")
 
-    def process_event(self, event):
+    def process_window_events(self):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
         # For all window events, the sender is self.
         sender = self
 
         # Since state machine is a special element of Window, we handle it separately.
-        if event.type == GWSIM_EVENTS and event.name == E_SMUPDATE:
-            self.sm_update()
+        for event in pygame.event.get(eventtype=[
+            pygame.QUIT,
+            pygame.WINDOWRESIZED,
+            pygame.WINDOWMINIMIZED,
+            pygame.WINDOWMAXIMIZED,
+            pygame.WINDOWENTER,
+            pygame.WINDOWLEAVE,
+            pygame.WINDOWFOCUSGAINED,
+            pygame.WINDOWFOCUSLOST,
+            pygame.WINDOWMOVED,
+            pygame.WINDOWCLOSE,
+        ]):
 
-        if event.type == GWSIM_EVENTS and event.name == E_NAME_WINDOWRESIZABILITYCHANGED:
-            for handler in self._handlers[E_NAME_QUIT]:
-                handler(sender, {"width": self.width, "height": self.height})
+            if event.type == pygame.QUIT:
+                for handler in self._handlers[pygame.QUIT]:
+                    handler(sender, dict())
 
-        if event.type == pygame.QUIT:
-            for handler in self._handlers[E_NAME_QUIT]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWRESIZED:
+                for handler in self._handlers[pygame.WINDOWRESIZED]:
+                    handler(sender, {"width": event.x, "height": event.y})
 
-        if event.type == pygame.WINDOWRESIZED:
-            for handler in self._handlers[E_NAME_WINDOWRESIZED]:
-                handler(sender, {"width": event.x, "height": event.y})
+            if event.type == pygame.WINDOWMINIMIZED:
+                for handler in self._handlers[pygame.WINDOWMINIMIZED]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWMINIMIZED:
-            for handler in self._handlers[E_NAME_WINDOWMINIMIZED]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWMAXIMIZED:
+                for handler in self._handlers[pygame.WINDOWMAXIMIZED]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWMAXIMIZED:
-            for handler in self._handlers[E_NAME_WINDOWMAXIMIZED]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWENTER:
+                for handler in self._handlers[pygame.WINDOWENTER]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWENTER:
-            for handler in self._handlers[E_NAME_WINDOWENTER]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWLEAVE:
+                for handler in self._handlers[pygame.WINDOWLEAVE]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWLEAVE:
-            for handler in self._handlers[E_NAME_WINDOWLEAVE]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                for handler in self._handlers[pygame.WINDOWFOCUSGAINED]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWFOCUSGAINED:
-            for handler in self._handlers[E_NAME_WINDOWFOCUSGAINED]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWFOCUSLOST:
+                for handler in self._handlers[pygame.WINDOWFOCUSLOST]:
+                    handler(sender, dict())
 
-        if event.type == pygame.WINDOWFOCUSLOST:
-            for handler in self._handlers[E_NAME_WINDOWFOCUSLOST]:
-                handler(sender, dict())
+            if event.type == pygame.WINDOWMOVED:
+                for handler in self._handlers[pygame.WINDOWMOVED]:
+                    handler(sender, dict())
 
-        if event.type == pygame.KEYDOWN:
-            for handler in self._handlers[E_NAME_KEYDOWN]:
-                handler(sender, {"key": event.key, "modifiers": event.mod})
+            if event.type == pygame.WINDOWCLOSE:
+                for handler in self._handlers[pygame.WINDOWCLOSE]:
+                    handler(sender, dict())
 
-        if event.type == pygame.KEYUP:
-            for handler in self._handlers[E_NAME_KEYUP]:
-                handler(sender, {"key": event.key, "modifiers": event.mod})
+    # def process_events(self, ):
+    #     # print(f"Called: {self}.{inspect.stack()[0][3]}")
+    #
+    #     # Handle window events
+    #     for event in pygame.event.get():
+    #         # For all window events, the sender is self.
+    #         sender = self
+    #         # Since state machine is a special element of Window, we handle it separately.
+    #         if event.type == GWSIM_EVENTS and event.name == E_SMUPDATE:
+    #             self.sm_update()
+    #
+    #         if event.type == GWSIM_EVENTS and event.name == E_NAME_WINDOWRESIZABILITYCHANGED:
+    #             for handler in self._handlers[E_NAME_QUIT]:
+    #                 handler(sender, {"width": self.width, "height": self.height})
+    #
+    #         if event.type == pygame.QUIT:
+    #             for handler in self._handlers[E_NAME_QUIT]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWRESIZED:
+    #             for handler in self._handlers[E_NAME_WINDOWRESIZED]:
+    #                 handler(sender, {"width": event.x, "height": event.y})
+    #
+    #         if event.type == pygame.WINDOWMINIMIZED:
+    #             for handler in self._handlers[E_NAME_WINDOWMINIMIZED]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWMAXIMIZED:
+    #             for handler in self._handlers[E_NAME_WINDOWMAXIMIZED]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWENTER:
+    #             for handler in self._handlers[E_NAME_WINDOWENTER]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWLEAVE:
+    #             for handler in self._handlers[E_NAME_WINDOWLEAVE]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWFOCUSGAINED:
+    #             for handler in self._handlers[E_NAME_WINDOWFOCUSGAINED]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.WINDOWFOCUSLOST:
+    #             for handler in self._handlers[E_NAME_WINDOWFOCUSLOST]:
+    #                 handler(sender, dict())
+    #
+    #         if event.type == pygame.KEYDOWN:
+    #             for handler in self._handlers[E_NAME_KEYDOWN]:
+    #                 handler(sender, {"key": event.key, "modifiers": event.mod})
+    #
+    #         if event.type == pygame.KEYUP:
+    #             for handler in self._handlers[E_NAME_KEYUP]:
+    #                 handler(sender, {"key": event.key, "modifiers": event.mod})
+    #
+    #         if event.type == pygame.WINDOWMOVED:
+    #             for handler in self._handlers[E_NAME_WINDOWMOVED]:
+    #                 handler(sender, {"key": event.key, "modifiers": event.mod})
+    #
+    #         if event.type == pygame.WINDOWCLOSE:
+    #             for handler in self._handlers[E_NAME_WINDOWCLOSE]:
+    #                 handler(sender, {"key": event.key, "modifiers": event.mod})
+    #
+    #     # Trigger events for all controls in window.
+    #     for name, control in self._controls.items():
+    #         # For event in control.events: Trigger it, if applicable.
+    #         control.process_event(event)
 
-        if event.type == pygame.WINDOWMOVED:
-            for handler in self._handlers[E_NAME_WINDOWMOVED]:
-                handler(sender, {"key": event.key, "modifiers": event.mod})
+    def trigger_gwsim_events(self):
+        for event in pygame.event.get(exclude=GWSIM_EVENTS):
 
-        if event.type == pygame.WINDOWCLOSE:
-            for handler in self._handlers[E_NAME_WINDOWCLOSE]:
-                handler(sender, {"key": event.key, "modifiers": event.mod})
+            # -------------------------------------------------------------------------------
+            # WINDOW EVENTS
+            # -------------------------------------------------------------------------------
+            if event.type == pygame.QUIT:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_QUIT"],
+                    name="E_QUIT",
+                    sender=self.name
+                ))
 
-        # Pass the event to child controls
-        for name, control in self._controls.items():
-            control.process_event(event)
+            if event.type == pygame.WINDOWRESIZED:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWRESIZED"],
+                    name="E_WINDOWRESIZED",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWMINIMIZED:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWMINIMIZED"],
+                    name="E_WINDOWMINIMIZED",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWMAXIMIZED:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWMAXIMIZED"],
+                    name="E_WINDOWMAXIMIZED",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWENTER:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWENTER"],
+                    name="E_WINDOWENTER",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWLEAVE:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWLEAVE"],
+                    name="E_WINDOWLEAVE",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWFOCUSGAINED:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWFOCUSGAINED"],
+                    name="E_WINDOWFOCUSGAINED",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWFOCUSLOST:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWFOCUSLOST"],
+                    name="E_WINDOWFOCUSLOST",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWFOCUSLOST:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWFOCUSLOST"],
+                    name="E_WINDOWFOCUSLOST",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWMOVED:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWMOVED"],
+                    name="E_WINDOWMOVED",
+                    sender=self.name
+                ))
+
+            if event.type == pygame.WINDOWCLOSE:
+                pygame.event.post(pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_ID["E_WINDOWCLOSE"],
+                    name="E_WINDOWCLOSE",
+                    sender=self.name
+                ))
+
+            # -------------------------------------------------------------------------------
+            # KEYBOARD EVENTS
+            # -------------------------------------------------------------------------------
+            if event.type == pygame.KEYDOWN:
+                #     for handler in self._handlers[E_NAME_KEYDOWN]:
+                #         handler(sender, {"key": event.key, "modifiers": event.mod})
+                pass
+
+            if event.type == pygame.KEYUP:
+                #     for handler in self._handlers[E_NAME_KEYUP]:
+                #         handler(sender, {"key": event.key, "modifiers": event.mod})
+                pass
+
+            # -------------------------------------------------------------------------------
+            # MOUSE EVENTS
+            # -------------------------------------------------------------------------------
+
+            # -------------------------------------------------------------------------------
+            # CUSTOM EVENTS
+            # -------------------------------------------------------------------------------
+
+    def process_gwsim_events(self):
+        for event in pygame.event.get():
+            if event.type == GWSIM_EVENTS and event.id == GWSIM_EVENTS_ID["E_QUIT"] and event.sender == self.name:
+                self._running = False
 
     def render_update(self, screen):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
@@ -1103,7 +1331,29 @@ class Control(pygame.sprite.Sprite):
         self._is_selected = kwargs["is_selected"] if "is_selected" in kwargs else False
 
         # Event properties
-        self._keydown_pressed_keys = set()
+        self._events = {
+            E_NAME_KEYPRESS: None,
+            E_NAME_KEYDOWN: None,
+            E_NAME_KEYUP: None,
+            E_NAME_RESIZE: None,
+            E_NAME_MOUSEMOTION: self._is_point_in_control,
+            E_NAME_MOUSEBUTTONDOWN: self._is_point_in_control,
+            E_NAME_MOUSEBUTTONUP: self._is_point_in_control,
+            E_NAME_MOUSEBUTTONPRESS: self._is_point_in_control,
+            E_NAME_MOUSEWHEEL: self._is_point_in_control,
+        }
+
+        self._handlers = {
+            E_NAME_KEYPRESS: [],
+            E_NAME_KEYDOWN: [],
+            E_NAME_KEYUP: [],
+            E_NAME_RESIZE: [],
+            E_NAME_MOUSEMOTION: [],
+            E_NAME_MOUSEBUTTONDOWN: [],
+            E_NAME_MOUSEBUTTONUP: [],
+            E_NAME_MOUSEBUTTONPRESS: [],
+            E_NAME_MOUSEWHEEL: [],
+        }
 
     def __del__(self):
         self._unregister_with_window(self)
@@ -1151,10 +1401,11 @@ class Control(pygame.sprite.Sprite):
             else:  # self._borderstyle == BorderStyle.HIDDEN:
                 pass
 
-    def handle_event(self, event):
-        # Get mouse position relative to current control
-        mouse_position = self.get_mouse_position()
+    def process_event(self, event):
+        # Get mouse position relative to window
+        mouse_position = pygame.mouse.get_pos()
 
+        # Recall that self.rect (x, y, w, h) are defined w.r.t. window.
         if self.rect.collidepoint(mouse_position):
             self.on_mouse_hover(mouse_position)
 
@@ -1489,6 +1740,9 @@ class Control(pygame.sprite.Sprite):
             y = self._parent.height - self.height
 
         self._position = [x, y]
+
+    def _is_point_in_control(self, vec: pygame.math.Vector2):
+        return True
 
 
 class Grid(Control):
