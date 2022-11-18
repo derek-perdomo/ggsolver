@@ -919,6 +919,19 @@ class Game(TSys):
 
             self.delta = delta_
 
+        if "atoms" in kwargs:
+            def atoms_():
+                return list(kwargs["atoms"])
+            self.atoms = atoms_
+
+        if "label" in kwargs:
+            def label_(state):
+                return list(kwargs["label"][state])
+            self.label = label_
+
+        if "init_state" in kwargs:
+            self.initialize(kwargs["init_state"])
+
         if "init_state" in kwargs:
             self.initialize(kwargs["init_state"])
 
