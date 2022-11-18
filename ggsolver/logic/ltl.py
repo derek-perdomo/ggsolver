@@ -1,7 +1,8 @@
 from abc import ABC
 
 import spot
-import ggsolver.interfaces.i_spot as i_spot
+# import ggsolver.interfaces.i_spot as i_spot
+import ggsolver.automata as automata
 from ggsolver.logic.formula import BaseFormula, ParsingError
 from ggsolver.util import apply_atoms_limit, powerset
 from ggsolver.automata import DFA
@@ -44,7 +45,7 @@ class LTL(BaseFormula):
     # IMPLEMENTATION OF ABSTRACT METHODS
     # ==================================================================
     def translate(self):
-        return i_spot.SpotAutomaton(formula=self.f_str, atoms=self.atoms())
+        return automata.SpotAutomaton(formula=self.f_str, atoms=self.atoms())
 
     def substitute(self, subs_map=None):
         raise NotImplementedError("To be implemented in future.")

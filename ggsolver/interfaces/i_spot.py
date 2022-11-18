@@ -3,13 +3,14 @@ Defines an interface from spot automaton to ggsolver automaton.
 """
 
 import spot
-from ggsolver.models import Automaton, register_property
+# from ggsolver.models import Automaton, models.register_property
+import ggsolver.models as models 
 from dd.autoref import BDD
 
 
-class SpotAutomaton(Automaton):
+class SpotAutomaton(models.Automaton):
     """
-    `SpotAutomaton` constructs an :class:`Automaton` from an LTL specification string using
+    `SpotAutomaton` constructs an :class:`models.Automaton` from an LTL specification string using
     `spot` (https://spot.lrde.epita.fr/) with customizations for `ggsolver`.
 
     **Customizations:** Since `ggsolver` contains several algorithms for reactive/controller synthesis,
@@ -22,7 +23,7 @@ class SpotAutomaton(Automaton):
     def __init__(self, formula=None, options=None, atoms=None):
         """
         Given an LTL formula, SpotAutomaton determines the best options for spot.translate() function
-        to generate a deterministic automaton in ggsolver.Automaton format.
+        to generate a deterministic automaton in ggsolver.models.Automaton format.
 
         :param formula: (str) LTL formula.
         :param options: (List/Tuple of str) Valid options for spot.translate() function. By default, the
@@ -67,17 +68,17 @@ class SpotAutomaton(Automaton):
         # Set the acceptance condition (in ggsolver terms)
         name = self.spot_aut.acc().name()
         if name == "Büchi" and spot.mp_class(formula).upper() in ["B", "S"]:
-            self._acc_cond = (Automaton.ACC_SAFETY, 0)
+            self._acc_cond = (models.Automaton.ACC_SAFETY, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["G"]:
-            self._acc_cond = (Automaton.ACC_REACH, 0)
+            self._acc_cond = (models.Automaton.ACC_REACH, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["O", "R"]:
-            self._acc_cond = (Automaton.ACC_BUCHI, 0)
+            self._acc_cond = (models.Automaton.ACC_BUCHI, 0)
         elif name == "co-Büchi":
-            self._acc_cond = (Automaton.ACC_COBUCHI, 0)
+            self._acc_cond = (models.Automaton.ACC_COBUCHI, 0)
         elif name == "all":
-            self._acc_cond = (Automaton.ACC_SAFETY, 0)
+            self._acc_cond = (models.Automaton.ACC_SAFETY, 0)
         else:  # name contains "parity":
-            self._acc_cond = (Automaton.ACC_PARITY, 0)
+            self._acc_cond = (models.Automaton.ACC_PARITY, 0)
 
     def _determine_options(self):
         """
@@ -155,7 +156,7 @@ class SpotAutomaton(Automaton):
     def acc_cond(self):
         """
         Returns acceptance condition according to ggsolver definitions:
-        See `ACC_REACH, ...` variables in Automaton class.
+        See `ACC_REACH, ...` variables in models.Automaton class.
         See :meth:`SpotAutomaton.spot_acc_cond` for acceptance condition in spot's nomenclature.
         """
         return self._acc_cond
@@ -177,7 +178,7 @@ class SpotAutomaton(Automaton):
 
     def is_terminal(self):
         """
-        Automaton is weak, accepting SCCs are complete, accepting edges may not go to rejecting SCCs.
+        models.Automaton is weak, accepting SCCs are complete, accepting edges may not go to rejecting SCCs.
         An automaton is weak if the transitions of an SCC all belong to the same acceptance sets.
 
         See https://spot.lrde.epita.fr/concepts.html
@@ -195,7 +196,7 @@ class SpotAutomaton(Automaton):
         """ Is the automaton complete? """
         return bool(spot.is_complete(self.spot_aut))
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def is_semi_deterministic(self):
         """
         Is the automaton semi-deterministic?
@@ -203,36 +204,36 @@ class SpotAutomaton(Automaton):
         """
         return bool(spot.is_semi_deterministic(self.spot_aut))
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def acc_name(self):
         """ Name of acceptance condition as per spot's nomenclature. """
         return self.spot_aut.acc().name()
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def spot_acc_cond(self):
         """
         Acceptance condition in spot's nomenclature.
         """
         return str(self.spot_aut.get_acceptance())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def formula(self):
         """ The LTL Formula. """
         return self._formula
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def is_state_based_acc(self):
         """ Is the acceptance condition state-based? """
         return bool(self.spot_aut.prop_state_acc())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def is_weak(self):
         """
         Are transitions of an SCC all belong to the same acceptance sets?
         """
         return bool(self.spot_aut.prop_weak())
 
-    @register_property(Automaton.GRAPH_PROPERTY)
+    @models.register_property(models.Automaton.GRAPH_PROPERTY)
     def is_inherently_weak(self):
         """ Is it the case that accepting and rejecting cycles cannot be mixed in the same SCC? """
         return bool(self.spot_aut.prop_inherently_weak())

@@ -2,7 +2,9 @@ import itertools
 
 from ggsolver.models import Game
 from ggsolver.automata import DFA
+import logging
 
+logging.basicConfig(level=logging.INFO)
 
 class DTPTBGame(Game):
     """
@@ -17,6 +19,7 @@ class DTPTBGame(Game):
             * atoms: List of atoms
             * label: Dictionary of {state: List[atoms]}
             * final: List of states
+            * turn: Dictionary of {state: turn}
         """
         super(DTPTBGame, self).__init__(
             **kwargs,
@@ -48,12 +51,14 @@ class ProductWithDFA(DTPTBGame):
         return t, p
 
     def init_state(self):
-        if self.init_state() is not None:
+        if self._game.init_state() is not None:
             s0 = self.init_state()
             q0 = self._aut.init_state()
             return s0, self._aut.delta(q0, self._game.label(s0))
 
     def final(self, state):
-        return self._aut.final(state[0]) == 0
+        return 0 in self._aut.final(state[1])
 
+    def turn(self, state):
+        return self._game.turn(state[0])
 
