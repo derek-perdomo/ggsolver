@@ -13,7 +13,7 @@ class CBSGame(ReachabilityGame):
 
         self._json_fname = json_fname
         self._cbs_network = self._decode()
-        self._states, self._credential_set, self._possible_firewall_states = self._construct_states()
+        self._states, self._credential_set, self._possible_firewall_states, self._connections = self._construct_states()
         self._actions = self._construct_actions()
 
     def _decode(self):
@@ -31,12 +31,54 @@ class CBSGame(ReachabilityGame):
         return self._actions
 
     def delta(self, state, act):
-        ### state is of form (state_number, node_name, obtained_credentials, firewall_state, turn) ###
-        # defender action
-        if act[0:19] == "change_firewall_to_":
-            firewall_settings_string = act[19:]
-            firewall_settings = [int(i) for i in firewall_settings_string.strip(')(').split(', ')]
-            return (state[0], state[1], state[2], tuple(firewall_settings), 2)
+        ### state is of form (source_node, obtained_credentials, firewall_state, turn) ###
+        source_node = state[0]
+        obtained_credentials = state[1]
+        firewall_state = state[2]
+        turn = state[3]
+        ## attacker actions ##
+        if turn == 2:
+            if act == "no_attacker_action":
+                return (source_node, obtained_credentials, firewall_state, 1)
+            elif act[0:13] == "move_to_node_":
+                target_node = act[13:]
+            elif act[0:16] == "local_attack_on_":
+                target_node = act[16:]
+                if target_node == source_node:
+                    new_obtained_credentials = list(obtained_credentials)
+                    for credential in self._cbs_network.nodes[target_node]["creds_stored"]:
+                        # the "creds_stored" is a list of credentials of form (node_to_be_used_on, service, credential)
+                        if new_obtained_credentials[int(credential[2])] == 0:
+                            new_obtained_credentials[int(credential[2])] = 1
+                    return (source_node, tuple(new_obtained_credentials), firewall_state, 1)
+                else:
+                    return (source_node, obtained_credentials, firewall_state, 1)
+            elif act[0:11] == "connect_to_":
+                index = act.find("_with_")
+                target_node = act[11:index]
+                credential = act[index+6:]
+
+                source_connected_to_target = False
+                connection_index = 0
+                for i, connection in enumerate(self._connections):
+                    if connection == (source_node, target_node):
+                        source_connected_to_target = True
+                        connection_index = i
+                target_accepts_credential = credential in self._cbs_network.nodes[target_node]["allowed_creds"]
+                connection_allowed_by_firewall = bool(firewall_state[connection_index])
+
+                if source_connected_to_target and target_accepts_credential and connection_allowed_by_firewall:
+                    # return state that is the same as passed state but at new node
+                    # add node to list of visited nodes??
+                    return (target_node, obtained_credentials, firewall_state, 1)
+                else:
+                    return (source_node, obtained_credentials, firewall_state, 1)
+        ## defender action ##
+        else:
+            if act[0:19] == "change_firewall_to_":
+                new_firewall_state_string = act[19:]
+                new_firewall_state = [int(i) for i in new_firewall_state_string.strip(')(').split(', ')]
+                return (source_node, obtained_credentials, tuple(new_firewall_state), 2)
 
     def final(self, state):
         pass
@@ -68,11 +110,13 @@ class CBSGame(ReachabilityGame):
                     # State is of form (id, i, bool[k], bool[n], turn)
                     # Where i is the agent's location, k is the number of credentials, and n is the
                     # number of firewalls (connections between computers in the network, edges in the network graph)
-                    states.append((state_number, node_name, obtained_credentials, firewall_state, 1))
-                    state_number += 1
-                    states.append((state_number, node_name, obtained_credentials, firewall_state, 2))
-                    state_number += 1
-        return states, unique_credentials, possible_firewall_states
+                    states.append((node_name, obtained_credentials, firewall_state, 1))
+                    states.append((node_name, obtained_credentials, firewall_state, 2))
+                    # states.append((state_number, node_name, obtained_credentials, firewall_state, 1))
+                    # state_number += 1
+                    # states.append((state_number, node_name, obtained_credentials, firewall_state, 2))
+                    # state_number += 1
+        return states, unique_credentials, possible_firewall_states, connections
 
     def _construct_actions(self):
         actions = []
@@ -94,12 +138,13 @@ class CBSGame(ReachabilityGame):
         return actions
 if __name__ == '__main__':
     game = CBSGame("network.json")
-    print(f"{len(game.states())=}")
-    print(f"{len(game.actions())=}")
-    for action in game.actions():
-        print(f"{action=}")
-    print(game.states()[0])
-    print(game.delta(game.states()[0], "change_firewall_to_(1, 1, 1, 1, 0)"))
+    # print(f"{len(game.states())=}")
+    # print(f"{len(game.actions())=}")
+    # for action in game.actions():
+    #     print(f"{action=}")
+    state = ("client", (1,0,0), (1,0,0,0,0), 2)
+    print(state)
+    print(game.delta(state, "connect_to_1_with_0"))
     # graph = game.graphify(pointed=True)
     # print(f"{graph.number_of_nodes()=}")
     # print(f"{graph.number_of_edges()=}")
