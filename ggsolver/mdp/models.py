@@ -1,4 +1,4 @@
-from ggsolver.models import Game
+import ggsolver.models as models
 
 
 def filter_kwargs(states=None, actions=None, trans_dict=None, init_state=None, final=None):
@@ -21,7 +21,7 @@ def filter_kwargs(states=None, actions=None, trans_dict=None, init_state=None, f
     return kwargs
 
 
-class QualitativeMDP(Game):
+class QualitativeMDP(models.Game):
     """
     delta(s, a) -> [s]
     """
