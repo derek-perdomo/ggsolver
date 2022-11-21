@@ -46,6 +46,10 @@ class PL(BaseFormula):
     # IMPLEMENTATION OF ABSTRACT METHODS
     # ==================================================================
     def translate(self):
+        """
+        Translate a propositional logic formula to an automaton.
+        :return: (:class:`SpotAutomaton`) SpotAutomaton representing the automaton for PL formula.
+        """
         return SpotAutomaton(formula=self.f_str, atoms=self.atoms())
 
     def substitute(self, subs_map=None):
@@ -75,6 +79,12 @@ class PL(BaseFormula):
         return True if transform(self._repr).is_tt() else False
 
     def atoms(self):
+        """
+        Gets the list of atoms associated with PL formula.
+
+        The list may contain atoms that do not appear in the formula, if the user has provided it.
+        :return: (List[str]) List of atoms.
+        """
         return self._atoms
 
     # ==================================================================
