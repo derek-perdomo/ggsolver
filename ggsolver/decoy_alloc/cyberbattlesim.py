@@ -8,12 +8,14 @@ class CBSGame(ReachabilityGame):
     """
     CyberBattleSim game
     """
-    def __init__(self, json_fname):
+    def __init__(self, json_fname, final_node):
         super(ReachabilityGame, self).__init__()
+        self._init_state = ("client", (0, 0, 0), (1, 1, 1, 1, 1), 1)
 
         self._json_fname = json_fname
+        self._final_node = final_node
         self._cbs_network = self._decode()
-        self._states, self._credential_set, self._possible_firewall_states, self._connections = self._construct_states()
+        self._states, self._credential_set, self._possible_firewall_states, self._connections, self._final_states = self._construct_states()
         self._actions = self._construct_actions()
 
     def _decode(self):
@@ -41,6 +43,14 @@ class CBSGame(ReachabilityGame):
             if act == "no_attacker_action":
                 return (source_node, obtained_credentials, firewall_state, 1)
             elif act[0:13] == "move_to_node_":
+                pass
+                # TODO how to restrict movement to only owned nodes (need to modify the graph to add edges returning to previous states?)
+                # for every state1
+                    # for each incoming edge state2
+                        # for each incoming edge state3
+                            # if everything is the same between state3 and state1 except firewall_state and attacker location
+                                # for every different attacker location in the set of state3s
+                                    # add an edge from state1 to every defender state (state with turn=2) with the new attacker location
                 target_node = act[13:]
             elif act[0:16] == "local_attack_on_":
                 target_node = act[16:]
@@ -81,13 +91,15 @@ class CBSGame(ReachabilityGame):
                 return (source_node, obtained_credentials, tuple(new_firewall_state), 2)
 
     def final(self, state):
-        pass
+        return self._final_states
 
     def turn(self, state):
-        return state[4]
+        print(state)
+        return state[3]
 
     def _construct_states(self):
         states = []  # list of state objects that can be used to construct game graph
+        final_states = []
 
         unique_credentials = set()
         connections = []
@@ -103,7 +115,6 @@ class CBSGame(ReachabilityGame):
         possible_firewall_states = list(itertools.product([0, 1], repeat=len(connections)))
         possible_obtained_credentials_states = list(itertools.product([0, 1], repeat=len(unique_credentials)))
 
-        state_number = 0
         for node_name in network_nodes:
             for firewall_state in possible_firewall_states:
                 for obtained_credentials in possible_obtained_credentials_states:
@@ -112,11 +123,10 @@ class CBSGame(ReachabilityGame):
                     # number of firewalls (connections between computers in the network, edges in the network graph)
                     states.append((node_name, obtained_credentials, firewall_state, 1))
                     states.append((node_name, obtained_credentials, firewall_state, 2))
-                    # states.append((state_number, node_name, obtained_credentials, firewall_state, 1))
-                    # state_number += 1
-                    # states.append((state_number, node_name, obtained_credentials, firewall_state, 2))
-                    # state_number += 1
-        return states, unique_credentials, possible_firewall_states, connections
+                    if node_name == self._final_node:
+                        final_states.append((node_name, obtained_credentials, firewall_state, 1))
+                        final_states.append((node_name, obtained_credentials, firewall_state, 2))
+        return states, unique_credentials, possible_firewall_states, connections, final_states
 
     def _construct_actions(self):
         actions = []
@@ -125,7 +135,7 @@ class CBSGame(ReachabilityGame):
         actions.append("no_attacker_action")
         for node in self._cbs_network.nodes:
             # change i to another owned node
-            actions.append(f"move_to_node_{node}")
+            # actions.append(f"move_to_node_{node}")
             # perform a local attack (add credentials from the current node i to the obtained credentials)
             actions.append(f"local_attack_on_{node}")
             # connect to a new node using obtained credentials
@@ -137,14 +147,15 @@ class CBSGame(ReachabilityGame):
             actions.append(f"change_firewall_to_{firewall_state}")
         return actions
 if __name__ == '__main__':
-    game = CBSGame("network.json")
-    # print(f"{len(game.states())=}")
-    # print(f"{len(game.actions())=}")
-    # for action in game.actions():
-    #     print(f"{action=}")
-    state = ("client", (1,0,0), (1,0,0,0,0), 2)
-    print(state)
-    print(game.delta(state, "connect_to_1_with_0"))
+    game = CBSGame("network.json", final_node="5")
+    print(f"{len(game.states())=}")
+    print(f"{len(game.actions())=}")
+    if None in game.states():
+        print("Yes")
+    else:
+        print("no")
+    for i in range(10):
+        print(game.states()[i])
     # graph = game.graphify(pointed=True)
     # print(f"{graph.number_of_nodes()=}")
     # print(f"{graph.number_of_edges()=}")
