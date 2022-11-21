@@ -1,13 +1,14 @@
 import itertools
-
-from ggsolver.models import Game
-from ggsolver.logic.automata import DFA
 import logging
+
+import ggsolver.models as models
+import ggsolver.logic.automata as automata
+
 
 logging.basicConfig(level=logging.INFO)
 
 
-class DTPTBGame(Game):
+class DTPTBGame(models.Game):
     """
     delta(s, a) -> s
     """
@@ -34,7 +35,7 @@ class ProductWithDFA(DTPTBGame):
     """
     For the product to be defined, Game must implement `atoms` and `label` functions.
     """
-    def __init__(self, game: DTPTBGame, aut: DFA):
+    def __init__(self, game: DTPTBGame, aut: automata.DFA):
         super(ProductWithDFA, self).__init__()
         self._game = game
         self._aut = aut

@@ -2,9 +2,10 @@ import logging
 from functools import reduce
 from tqdm import tqdm
 
-import ggsolver.graph as graph
+import ggsolver.graph as mod_graph
 import ggsolver.util as util
 import ggsolver.models as models
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,13 +37,13 @@ class SWinReach(models.Solver):
         self._player = player
         self._final = final if final is not None else self.get_final_states()
         self._turn = self._solution["turn"]
-        self._rank = graph.NodePropertyMap(self._solution, default=float("inf"))
+        self._rank = mod_graph.NodePropertyMap(self._solution, default=float("inf"))
         self._solution["rank"] = self._rank
 
     def reset(self):
         """ Resets the solver to initial state. """
         super(SWinReach, self).reset()
-        self._rank = graph.NodePropertyMap(self._solution)
+        self._rank = mod_graph.NodePropertyMap(self._solution)
         self._is_solved = False
 
     def get_final_states(self):
