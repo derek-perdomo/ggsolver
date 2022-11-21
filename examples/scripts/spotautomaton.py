@@ -16,7 +16,7 @@ This example is used to reproduce and fix the bug on line 209.
 """
 import itertools
 from ggsolver.models import Game, TSys
-from ggsolver.interfaces.i_spot import SpotAutomaton
+from ggsolver.logic import SpotAutomaton
 
 
 class TomAndJerry(Game):

@@ -1,10 +1,11 @@
 import itertools
 
 from ggsolver.models import Game
-from ggsolver.automata import DFA
+from ggsolver.logic.automata import DFA
 import logging
 
 logging.basicConfig(level=logging.INFO)
+
 
 class DTPTBGame(Game):
     """
