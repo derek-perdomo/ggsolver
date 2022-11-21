@@ -1,13 +1,15 @@
 import logging
-from ggsolver.graph import NodePropertyMap
-from ggsolver.util import ColoredMsg
-from ggsolver.models import Solver
 from functools import reduce
 from tqdm import tqdm
+
+import ggsolver.graph as graph
+import ggsolver.util as util
+import ggsolver.models as models
+
 logger = logging.getLogger(__name__)
 
 
-class SWinReach(Solver):
+class SWinReach(models.Solver):
     """
     Computes sure winning region for player 1 or player 2 to reach a set of final states in a deterministic
     two-player turn-based game.
@@ -22,25 +24,25 @@ class SWinReach(Solver):
     """
     def __init__(self, graph, final=None, player=1, **kwargs):
         if not graph["is_deterministic"]:
-            logger.warning(ColoredMsg.warn(f"dtptb.SWinReach expects deterministic game graph. Input parameters: "
+            logger.warning(util.ColoredMsg.warn(f"dtptb.SWinReach expects deterministic game graph. Input parameters: "
                                            f"is_deterministic={graph['is_deterministic']}, "
                                            f"is_probabilistic={graph['is_probabilistic']}."))
 
         if not graph["is_turn_based"]:
-            logger.warning(ColoredMsg.warn(f"dtptb.SWinReach expects turn-based game graph. Input parameters: "
+            logger.warning(util.ColoredMsg.warn(f"dtptb.SWinReach expects turn-based game graph. Input parameters: "
                                            f"is_turn_based={graph['is_turn_based']}."))
 
         super(SWinReach, self).__init__(graph, **kwargs)
         self._player = player
         self._final = final if final is not None else self.get_final_states()
         self._turn = self._solution["turn"]
-        self._rank = NodePropertyMap(self._solution, default=float("inf"))
+        self._rank = graph.NodePropertyMap(self._solution, default=float("inf"))
         self._solution["rank"] = self._rank
 
     def reset(self):
         """ Resets the solver to initial state. """
         super(SWinReach, self).reset()
-        self._rank = NodePropertyMap(self._solution)
+        self._rank = graph.NodePropertyMap(self._solution)
         self._is_solved = False
 
     def get_final_states(self):
