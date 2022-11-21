@@ -1,9 +1,10 @@
 import random
-from ggsolver.models import Solver
+# from ggsolver.models import Solver
+import ggsolver.models as models
 from tqdm import tqdm
 
 
-class ASWinReach(Solver):
+class ASWinReach(models.Solver):
     def __init__(self, graph, final=None, player=1, **kwargs):
         """
         Instantiates a sure winning reachability game solver.
@@ -80,7 +81,7 @@ class ASWinReach(Solver):
                 graph.hide_edge(uid, vid, key)
 
 
-class PWinReach(Solver):
+class PWinReach(models.Solver):
     def __init__(self, graph, final=None, player=1, **kwargs):
         """
         Instantiates a sure winning reachability game solver.
