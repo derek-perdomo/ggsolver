@@ -10,7 +10,7 @@ class CBSGame(ReachabilityGame):
     """
     def __init__(self, json_fname, final_node):
         super(ReachabilityGame, self).__init__()
-        self._init_state = ("client", (0, 0, 0), (1, 1, 1, 1, 1), 1)
+        self._init_state = ("client", (0, 0, 0), (1, 1, 1, 1, 1), 2)
 
         self._json_fname = json_fname
         self._final_node = final_node
@@ -83,18 +83,21 @@ class CBSGame(ReachabilityGame):
                     return (target_node, obtained_credentials, firewall_state, 1)
                 else:
                     return (source_node, obtained_credentials, firewall_state, 1)
+            else:
+                return (source_node, obtained_credentials, firewall_state, 1)
         ## defender action ##
         else:
             if act[0:19] == "change_firewall_to_":
                 new_firewall_state_string = act[19:]
                 new_firewall_state = [int(i) for i in new_firewall_state_string.strip(')(').split(', ')]
                 return (source_node, obtained_credentials, tuple(new_firewall_state), 2)
+            else:
+                return (source_node, obtained_credentials, firewall_state, 2)
 
     def final(self, state):
         return self._final_states
 
     def turn(self, state):
-        print(state)
         return state[3]
 
     def _construct_states(self):
@@ -150,12 +153,6 @@ if __name__ == '__main__':
     game = CBSGame("network.json", final_node="5")
     print(f"{len(game.states())=}")
     print(f"{len(game.actions())=}")
-    if None in game.states():
-        print("Yes")
-    else:
-        print("no")
-    for i in range(10):
-        print(game.states()[i])
-    # graph = game.graphify(pointed=True)
+    graph = game.graphify(pointed=True)
     # print(f"{graph.number_of_nodes()=}")
     # print(f"{graph.number_of_edges()=}")
