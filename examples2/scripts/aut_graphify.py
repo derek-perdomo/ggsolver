@@ -2,7 +2,7 @@
 Development test code for Automaton.graphify.
 """
 
-from ggsolver.interfaces.i_spot import SpotAutomaton
+from ggsolver.logic import SpotAutomaton
 
 
 if __name__ == '__main__':

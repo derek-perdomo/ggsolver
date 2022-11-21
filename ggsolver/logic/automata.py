@@ -1,6 +1,4 @@
-import itertools
-from functools import reduce
-from ggsolver.models import Automaton
+import ggsolver.logic.base as base
 
 
 def filter_kwargs(states=None, atoms=None, trans_dict=None, init_state=None, final=None):
@@ -23,11 +21,11 @@ def filter_kwargs(states=None, atoms=None, trans_dict=None, init_state=None, fin
     return kwargs
 
 
-class DFA(Automaton):
+class DFA(base.Automaton):
     """
-    Represents a Deterministic Finite-state Automaton.
+    Represents a Deterministic Finite-state base.Automaton.
 
-    - Acceptance Type: `Automaton.ACC_REACH`
+    - Acceptance Type: `base.Automaton.ACC_REACH`
     - Acceptance condition: `(Reach, 0)`
 
         - **Accepts:** Finite words.
@@ -51,14 +49,14 @@ class DFA(Automaton):
         kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
         super(DFA, self).__init__(**kwargs,
                                   is_deterministic=True,
-                                  acc_cond=(Automaton.ACC_REACH, 0))
+                                  acc_cond=(base.Automaton.ACC_REACH, 0))
 
 
-class Monitor(Automaton):
+class Monitor(base.Automaton):
     """
     Represents a Safety automaton.
 
-    - Acceptance Type: `Automaton.ACC_SAFETY`
+    - Acceptance Type: `base.Automaton.ACC_SAFETY`
     - Acceptance condition: `(Safety, 0)`
 
         - **Accepts:** Infinite words.
@@ -82,14 +80,14 @@ class Monitor(Automaton):
         kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
         super(Monitor, self).__init__(**kwargs,
                                       is_deterministic=True,
-                                      acc_cond=(Automaton.ACC_SAFETY, 0))
+                                      acc_cond=(base.Automaton.ACC_SAFETY, 0))
 
 
-class DBA(Automaton):
+class DBA(base.Automaton):
     """
     Represents a Deterministic Buchi automaton.
 
-    - Acceptance Type: `Automaton.ACC_BUCHI`
+    - Acceptance Type: `base.Automaton.ACC_BUCHI`
     - Acceptance condition: `(Buchi, 0)`
 
         - **Accepts:** Infinite words.
@@ -113,14 +111,14 @@ class DBA(Automaton):
         kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
         super(DBA, self).__init__(**kwargs,
                                   is_deterministic=True,
-                                  acc_cond=(Automaton.ACC_BUCHI, 0))
+                                  acc_cond=(base.Automaton.ACC_BUCHI, 0))
 
 
-class DCBA(Automaton):
+class DCBA(base.Automaton):
     """
     Represents a Deterministic co-Buchi automaton.
 
-    - Acceptance Type: `Automaton.ACC_COBUCHI`
+    - Acceptance Type: `base.Automaton.ACC_COBUCHI`
     - Acceptance condition: `(co-Buchi, 0)`
 
         - **Accepts:** Infinite words.
@@ -144,14 +142,14 @@ class DCBA(Automaton):
         kwargs = filter_kwargs(states, atoms, trans_dict, init_state, final)
         super(DCBA, self).__init__(**kwargs,
                                    is_deterministic=True,
-                                   acc_cond=(Automaton.ACC_COBUCHI, 0))
+                                   acc_cond=(base.Automaton.ACC_COBUCHI, 0))
 
 
-class DPA(Automaton):
+class DPA(base.Automaton):
     """
     Represents a Deterministic Buchi automaton.
 
-    - Acceptance Type: `Automaton.ACC_PARITY`
+    - Acceptance Type: `base.Automaton.ACC_PARITY`
     - Acceptance condition: `(Parity Min Even , 0)`
 
         - **Accepts:** Infinite words.
@@ -176,39 +174,4 @@ class DPA(Automaton):
         kwargs = filter_kwargs(states, atoms, trans_dict, init_state, None)
         super(DPA, self).__init__(**kwargs,
                                   is_deterministic=True,
-                                  acc_cond=(Automaton.ACC_PARITY, 0))
-
-
-class DFACrossProduct(DFA):
-    def __init__(self, automata):
-        super(DFACrossProduct, self).__init__()
-        self.automata = list(automata)
-        assert len(self.automata) > 0, "There should be at least one DFA to compute product!"
-
-    def states(self):
-        return list(itertools.product(*[dfa.states() for dfa in self.automata]))
-
-    def atoms(self):
-        return list(reduce(set.union, [set(dfa.atoms()) for dfa in self.automata]))
-
-    def init_state(self):
-        return tuple(dfa.init_state() for dfa in self.automata)
-
-    def delta(self, state, inp):
-        return tuple(self.automata[i].delta(state[i], inp) for i in range(len(self.automata)))
-
-
-class DFAIntersectionProduct(DFACrossProduct):
-    def final(self, state):
-        """
-        DFAs have single acceptance set. Hence, we assert acceptance set of final states to be 0.
-        """
-        return all(dfa.final(state[0]) == 0 for dfa in self.automata)
-
-
-class DFAUnionProduct(DFACrossProduct):
-    def final(self, state):
-        """
-        DFAs have single acceptance set. Hence, we assert acceptance set of final states to be 0.
-        """
-        return any(dfa.final(state[0]) == 0 for dfa in self.automata)
+                                  acc_cond=(base.Automaton.ACC_PARITY, 0))

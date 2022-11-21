@@ -1,4 +1,5 @@
-from ggsolver.logic.pl import *
+# from ggsolver.logic.pl import *
+from ggsolver.logic import *
 
 
 if __name__ == '__main__':
