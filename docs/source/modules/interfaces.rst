@@ -1,7 +1,7 @@
 Interfaces
 ==========
 
-.. autoclass:: ggsolver.interfaces.i_spot.SpotAutomaton
+.. autoclass:: ggsolver.logic.SpotAutomaton
     :members:   __init__,
                 _determine_options,
                 sigma,

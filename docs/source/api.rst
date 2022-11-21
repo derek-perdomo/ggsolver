@@ -8,8 +8,8 @@ API
 
     modules/graph
     modules/models
-    modules/interfaces
     modules/automata
+    modules/interfaces
     modules/dtptb
     modules/mdp
 
