@@ -52,7 +52,7 @@ class BankHeistWindow(gw.Window):
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
             anchor=gw.AnchorStyle.CENTER,
             sprites=self._game_config["p1"]["sprites"],
-            backcolor=gw.COLOR_TRANSPARENT
+            backcolor=gw.COLOR_TRANSPARENT,
         )
 
         # TODO. Add police cars.
@@ -119,6 +119,9 @@ class Character(gw.Control):
             (x, y) = self.parent.name
             if (x, y - 1) in self.parent.parent.controls:
                 self.parent = self.parent.parent[x, y - 1]
+
+        if event.key == pygame.K_h:
+            self.visible = not self.visible
 
 
 if __name__ == '__main__':
