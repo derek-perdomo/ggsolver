@@ -53,9 +53,59 @@ class BankHeistWindow(gw.Window):
             anchor=gw.AnchorStyle.CENTER,
             sprites=self._game_config["p1"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
+            init_sprite="N",
         )
 
-        # TODO. Add police cars.
+        # Police cars
+        # PATCH: Hard coded to two for now.
+        self._police1 = Character(
+            name="police1",
+            parent=self.grid[3, 1],
+            position=(0, 0),
+            size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
+            anchor=gw.AnchorStyle.CENTER,
+            sprites=self._game_config["p2"]["sprites"],
+            backcolor=gw.COLOR_TRANSPARENT,
+            visible=False,
+            init_sprite="N",
+        )
+        self._police2 = Character(
+            name="police2",
+            parent=self.grid[4, 1],
+            position=(0, 0),
+            size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
+            anchor=gw.AnchorStyle.CENTER,
+            sprites=self._game_config["p2"]["sprites"],
+            backcolor=gw.COLOR_TRANSPARENT,
+            visible=False,
+            init_sprite="N",
+        )
+
+        # Banks
+        bank1_pos = self._game_config["banks"]["banks.1"]
+        bank2_pos = self._game_config["banks"]["banks.2"]
+        self._bank1 = Character(
+            name="bank1",
+            parent=self.grid[bank1_pos[0], bank1_pos[1]],
+            position=(0, 0),
+            size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
+            anchor=gw.AnchorStyle.CENTER,
+            sprites=self._game_config["banks"]["sprites"],
+            backcolor=gw.COLOR_TRANSPARENT,
+            visible=True,
+            init_sprite="front",
+        )
+        self._bank2 = Character(
+            name="bank2",
+            parent=self.grid[bank2_pos[0], bank2_pos[1]],
+            position=(0, 0),
+            size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
+            anchor=gw.AnchorStyle.CENTER,
+            sprites=self._game_config["banks"]["sprites"],
+            backcolor=gw.COLOR_TRANSPARENT,
+            visible=True,
+            init_sprite="front",
+        )
 
     def sm_update(self, event_args):
         print(f"sm_update: {event_args}")

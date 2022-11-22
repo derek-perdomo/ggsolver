@@ -92,14 +92,14 @@ GAME_CONFIG = {
     "p2": {
         "sprites": {
             # Direction of facing
-            "N": "sprites/cars/police/police_iso0005.png",
-            "E": "sprites/cars/police/police_iso0007.png",
-            "S": "sprites/cars/police/police_iso0001.png",
-            "W": "sprites/cars/police/police_iso0003.png",
-            "NE": "sprites/cars/police/police_iso0006.png",
-            "SE": "sprites/cars/police/police_iso0004.png",
-            "NW": "sprites/cars/police/police_iso0000.png",
-            "SW": "sprites/cars/police/police_iso0002.png",
+            "N": "sprites/cars/police/policeiso_0005.png",
+            "E": "sprites/cars/police/policeiso_0007.png",
+            "S": "sprites/cars/police/policeiso_0001.png",
+            "W": "sprites/cars/police/policeiso_0003.png",
+            "NE": "sprites/cars/police/policeiso_0006.png",
+            "SE": "sprites/cars/police/policeiso_0004.png",
+            "NW": "sprites/cars/police/policeiso_0000.png",
+            "SW": "sprites/cars/police/policeiso_0002.png",
         },
         "p2.1": {
             "accessible region": TERRAIN,
@@ -113,6 +113,9 @@ GAME_CONFIG = {
         },
     },
     "banks": {
+        "sprites": {
+            "front": "sprites/bank/bank.jpg",
+        },
         "banks.1": [3, 4],
         "banks.2": [7, 7],
     },
