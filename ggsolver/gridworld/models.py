@@ -9,6 +9,8 @@ import ggsolver.gridworld.color_util as colors
 # ===========================================================================================
 GWSIM_EVENTS = pygame.USEREVENT + 1
 GWSIM_EVENTS_SM_UPDATE = 0
+GWSIM_EVENTS_GRIDCELL_ENTER = 1
+GWSIM_EVENTS_GRIDCELL_LEAVE = 2
 
 
 # ===========================================================================================
@@ -239,20 +241,20 @@ class Window:
         * frame_rate: (float) Frames per second for pygame rendering. (Default: 60)
         * sm_update_rate: (float) State machine updates per second. (Default: 1)
         * backcolor: (tuple[int, int, int]) Default backcolor of window. (Default: (0, 0, 0))
-        * on_quit: (function[dict:event_args] -> None) Handler for pygame.QUIT event. (Default: None)
-        * on_window_resized: (function[dict:event_args] -> None) Handler for pygame.WINDOWRESIZED event. (Default: None)
-        * on_window_minimized: (function[dict:event_args] -> None) Handler for pygame.WINDOWMINIMIZED event. (Default: None)
-        * on_window_maximized: (function[dict:event_args] -> None) Handler for pygame.WINDOWMAXIMIZED event. (Default: None)
-        * on_window_enter: (function[dict:event_args] -> None) Handler for pygame.WINDOWENTER event. (Default: None)
-        * on_window_leave: (function[dict:event_args] -> None) Handler for pygame.WINDOWLEAVE event. (Default: None)
-        * on_window_focus_gained: (function[dict:event_args] -> None) Handler for pygame.WINDOWFOCUSGAINED event. (Default: None)
-        * on_window_focus_lost: (function[dict:event_args] -> None) Handler for pygame.WINDOWFOCUSLOST event. (Default: None)
-        * on_window_moved: (function[dict:event_args] -> None) Handler for pygame.WINDOWMOVED event. (Default: None)
-        * on_window_close: (function[dict:event_args] -> None) Handler for pygame.WINDOWCLOSE event. (Default: None)
-        * on_key_up: (function[dict:event_args] -> None) Handler for pygame.KEYUP event. (Default: None)
-        * on_key_down: (function[dict:event_args] -> None) Handler for pygame.KEYDOWN event. (Default: None)
-        * on_mouse_button_up: (function[dict:event_args] -> None) Handler for pygame.MOUSEBUTTONUP event. (Default: None)
-        * on_mouse_button_down: (function[dict:event_args] -> None) Handler for pygame.MOUSEBUTTONDOWN event. (Default: None)
+        * on_quit: (function[event_args: pygame.event.Event] -> None) Handler for pygame.QUIT event. (Default: None)
+        * on_window_resized: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWRESIZED event. (Default: None)
+        * on_window_minimized: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWMINIMIZED event. (Default: None)
+        * on_window_maximized: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWMAXIMIZED event. (Default: None)
+        * on_window_enter: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWENTER event. (Default: None)
+        * on_window_leave: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWLEAVE event. (Default: None)
+        * on_window_focus_gained: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWFOCUSGAINED event. (Default: None)
+        * on_window_focus_lost: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWFOCUSLOST event. (Default: None)
+        * on_window_moved: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWMOVED event. (Default: None)
+        * on_window_close: (function[event_args: pygame.event.Event] -> None) Handler for pygame.WINDOWCLOSE event. (Default: None)
+        * on_key_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYUP event. (Default: None)
+        * on_key_down: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYDOWN event. (Default: None)
+        * on_mouse_button_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.MOUSEBUTTONUP event. (Default: None)
+        * on_mouse_button_down: (function[event_args: pygame.event.Event] -> None) Handler for pygame.MOUSEBUTTONDOWN event. (Default: None)
 
         Programmer's Note:
             * Since SM is a special element, Window handles the SMUPDATE event with sm_update() function.
@@ -624,10 +626,10 @@ class Control(pygame.sprite.Sprite):
         kwargs:
             * visible: (bool) Whether control is visible (Default: True)
             * anchor: (AnchorStyle) Whether control is visible (Default: None)
-            * on_key_up: (function[dict:event_args] -> None) Handler for pygame.KEYUP event. (Default: None)
-            * on_key_down: (function[dict:event_args] -> None) Handler for pygame.KEYDOWN event. (Default: None)
-            * on_mouse_button_up: (function[dict:event_args] -> None) Handler for pygame.MOUSEBUTTONUP event. (Default: None)
-            * on_mouse_button_down: (function[dict:event_args] -> None) Handler for pygame.MOUSEBUTTONDOWN event. (Default: None)
+            * on_key_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYUP event. (Default: None)
+            * on_key_down: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYDOWN event. (Default: None)
+            * on_mouse_button_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.MOUSEBUTTONUP event. (Default: None)
+            * on_mouse_button_down: (function[event_args: pygame.event.Event] -> None) Handler for pygame.MOUSEBUTTONDOWN event. (Default: None)
 
         """
         super(Control, self).__init__()
@@ -869,16 +871,17 @@ class Control(pygame.sprite.Sprite):
         if not self.handles(event):
             return
 
-        # print(self, event.type, self._event_handlers[event.type])
-
         # Handle in-built pygame events
         if event.type < pygame.USEREVENT:
+            # print(self, pygame.event.event_name(event.type), self._event_handlers[event.type])
             for func in self._event_handlers[event.type]:
                 func(event)
 
         # Handle custom GWSim events
         if event.type == GWSIM_EVENTS and (event.type, event.id) in self._event_handlers.keys():
-            pass
+            # print(self, (pygame.event.event_name(event.type), event.id), self._event_handlers[(event.type, event.id)])
+            for func in self._event_handlers[(event.type, event.id)]:
+                func(event)
 
     def handles(self, event):
         if event.type < pygame.USEREVENT:
@@ -980,6 +983,7 @@ class Control(pygame.sprite.Sprite):
             control = self._controls.pop(control, None)
         else:
             control = self._controls.pop(control.name, None)
+        return control
 
     def create_control(self, cls_control, constructor_kwargs):
         # Preprocess input arguments (basic control arguments, any addtional parameters should be passed by user)
@@ -1026,6 +1030,10 @@ class Grid(Control):
         """
         Special kwargs:
         * cls_cell: (Cell) The class (Cell or derived from Cell) that is used to construct background cells in grid.
+
+        Special events: (same handler will be shared with all cells)
+        * on_cell_enter: (function[event_args: pygame.event.Event] -> None) Handler for pygame.QUIT event. (Default: None)
+        * on_cell_leave: (function[event_args: pygame.event.Event] -> None) Handler for pygame.QUIT event. (Default: None)
         """
         super(Grid, self).__init__(name, parent, position, size, **kwargs)
 
@@ -1039,35 +1047,63 @@ class Grid(Control):
         self._cls_cell = kwargs["cls_cell"] if "cls_cell" in kwargs else Cell
 
         if self._grid_layout == GridLayout.AUTO:
-            self._construct_grid(self._cls_cell)
+            self._construct_grid(self._cls_cell, **kwargs)
         elif self._grid_layout == GridLayout.CUSTOM:
-            self.construct_grid()
+            self.construct_grid(**kwargs)
         else:
             raise ValueError("GridLayout unrecognized.")
 
     def __getitem__(self, cell):
         return self._controls[cell]
 
-    def _construct_grid(self, cls_cell):
+    def _construct_grid(self, cls_cell, **kwargs):
         """ Auto grid construction. Uniform cells. """
+
+        # Check for special events (on_cell_leave, on_cell_enter)
+        cell_kwargs = {k: v for k, v in kwargs.items() if k in ["on_cell_enter", "on_cell_leave"]}
+
         rows, cols = self._grid_size
         cell_size = (self.width // rows, self.height // cols)
         for x in range(rows):
             for y in range(cols):
                 position = (cell_size[0] * x, self.height - cell_size[1] * (y + 1))
                 cell_xy = cls_cell(
-                    name=(x, y), parent=self, position=position, size=cell_size,
-                    bordercolor=self._bordercolor, borderstyle=self._borderstyle, borderwidth=self._borderwidth,
-                    level=0
+                    name=(x, y),
+                    parent=self,
+                    position=position,
+                    size=cell_size,
+                    bordercolor=self._bordercolor,
+                    borderstyle=self._borderstyle,
+                    borderwidth=self._borderwidth,
+                    level=0,
+                    **cell_kwargs
                 )
                 self._controls[(x, y)] = cell_xy
                 self._sprites[(x, y)].add(cell_xy)
 
-    def construct_grid(self):
+    def construct_grid(self, **kwargs):
         raise NotImplementedError("User should implement this if grid is generated in custom mode.")
 
 
 class Cell(Control):
+    def __init__(self, name, parent, position, size, **kwargs):
+        """
+        Special Events:
+        * on_cell_enter: (function[event_args: pygame.event.Event] -> None) Handler for pygame.QUIT event. (Default: None)
+        * on_cell_leave: (function[event_args: pygame.event.Event] -> None) Handler for pygame.QUIT event. (Default: None)
+        """
+        super(Cell, self).__init__(name, parent, position, size, **kwargs)
+
+        # Special event handlers
+        self._event_handlers[(GWSIM_EVENTS, GWSIM_EVENTS_GRIDCELL_ENTER)] = []
+        self._event_handlers[(GWSIM_EVENTS, GWSIM_EVENTS_GRIDCELL_LEAVE)] = []
+
+        if "on_cell_enter" in kwargs:
+            self.add_event_handler((GWSIM_EVENTS, GWSIM_EVENTS_GRIDCELL_ENTER), kwargs["on_cell_enter"])
+        if "on_cell_leave" in kwargs:
+            self.add_event_handler((GWSIM_EVENTS, GWSIM_EVENTS_GRIDCELL_LEAVE), kwargs["on_cell_leave"])
+
+
     def update(self):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
         super(Cell, self).update()
@@ -1082,5 +1118,28 @@ class Cell(Control):
         else:
             self.image.fill(colors.COLOR_TRANSPARENTAN)
 
+    def add_control(self, control):
+        super(Cell, self).add_control(control)
+        try:
+            pygame.event.post(
+                pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_GRIDCELL_ENTER,
+                    sender=self,
+                    new_control=control
+                )
+            )
+        except pygame.error:
+            pass
 
-
+    def rem_control(self, control):
+        control = super(Cell, self).rem_control(control)
+        if control is not None:
+            pygame.event.post(
+                pygame.event.Event(
+                    GWSIM_EVENTS,
+                    id=GWSIM_EVENTS_GRIDCELL_LEAVE,
+                    sender=self,
+                    rem_control=control
+                )
+            )
