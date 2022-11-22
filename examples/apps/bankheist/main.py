@@ -109,6 +109,20 @@ class BankHeistWindow(gw.Window):
             init_sprite="front",
         )
 
+        # Gas station
+        gas1_pos = self._game_config["gas"]["gas.1"]
+        self._gas = Character(
+            name="gas",
+            parent=self.grid[gas1_pos[0], gas1_pos[1]],
+            position=(0, 0),
+            size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
+            dockstyle=gw.DockStyle.CENTER,
+            sprites=self._game_config["gas"]["sprites"],
+            backcolor=gw.COLOR_TRANSPARENT,
+            visible=True,
+            init_sprite="front",
+        )
+
     def sm_update(self, sender, event_args):
         print(f"sm_update: {event_args}")
 
@@ -214,7 +228,7 @@ class Character(gw.Control):
 if __name__ == '__main__':
     # conf = f"saved_games/game_2022_11_21_20_05.conf"
 
-    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_10_22.conf")
+    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_16_24.conf")
     # conf = f"E:/Github-Repositories/ggsolver/examples/apps/bankheist/saved_games/game_2022_11_21_20_05.conf"
     window = BankHeistWindow(name="Bank Heist", size=(660, 480), game_config=conf)
     window.run()

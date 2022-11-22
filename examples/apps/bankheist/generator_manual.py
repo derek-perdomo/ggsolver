@@ -119,6 +119,12 @@ GAME_CONFIG = {
         "banks.1": [3, 4],
         "banks.2": [7, 7],
     },
+    "gas": {
+        "sprites": {
+            "front": "sprites/bank/gas.png",
+        },
+        "gas.1": [4, 3]
+    },
     "metadata": {
         "author": os.getenv('username'),
         "datetime": time.strftime("%Y-%m-%d %H:%M"),
