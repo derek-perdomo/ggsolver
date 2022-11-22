@@ -638,6 +638,8 @@ class Control(pygame.sprite.Sprite):
 
         self._controls = dict()
         self._register_with_window(self)
+        if not isinstance(self._parent, Window):
+            self._parent.add_control(self)
 
         # Geometry properties
         self._anchor = kwargs["anchor"] if "anchor" in kwargs else AnchorStyle.NONE
@@ -705,7 +707,9 @@ class Control(pygame.sprite.Sprite):
 
     @parent.setter
     def parent(self, value):
+        self._parent.rem_control(self)
         self._parent = value
+        self._parent.add_control(self)
 
     @property
     def position(self):
