@@ -18,6 +18,9 @@ class CBSGame(ReachabilityGame):
         self._states, self._credential_set, self._possible_firewall_states, self._connections, self._final_states = self._construct_states()
         self._actions = self._construct_actions()
 
+        self._ATTACKER_TURN = 2
+        self._DEFENDER_TURN = 1
+
     def _decode(self):
         # do something with self._json
         # return nx.MultiDiGraph()
@@ -33,7 +36,7 @@ class CBSGame(ReachabilityGame):
         return self._actions
 
     def delta(self, state, act):
-        ### state is of form (int source_node, bool[] obtained_credentials, bool[] firewall_state, int turn) ###
+        ### state is of form (int source_node, bool[] obtained_credentials, bool[] firewall_state, int turn, bool[] owned nodes) ###
         source_node = state[0]
         obtained_credentials = state[1]
         firewall_state = state[2]
@@ -41,31 +44,35 @@ class CBSGame(ReachabilityGame):
         owned_nodes = state[4]
 
         ## attacker actions ##
-        if turn == 2:
+        if turn == self._ATTACKER_TURN:
+            no_attacker_action_state = (source_node, obtained_credentials, firewall_state, self._DEFENDER_TURN, owned_nodes)
+
             if act == "no_attacker_action":
-                return (source_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                return no_attacker_action_state
             elif act[0:13] == "move_to_node_":
                 target_node = act[13:]
                 if(owned_nodes[int(target_node)]) == 1:
-                    return (target_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                    return (target_node, obtained_credentials, firewall_state, self._DEFENDER_TURN, owned_nodes)
                 else:
-                    return (source_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                    return no_attacker_action_state
             elif act[0:16] == "local_attack_on_":
                 target_node = act[16:]
                 if target_node == source_node:
+                    # find new credentials
                     new_obtained_credentials = list(obtained_credentials)
                     for credential in self._cbs_network.nodes[target_node]["creds_stored"]:
                         # the "creds_stored" is a list of credentials of form (node_to_be_used_on, service, credential)
                         if new_obtained_credentials[int(credential[2])] == 0:
                             new_obtained_credentials[int(credential[2])] = 1
-                    return (source_node, tuple(new_obtained_credentials), firewall_state, 1, owned_nodes)
+                    return (source_node, tuple(new_obtained_credentials), firewall_state, self._DEFENDER_TURN, owned_nodes)
                 else:
-                    return (source_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                    return no_attacker_action_state
             elif act[0:11] == "connect_to_":
                 index = act.find("_with_")
                 target_node = act[11:index]
                 credential = act[index+6:]
 
+                # Check conditions for connection
                 source_connected_to_target = False
                 connection_index = 0
                 for i, connection in enumerate(self._connections):
@@ -79,19 +86,19 @@ class CBSGame(ReachabilityGame):
                     # return state that is the same as passed state but at new node
                     new_owned_nodes = list(owned_nodes)
                     new_owned_nodes[int(target_node)] = 1
-                    return (target_node, obtained_credentials, firewall_state, 1, tuple(new_owned_nodes))
+                    return (target_node, obtained_credentials, firewall_state, self._DEFENDER_TURN, tuple(new_owned_nodes))
                 else:
-                    return (source_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                    return no_attacker_action_state
             else:
-                return (source_node, obtained_credentials, firewall_state, 1, owned_nodes)
+                return no_attacker_action_state
         ## defender action ##
         else:
             if act[0:19] == "change_firewall_to_":
                 new_firewall_state_string = act[19:]
                 new_firewall_state = [int(i) for i in new_firewall_state_string.strip(')(').split(', ')]
-                return (source_node, obtained_credentials, tuple(new_firewall_state), 2, owned_nodes)
+                return (source_node, obtained_credentials, tuple(new_firewall_state), self._ATTACKER_TURN, owned_nodes)
             else:
-                return (source_node, obtained_credentials, firewall_state, 2, owned_nodes)
+                return (source_node, obtained_credentials, firewall_state, self._ATTACKER_TURN, owned_nodes)
 
     def final(self, state):
         return self._final_states
