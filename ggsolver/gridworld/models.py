@@ -451,7 +451,7 @@ class Window:
 
         # Handle custom GWSim events
         if event.type == GWSIM_EVENTS and (event.type, event.id) in self._event_handlers.keys():
-            if event.id == GWSIM_EVENTS_SM_UPDATE and self._game_paused:
+            if event.id == GWSIM_EVENTS_SM_UPDATE and not self._game_paused:
                 event.sender = self
                 for func in self._event_handlers[(event.type, event.id)]:
                     func(event)
@@ -580,7 +580,7 @@ class Window:
         mods = pygame.key.get_mods()
         if event_args.key == pygame.K_p and mods & pygame.KMOD_SHIFT:
             self._game_paused = not self._game_paused
-            print(f"[INFO] Game {'running.' if self._game_paused else 'paused.'}")
+            print(f"[INFO] Game {'running.' if not self._game_paused else 'paused.'}")
 
 
 class GWSim(StateMachine):
