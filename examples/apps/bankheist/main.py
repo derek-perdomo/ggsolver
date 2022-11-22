@@ -9,9 +9,11 @@ import numpy as np
 import pygame
 import os
 import pathlib
+import itertools
 
 import ggsolver.mdp as mdp
 import ggsolver.gridworld as gw
+import ggsolver.gridworld.util as gw_utils
 from collections import namedtuple
 
 curr_file_path = pathlib.Path(__file__).parent.resolve()
@@ -225,10 +227,46 @@ class Character(gw.Control):
             self.visible = not self.visible
 
 
-if __name__ == '__main__':
-    # conf = f"saved_games/game_2022_11_21_20_05.conf"
+class BankHeistMDP(mdp.QualitativeMDP):
+    def __init__(self, game_config):
+        super(BankHeistMDP, self).__init__()
+        with open(game_config, "r") as file:
+            self._game_config = json.load(file)
 
+        self._terrain = np.array(self._game_config["terrain"])
+        self._p2_1_accessible = np.array(self._game_config["p2"]["p2.1"]["accessible region"])
+        self._p2_2_accessible = np.array(self._game_config["p2"]["p2.2"]["accessible region"])
+        self._grid_size = tuple(reversed(self._terrain.shape))
+
+    def states(self):
+        """
+        State representation: (p1.cell, p2.1.cell, p2.2.cell, p1.gas)
+        :return:
+        """
+        x_max, y_max = self._grid_size
+        p1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._terrain[y, x] == 1]
+        p1_gas = self._game_config["p1"]["gas capacity"]
+        p2_1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_1_accessible[y, x] == 1]
+        p2_2_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_2_accessible[y, x] == 1]
+
+        return list(itertools.product(p1_walkable_cells, p2_1_walkable_cells, p2_2_walkable_cells, range(p1_gas)))
+
+    def actions(self):
+        return [
+            gw_utils.GW_ACT_N,
+            gw_utils.GW_ACT_S,
+            gw_utils.GW_ACT_E,
+            gw_utils.GW_ACT_W,
+        ]
+
+    def delta(self, state, act):
+        pass
+
+
+if __name__ == '__main__':
     conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_16_24.conf")
-    # conf = f"E:/Github-Repositories/ggsolver/examples/apps/bankheist/saved_games/game_2022_11_21_20_05.conf"
-    window = BankHeistWindow(name="Bank Heist", size=(660, 480), game_config=conf)
-    window.run()
+    game = BankHeistMDP(game_config=conf)
+    print(len(game.states()))
+
+    # window = BankHeistWindow(name="Bank Heist", size=(660, 480), game_config=conf)
+    # window.run()
