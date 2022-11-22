@@ -37,6 +37,8 @@ class BankHeistWindow(gw.Window):
             grid_size=grid_size,
             backcolor=gw.COLOR_BEIGE,
             anchor=gw.AnchorStyle.TOP_LEFT,
+            on_cell_leave=self.on_cell_leave,
+            on_cell_enter=self.on_cell_enter,
         )
 
         for x in range(grid_size[0]):
@@ -66,7 +68,7 @@ class BankHeistWindow(gw.Window):
             anchor=gw.AnchorStyle.CENTER,
             sprites=self._game_config["p2"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
-            visible=False,
+            # visible=False,
             init_sprite="N",
         )
         self._police2 = Character(
@@ -77,7 +79,7 @@ class BankHeistWindow(gw.Window):
             anchor=gw.AnchorStyle.CENTER,
             sprites=self._game_config["p2"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
-            visible=False,
+            # visible=False,
             init_sprite="N",
         )
 
@@ -107,8 +109,48 @@ class BankHeistWindow(gw.Window):
             init_sprite="front",
         )
 
-    def sm_update(self, event_args):
+    def sm_update(self, sender, event_args):
         print(f"sm_update: {event_args}")
+
+    def on_cell_leave(self, sender, event_args):
+        # print(f"on_cell_leave: {sender.name=}, {event_args=}")
+        if sender.name == event_args.trigger.name:
+            self.arrange_controls_in_cell(event_args.trigger)
+
+    def on_cell_enter(self, sender, event_args):
+        # print(f"on_cell_enter: {sender.name=}, {event_args=}")
+        if sender.name == event_args.trigger.name:
+            self.arrange_controls_in_cell(event_args.trigger)
+
+    def arrange_controls_in_cell(self, cell):
+        if len(cell.controls) == 0:
+            pass
+        
+        elif len(cell.controls) == 1:
+            print(f"arrange_controls_in_cell: {cell.name}, {len(cell.controls)=}")
+            control = list(cell.controls.values())[0]
+            control.width = 0.75 * cell.width
+            control.height = 0.75 * cell.height
+            control.anchor = gw.AnchorStyle.CENTER
+
+        elif len(cell.controls) == 2:
+            print(f"arrange_controls_in_cell: {cell.name}, {len(cell.controls)=}")
+
+            control0 = list(cell.controls.values())[0]
+            control0.anchor = gw.AnchorStyle.NONE
+            control0.left = 0
+            control0.top = 0
+            control0.width = 0.25 * cell.width
+            control0.height = 0.25 * cell.height
+
+            control1 = list(cell.controls.values())[1]
+            control1.anchor = gw.AnchorStyle.NONE
+            control1.left = 0.5 * cell.width
+            control1.top = 0.5 * cell.height
+            control1.width = 0.25 * cell.width
+            control1.height = 0.25 * cell.height
+        else:
+            print(f"Not supported")
 
 
 class Character(gw.Control):
@@ -128,7 +170,10 @@ class Character(gw.Control):
 
         self.add_event_handler(pygame.MOUSEBUTTONDOWN, self._on_select_changed)
 
-    def _on_select_changed(self, event):
+    def __repr__(self):
+        return f"<{self.__class__.__name__} at {self.parent.name}>"
+
+    def _on_select_changed(self, sender, event_args):
         self._is_selected = not self._is_selected
     
     def update(self):
@@ -140,33 +185,33 @@ class Character(gw.Control):
                 self._sprites[self._curr_sprite] = pygame.transform.scale(self._sprites[self._curr_sprite], (50, 50))
             self._backimage = self._sprites[self._curr_sprite]
 
-    def on_key_down(self, event):
-        if event.sender.name == "robber":
-            if event.key == pygame.K_RIGHT:
+    def on_key_down(self, sender, event_args):
+        if self.name == "robber":
+            if event_args.key == pygame.K_RIGHT:
                 self._curr_sprite = "E"
                 (x, y) = self.parent.name
                 if (x + 1, y) in self.parent.parent.controls:
                     self.parent = self.parent.parent[x + 1, y]
 
-            if event.key == pygame.K_LEFT:
+            if event_args.key == pygame.K_LEFT:
                 self._curr_sprite = "W"
                 (x, y) = self.parent.name
                 if (x - 1, y) in self.parent.parent.controls:
                     self.parent = self.parent.parent[x - 1, y]
 
-            if event.key == pygame.K_UP:
+            if event_args.key == pygame.K_UP:
                 self._curr_sprite = "N"
                 (x, y) = self.parent.name
                 if (x, y + 1) in self.parent.parent.controls:
                     self.parent = self.parent.parent[x, y + 1]
 
-            if event.key == pygame.K_DOWN:
+            if event_args.key == pygame.K_DOWN:
                 self._curr_sprite = "S"
                 (x, y) = self.parent.name
                 if (x, y - 1) in self.parent.parent.controls:
                     self.parent = self.parent.parent[x, y - 1]
 
-        if event.key == pygame.K_h:
+        if event_args.key == pygame.K_h:
             self.visible = not self.visible
 
 
