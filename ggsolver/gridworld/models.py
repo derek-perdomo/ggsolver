@@ -431,7 +431,7 @@ class Window:
             # Control FPS
             clock.tick(self._frame_rate)
 
-    def sm_update(self, event_args):
+    def sm_update(self, sender, event_args):
         print(f"Called: {self}.{inspect.stack()[0][3]}")
 
     def trigger_custom_events(self):
@@ -439,6 +439,7 @@ class Window:
             pygame.event.post(
                 pygame.event.Event(
                     pygame.WINDOWRESIZED,
+                    trigger=self,
                     x=self.width,
                     y=self.height
                 )
@@ -447,20 +448,20 @@ class Window:
     def process_event(self, event):
         # Handle in-built pygame events
         if event.type < pygame.USEREVENT and event.type in self._event_handlers.keys():
-                event.sender = self
-                for func in self._event_handlers[event.type]:
-                    func(event)
+            sender = self
+            for func in self._event_handlers[event.type]:
+                func(sender=sender, event_args=event)
 
         # Handle custom GWSim events
         if event.type == GWSIM_EVENTS and (event.type, event.id) in self._event_handlers.keys():
             if event.id == GWSIM_EVENTS_SM_UPDATE and not self._game_paused:
-                event.sender = self
+                sender = self
                 for func in self._event_handlers[(event.type, event.id)]:
-                    func(event)
+                    func(sender=sender, event_args=event)
 
         # Trigger events for registered controls
         for control in self._controls.values():
-            event.sender = control
+            # sender = control
             control.process_event(event)
 
     def render_update(self, screen):
@@ -569,16 +570,16 @@ class Window:
     # =================================================================================
     # DEFAULT EVENT HANDLERS
     # =================================================================================
-    def _on_exit(self, event_args, *args, **kwargs):
+    def _on_exit(self, sender, event_args):
         print(f"Called: {self}.{inspect.stack()[0][3]}")
         self._running = False
 
-    def _on_window_resized(self, event_args, *args, **kwargs):
+    def _on_window_resized(self, sender, event_args):
         print(f"Called: {self}.{inspect.stack()[0][3]}")
         if self.resizable:
             self._size = pygame.math.Vector2(event_args["width"], event_args["height"])
 
-    def _on_key_down(self, event_args, *args, **kwargs):
+    def _on_key_down(self, sender, event_args):
         mods = pygame.key.get_mods()
         if event_args.key == pygame.K_p and mods & pygame.KMOD_SHIFT:
             self._game_paused = not self._game_paused
@@ -875,13 +876,13 @@ class Control(pygame.sprite.Sprite):
         if event.type < pygame.USEREVENT:
             # print(self, pygame.event.event_name(event.type), self._event_handlers[event.type])
             for func in self._event_handlers[event.type]:
-                func(event)
+                func(sender=self, event_args=event)
 
         # Handle custom GWSim events
         if event.type == GWSIM_EVENTS and (event.type, event.id) in self._event_handlers.keys():
             # print(self, (pygame.event.event_name(event.type), event.id), self._event_handlers[(event.type, event.id)])
             for func in self._event_handlers[(event.type, event.id)]:
-                func(event)
+                func(sender=self, event_args=event)
 
     def handles(self, event):
         if event.type < pygame.USEREVENT:
@@ -1125,7 +1126,7 @@ class Cell(Control):
                 pygame.event.Event(
                     GWSIM_EVENTS,
                     id=GWSIM_EVENTS_GRIDCELL_ENTER,
-                    sender=self,
+                    trigger=self,
                     new_control=control
                 )
             )
@@ -1139,7 +1140,7 @@ class Cell(Control):
                 pygame.event.Event(
                     GWSIM_EVENTS,
                     id=GWSIM_EVENTS_GRIDCELL_LEAVE,
-                    sender=self,
+                    trigger=self,
                     rem_control=control
                 )
             )
