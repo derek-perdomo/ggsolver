@@ -257,6 +257,9 @@ class Window:
         Programmer's Note:
             * Since SM is a special element, Window handles the SMUPDATE event with sm_update() function.
                 Users are not allowed to add any more handlers to this event.
+
+        SPECIAL KEY MAPPING:
+            * SHIFT + P: Pause or Unpause game. (see self._on_key_down function)
         """
         # Instance variables
         self._gw_sim = None
@@ -271,6 +274,7 @@ class Window:
         self._sm_update_rate = kwargs["sm_update_rate"] if "sm_update_rate" in kwargs else 1
         self._visible = kwargs["visible"] if "visible" in kwargs else True
         self._running = False
+        self._game_paused = False
 
         # Event handling flags
         self._e_flag_on_window_resized = False
@@ -447,7 +451,7 @@ class Window:
 
         # Handle custom GWSim events
         if event.type == GWSIM_EVENTS and (event.type, event.id) in self._event_handlers.keys():
-            if event.id == GWSIM_EVENTS_SM_UPDATE:
+            if event.id == GWSIM_EVENTS_SM_UPDATE and self._game_paused:
                 event.sender = self
                 for func in self._event_handlers[(event.type, event.id)]:
                     func(event)
@@ -525,7 +529,7 @@ class Window:
             pygame.WINDOWFOCUSLOST: [],
             pygame.WINDOWMOVED: [],
             pygame.WINDOWCLOSE: [],
-            pygame.KEYDOWN: [],
+            pygame.KEYDOWN: [self._on_key_down],
             pygame.KEYUP: [],
             pygame.MOUSEBUTTONUP: [],
             pygame.MOUSEBUTTONDOWN: [],
@@ -571,6 +575,12 @@ class Window:
         print(f"Called: {self}.{inspect.stack()[0][3]}")
         if self.resizable:
             self._size = pygame.math.Vector2(event_args["width"], event_args["height"])
+
+    def _on_key_down(self, event_args, *args, **kwargs):
+        mods = pygame.key.get_mods()
+        if event_args.key == pygame.K_p and mods & pygame.KMOD_SHIFT:
+            self._game_paused = not self._game_paused
+            print(f"[INFO] Game {'running.' if self._game_paused else 'paused.'}")
 
 
 class GWSim(StateMachine):
