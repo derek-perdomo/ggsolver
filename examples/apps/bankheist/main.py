@@ -116,6 +116,7 @@ class Character(gw.Control):
         """
         Additional kwargs:
         * sprites: (Dict[str, PathLike]) Mapping of sprite name to sprite image.
+        * init_sprite: (str) Name of initial sprite to use.
         """
         super(Character, self).__init__(name, parent, position, size, on_key_down=self.on_key_down, **kwargs)
 
@@ -123,7 +124,7 @@ class Character(gw.Control):
         self._sprites = {name: None for name, file in self._sprite_files.items()}
         # self._curr_sprite = None
         # PATCH
-        self._curr_sprite = "N"
+        self._curr_sprite = kwargs["init_sprite"] if "init_sprite" in kwargs else None
 
         self.add_event_handler(pygame.MOUSEBUTTONDOWN, self._on_select_changed)
 
@@ -140,29 +141,30 @@ class Character(gw.Control):
             self._backimage = self._sprites[self._curr_sprite]
 
     def on_key_down(self, event):
-        if event.key == pygame.K_RIGHT:
-            self._curr_sprite = "E"
-            (x, y) = self.parent.name
-            if (x + 1, y) in self.parent.parent.controls:
-                self.parent = self.parent.parent[x + 1, y]
+        if event.sender.name == "robber":
+            if event.key == pygame.K_RIGHT:
+                self._curr_sprite = "E"
+                (x, y) = self.parent.name
+                if (x + 1, y) in self.parent.parent.controls:
+                    self.parent = self.parent.parent[x + 1, y]
 
-        if event.key == pygame.K_LEFT:
-            self._curr_sprite = "W"
-            (x, y) = self.parent.name
-            if (x - 1, y) in self.parent.parent.controls:
-                self.parent = self.parent.parent[x - 1, y]
+            if event.key == pygame.K_LEFT:
+                self._curr_sprite = "W"
+                (x, y) = self.parent.name
+                if (x - 1, y) in self.parent.parent.controls:
+                    self.parent = self.parent.parent[x - 1, y]
 
-        if event.key == pygame.K_UP:
-            self._curr_sprite = "N"
-            (x, y) = self.parent.name
-            if (x, y + 1) in self.parent.parent.controls:
-                self.parent = self.parent.parent[x, y + 1]
+            if event.key == pygame.K_UP:
+                self._curr_sprite = "N"
+                (x, y) = self.parent.name
+                if (x, y + 1) in self.parent.parent.controls:
+                    self.parent = self.parent.parent[x, y + 1]
 
-        if event.key == pygame.K_DOWN:
-            self._curr_sprite = "S"
-            (x, y) = self.parent.name
-            if (x, y - 1) in self.parent.parent.controls:
-                self.parent = self.parent.parent[x, y - 1]
+            if event.key == pygame.K_DOWN:
+                self._curr_sprite = "S"
+                (x, y) = self.parent.name
+                if (x, y - 1) in self.parent.parent.controls:
+                    self.parent = self.parent.parent[x, y - 1]
 
         if event.key == pygame.K_h:
             self.visible = not self.visible
@@ -171,7 +173,7 @@ class Character(gw.Control):
 if __name__ == '__main__':
     # conf = f"saved_games/game_2022_11_21_20_05.conf"
 
-    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_21_22_05.conf")
+    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_10_22.conf")
     # conf = f"E:/Github-Repositories/ggsolver/examples/apps/bankheist/saved_games/game_2022_11_21_20_05.conf"
     window = BankHeistWindow(name="Bank Heist", size=(660, 480), game_config=conf)
     window.run()
