@@ -1104,6 +1104,8 @@ class Cell(Control):
         if "on_cell_leave" in kwargs:
             self.add_event_handler((GWSIM_EVENTS, GWSIM_EVENTS_GRIDCELL_LEAVE), kwargs["on_cell_leave"])
 
+    def __repr__(self):
+        return f"<{self.__class__.__name__} at name:{self.name}>"
 
     def update(self):
         # print(f"Called: {self}.{inspect.stack()[0][3]}")
