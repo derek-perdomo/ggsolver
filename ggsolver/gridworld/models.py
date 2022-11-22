@@ -31,9 +31,12 @@ class GameMode:
     MANUAL = "manual"
 
 
-class AnchorStyle:
+class DockStyle:
     NONE = "None"
     TOP_LEFT = "Top-left"
+    TOP_RIGHT = "Top-right"
+    BOTTOM_LEFT = "Bottom-left"
+    BOTTOM_RIGHT = "Bottom-right"
     CENTER = "Center"
 
 
@@ -626,7 +629,7 @@ class Control(pygame.sprite.Sprite):
 
         kwargs:
             * visible: (bool) Whether control is visible (Default: True)
-            * anchor: (AnchorStyle) Whether control is visible (Default: None)
+            * dockstyle: (DockStyle) Snap position of self to parent. (Default: DockStyle.NONE)
             * on_key_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYUP event. (Default: None)
             * on_key_down: (function[event_args: pygame.event.Event] -> None) Handler for pygame.KEYDOWN event. (Default: None)
             * on_mouse_button_up: (function[event_args: pygame.event.Event] -> None) Handler for pygame.MOUSEBUTTONUP event. (Default: None)
@@ -645,7 +648,7 @@ class Control(pygame.sprite.Sprite):
             self._parent.add_control(self)
 
         # Geometry properties
-        self._anchor = kwargs["anchor"] if "anchor" in kwargs else AnchorStyle.NONE
+        self._dockstyle = kwargs["dockstyle"] if "dockstyle" in kwargs else DockStyle.NONE
         self._position = pygame.math.Vector2(*position)
         self._size = pygame.math.Vector2(*size)
         self._image = pygame.Surface(self._size, flags=pygame.SRCALPHA)
@@ -685,6 +688,7 @@ class Control(pygame.sprite.Sprite):
     @property
     def rect(self):
         # print(f"Call: {self.name}.image")
+        # return self._image.get_rect()
         return self._rect
 
     @property
@@ -715,18 +719,19 @@ class Control(pygame.sprite.Sprite):
         self._parent.add_control(self)
 
     @property
+    def dock(self):
+        """ Gets the location of top-left point of rectangle w.r.t. parent. """
+        return self._dockstyle
+
+    @dock.setter
+    def dock(self, value):
+        """ Gets the location of top-left point of rectangle w.r.t. parent. """
+        self._dockstyle = value
+
+    @property
     def position(self):
         """ Gets the location of top-left point of rectangle w.r.t. parent. """
-        if self._anchor == AnchorStyle.NONE:
-            return self._position
-        elif self._anchor == AnchorStyle.TOP_LEFT:
-            return pygame.math.Vector2(0, 0)
-        elif self._anchor == AnchorStyle.CENTER:
-            parent_size = self.parent.size
-            self_size = self.size
-            return pygame.math.Vector2(0.5 * (parent_size - self_size))
-        else:
-            raise NotImplementedError(f"Unsupported AnchorStyle: {self._anchor}")
+        return self._position
 
     @position.setter
     def position(self, value):
@@ -747,7 +752,7 @@ class Control(pygame.sprite.Sprite):
 
     @left.setter
     def left(self, value):
-        self.position = pygame.math.Vector2(value, self.position[1])
+        self.position = pygame.math.Vector2(value, self.top)
 
     @property
     def top(self):
@@ -755,7 +760,7 @@ class Control(pygame.sprite.Sprite):
 
     @top.setter
     def top(self, value):
-        self.position = pygame.math.Vector2(self.position[0], value)
+        self.position = pygame.math.Vector2(self.left, value)
 
     @property
     def width(self):
@@ -763,7 +768,7 @@ class Control(pygame.sprite.Sprite):
 
     @width.setter
     def width(self, value):
-        self.size = pygame.math.Vector2(value, self.position[1])
+        self.size = pygame.math.Vector2(value, self.height)
 
     @property
     def height(self):
@@ -771,7 +776,7 @@ class Control(pygame.sprite.Sprite):
 
     @height.setter
     def height(self, value):
-        self.size = pygame.math.Vector2(self.position[0], value)
+        self.size = pygame.math.Vector2(self.width, value)
 
     @property
     def visible(self):
@@ -911,16 +916,46 @@ class Control(pygame.sprite.Sprite):
     # PUBLIC FUNCTIONS: RENDERING
     # ============================================================================================
     def update(self):
-        # Update position and size
-        # TODO. Resize surface, if applicable.
-        self._rect.topleft = self.point_to_world(self.position)
+        # Resize
+        self._image = pygame.transform.scale(self._image, self.size)
+        self._rect = self._image.get_rect()
+        
+        # Determine position based on DockStyle
+        if self._dockstyle == DockStyle.NONE:
+            position = self.point_to_world(self.position)
+        elif self._dockstyle == DockStyle.TOP_LEFT:
+            position = self.point_to_world(
+                pygame.math.Vector2([0, 0])
+            )
+        elif self._dockstyle == DockStyle.TOP_RIGHT:
+            position = self.point_to_world(
+                pygame.math.Vector2([self.parent.width - self.width, 0])
+            )
+        elif self._dockstyle == DockStyle.BOTTOM_LEFT:
+            position = self.point_to_world(
+                pygame.math.Vector2([0, self.parent.height - self.height])
+            )
+        elif self._dockstyle == DockStyle.BOTTOM_RIGHT:
+            position = self.point_to_world(
+                pygame.math.Vector2([self.parent.width - self.width, self.parent.height - self.height])
+            )
+        elif self._dockstyle == DockStyle.CENTER:
+            position = self.point_to_world(
+                pygame.math.Vector2([(self.parent.width - self.width) / 2, (self.parent.height - self.height) / 2])
+            )
+        else:
+            raise NotImplementedError(f"Unsupported AnchorStyle: {self._dockstyle}")
+
+        # Update rectangle's position
+        self._rect.topleft = position
 
         # If control is not visible, then none of its children are visible either.
         if self.visible:
             # Fill with backcolor, backimage
             self._image.fill(self._backcolor)
-            if self._backimage is not None:  # FIXME. Check if this code works.
-                self._image.blit(self._backimage, (0, 0))
+            if self._backimage is not None:
+                img = pygame.transform.scale(self._backimage, self._rect.size)
+                self._image.blit(img, (0, 0))
 
             # Update borders
             if self._borderstyle == BorderStyle.SOLID:
@@ -1119,7 +1154,7 @@ class Cell(Control):
                 self._borderwidth
             )
         else:
-            self.image.fill(colors.COLOR_TRANSPARENTAN)
+            self.image.fill(colors.COLOR_TRANSPARENT)
 
     def add_control(self, control):
         super(Cell, self).add_control(control)
