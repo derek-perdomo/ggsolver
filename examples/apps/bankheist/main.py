@@ -36,7 +36,7 @@ class BankHeistWindow(gw.Window):
             size=size,
             grid_size=grid_size,
             backcolor=gw.COLOR_BEIGE,
-            anchor=gw.AnchorStyle.TOP_LEFT,
+            dockstyle=gw.DockStyle.TOP_LEFT,
             on_cell_leave=self.on_cell_leave,
             on_cell_enter=self.on_cell_enter,
         )
@@ -49,10 +49,10 @@ class BankHeistWindow(gw.Window):
         # Create character
         self._robber = Character(
             name="robber",
-            parent=self.grid[2, 1],
+            parent=self.grid[0, 7],
             position=(0, 0),
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
-            anchor=gw.AnchorStyle.CENTER,
+            dockstyle=gw.DockStyle.CENTER,
             sprites=self._game_config["p1"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
             init_sprite="N",
@@ -65,7 +65,7 @@ class BankHeistWindow(gw.Window):
             parent=self.grid[3, 1],
             position=(0, 0),
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
-            anchor=gw.AnchorStyle.CENTER,
+            dockstyle=gw.DockStyle.CENTER,
             sprites=self._game_config["p2"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
             # visible=False,
@@ -76,7 +76,7 @@ class BankHeistWindow(gw.Window):
             parent=self.grid[4, 1],
             position=(0, 0),
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
-            anchor=gw.AnchorStyle.CENTER,
+            dockstyle=gw.DockStyle.CENTER,
             sprites=self._game_config["p2"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
             # visible=False,
@@ -91,7 +91,7 @@ class BankHeistWindow(gw.Window):
             parent=self.grid[bank1_pos[0], bank1_pos[1]],
             position=(0, 0),
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
-            anchor=gw.AnchorStyle.CENTER,
+            dockstyle=gw.DockStyle.CENTER,
             sprites=self._game_config["banks"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
             visible=True,
@@ -102,7 +102,7 @@ class BankHeistWindow(gw.Window):
             parent=self.grid[bank2_pos[0], bank2_pos[1]],
             position=(0, 0),
             size=(0.75 * self.grid[0, 0].width, 0.75 * self.grid[0, 0].height),
-            anchor=gw.AnchorStyle.CENTER,
+            dockstyle=gw.DockStyle.CENTER,
             sprites=self._game_config["banks"]["sprites"],
             backcolor=gw.COLOR_TRANSPARENT,
             visible=True,
@@ -125,30 +125,26 @@ class BankHeistWindow(gw.Window):
     def arrange_controls_in_cell(self, cell):
         if len(cell.controls) == 0:
             pass
-        
+
         elif len(cell.controls) == 1:
             print(f"arrange_controls_in_cell: {cell.name}, {len(cell.controls)=}")
             control = list(cell.controls.values())[0]
             control.width = 0.75 * cell.width
             control.height = 0.75 * cell.height
-            control.anchor = gw.AnchorStyle.CENTER
+            control.dock = gw.DockStyle.CENTER
 
         elif len(cell.controls) == 2:
             print(f"arrange_controls_in_cell: {cell.name}, {len(cell.controls)=}")
 
             control0 = list(cell.controls.values())[0]
-            control0.anchor = gw.AnchorStyle.NONE
-            control0.left = 0
-            control0.top = 0
-            control0.width = 0.25 * cell.width
-            control0.height = 0.25 * cell.height
+            control0.dock = gw.DockStyle.TOP_LEFT
+            control0.width = 0.5 * cell.width
+            control0.height = 0.5 * cell.height
 
             control1 = list(cell.controls.values())[1]
-            control1.anchor = gw.AnchorStyle.NONE
-            control1.left = 0.5 * cell.width
-            control1.top = 0.5 * cell.height
-            control1.width = 0.25 * cell.width
-            control1.height = 0.25 * cell.height
+            control1.dock = gw.DockStyle.BOTTOM_RIGHT
+            control1.width = 0.5 * cell.width
+            control1.height = 0.5 * cell.height
         else:
             print(f"Not supported")
 
