@@ -60,12 +60,6 @@ class BankHeistWindow(gw.Window):
     def sm_update(self, event_args):
         print(f"sm_update: {event_args}")
 
-    def _on_key_down(self, event_args, *args, **kwargs):
-        mods = pygame.key.get_mods()
-        if event_args.key == pygame.K_p and mods & pygame.KMOD_SHIFT:
-            self._game_paused = not self._game_paused
-            print(f"[INFO] Game {'running.' if self._game_paused else 'paused.'}")
-
 
 class Character(gw.Control):
     def __init__(self, name, parent, position, size, **kwargs):
