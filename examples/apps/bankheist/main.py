@@ -73,7 +73,7 @@ class Character(gw.Control):
         Additional kwargs:
         * sprites: (Dict[str, PathLike]) Mapping of sprite name to sprite image.
         """
-        super(Character, self).__init__(name, parent, position, size, **kwargs)
+        super(Character, self).__init__(name, parent, position, size, on_key_down=self.on_key_down, **kwargs)
 
         self._sprite_files = kwargs["sprites"] if "sprites" in kwargs else dict()
         self._sprites = {name: None for name, file in self._sprite_files.items()}
@@ -94,6 +94,31 @@ class Character(gw.Control):
                 self._sprites[self._curr_sprite] = pygame.image.load(os.path.join(curr_file_path, pathlib.Path(self._sprite_files[self._curr_sprite])))
                 self._sprites[self._curr_sprite] = pygame.transform.scale(self._sprites[self._curr_sprite], (50, 50))
             self._backimage = self._sprites[self._curr_sprite]
+
+    def on_key_down(self, event):
+        if event.key == pygame.K_RIGHT:
+            self._curr_sprite = "E"
+            (x, y) = self.parent.name
+            if (x + 1, y) in self.parent.parent.controls:
+                self.parent = self.parent.parent[x + 1, y]
+
+        if event.key == pygame.K_LEFT:
+            self._curr_sprite = "W"
+            (x, y) = self.parent.name
+            if (x - 1, y) in self.parent.parent.controls:
+                self.parent = self.parent.parent[x - 1, y]
+
+        if event.key == pygame.K_UP:
+            self._curr_sprite = "N"
+            (x, y) = self.parent.name
+            if (x, y + 1) in self.parent.parent.controls:
+                self.parent = self.parent.parent[x, y + 1]
+
+        if event.key == pygame.K_DOWN:
+            self._curr_sprite = "S"
+            (x, y) = self.parent.name
+            if (x, y - 1) in self.parent.parent.controls:
+                self.parent = self.parent.parent[x, y - 1]
 
 
 if __name__ == '__main__':
