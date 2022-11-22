@@ -924,6 +924,9 @@ class Control(pygame.sprite.Sprite):
                 )
             else:  # self._borderstyle == BorderStyle.HIDDEN:
                 pass
+        else:
+            # Fill with transperant backcolor
+            self._image.fill(colors.COLOR_TRANSPARENT)
 
     def show(self):
         raise NotImplementedError
