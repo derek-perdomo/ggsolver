@@ -74,14 +74,14 @@ GAME_CONFIG = {
     "p1": {
         "sprites": {
             # Direction of facing
-            "N": "sprites/cars/police/car01iso_0005.png",
-            "E": "sprites/cars/police/car01iso_0007.png",
-            "S": "sprites/cars/police/car01iso_0001.png",
-            "W": "sprites/cars/police/car01iso_0003.png",
-            "NE": "sprites/cars/police/car01iso_0006.png",
-            "SE": "sprites/cars/police/car01iso_0004.png",
-            "NW": "sprites/cars/police/car01iso_0000.png",
-            "SW": "sprites/cars/police/car01iso_0002.png",
+            "N": "sprites/cars/redcar/car01iso_0005.png",
+            "E": "sprites/cars/redcar/car01iso_0007.png",
+            "S": "sprites/cars/redcar/car01iso_0001.png",
+            "W": "sprites/cars/redcar/car01iso_0003.png",
+            "NE": "sprites/cars/redcar/car01iso_0006.png",
+            "SE": "sprites/cars/redcar/car01iso_0004.png",
+            "NW": "sprites/cars/redcar/car01iso_0000.png",
+            "SW": "sprites/cars/redcar/car01iso_0002.png",
         },
         "gas capacity": 15,
         "init_pos": None,
