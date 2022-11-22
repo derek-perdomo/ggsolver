@@ -865,7 +865,7 @@ class Control(pygame.sprite.Sprite):
         if not self.handles(event):
             return
 
-        print(self, event.type, self._event_handlers[event.type])
+        # print(self, event.type, self._event_handlers[event.type])
 
         # Handle in-built pygame events
         if event.type < pygame.USEREVENT:
@@ -1047,7 +1047,7 @@ class Grid(Control):
         cell_size = (self.width // rows, self.height // cols)
         for x in range(rows):
             for y in range(cols):
-                position = (cell_size[0] * x, cell_size[1] * y)
+                position = (cell_size[0] * x, self.height - cell_size[1] * (y + 1))
                 cell_xy = cls_cell(
                     name=(x, y), parent=self, position=position, size=cell_size,
                     bordercolor=self._bordercolor, borderstyle=self._borderstyle, borderwidth=self._borderwidth,
