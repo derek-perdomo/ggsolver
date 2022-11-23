@@ -163,6 +163,7 @@ class GraphicalModel:
         ep_prob = EdgePropertyMap(graph=graph, default=None)
 
         # Generate edges
+        # TODO. Separate for loop for state and act. Choose actions from enabled_acts if available.
         delta = getattr(self, "delta")
         for state, inp in tqdm(itertools.product(self.__states.keys(), inputs),
                                total=len(self.__states) * len(inputs),
@@ -803,6 +804,16 @@ class TSys(GraphicalModel):
         :return: (list/tuple of str). A list/tuple of atomic propositions that are true in the given state.
         """
         raise NotImplementedError(f"{self.__class__.__name__}.label() is not implemented.")
+
+    @register_property(NODE_PROPERTY)
+    def enabled_acts(self, state):
+        """
+        Defines the enabled actions at the given state.
+
+        :param state: (object) A valid state.
+        :return: (list/tuple of str). A list/tuple of actions enabled in the given state.
+        """
+        raise NotImplementedError(f"{self.__class__.__name__}.enabled_acts() is not implemented.")
 
 
 class Game(TSys):
