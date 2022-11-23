@@ -176,7 +176,7 @@ class GraphicalModel:
         if enabled_acts is not None:
             np_enabled_acts = NodePropertyMap(graph=graph, default=inputs)
             for state in tqdm(self.__states.keys(), desc="Generating state: enabled actions map"):
-                np_enabled_acts[state] = enabled_acts(state)
+                np_enabled_acts[self.__states[state]] = enabled_acts(state)
             graph["enabled_acts"] = np_enabled_acts
             logging.info(util.ColoredMsg.ok(f"[INFO] Processed node property: enabled_acts. [OK]"))
 
@@ -190,7 +190,7 @@ class GraphicalModel:
         for state in tqdm(self.__states.keys(), desc="Unpointed graphify adding edges"):
             # Get the enabled inputs at the state. If enabled_acts is not defined, then use entire inputs set.
             if enabled_acts is not None:
-                inputs_at_state = np_enabled_acts[state]
+                inputs_at_state = np_enabled_acts[self.__states[state]]
             else:
                 inputs_at_state = inputs
 
@@ -279,7 +279,7 @@ class GraphicalModel:
                 # Apply all inputs to state
                 if enabled_acts is not None:
                     inputs_at_state = enabled_acts(state)
-                    np_enabled_acts[state] = inputs_at_state
+                    np_enabled_acts[uid] = inputs_at_state
                 else:
                     inputs_at_state = inputs
 
