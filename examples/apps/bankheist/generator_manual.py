@@ -65,7 +65,26 @@ TERRAIN = np.array([
     [0, 1, 1, 0, 1, 1, 0, 1, 1, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ]).tolist()
-
+P1_1_ACCESSIBLE = np.array([
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+]).tolist()
+P1_2_ACCESSIBLE = np.array([
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+]).tolist()
 
 GAME_CONFIG = {
     "game": "Bank Heist",
@@ -102,12 +121,12 @@ GAME_CONFIG = {
             "SW": "sprites/cars/police/policeiso_0002.png",
         },
         "p2.1": {
-            "accessible region": TERRAIN,
+            "accessible region": P1_1_ACCESSIBLE,
             "init_pos": None,
             "active": True,
         },
         "p2.2": {
-            "accessible region": TERRAIN,
+            "accessible region": P1_2_ACCESSIBLE,
             "init_pos": None,
             "active": True,
         },

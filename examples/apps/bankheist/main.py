@@ -10,6 +10,7 @@ import pygame
 import os
 import pathlib
 import itertools
+import random
 
 import ggsolver.mdp as mdp
 import ggsolver.gridworld as gw
@@ -233,10 +234,10 @@ class BankHeistMDP(mdp.QualitativeMDP):
         with open(game_config, "r") as file:
             self._game_config = json.load(file)
 
-        self._terrain = np.array(self._game_config["terrain"])
-        self._p2_1_accessible = np.array(self._game_config["p2"]["p2.1"]["accessible region"])
-        self._p2_2_accessible = np.array(self._game_config["p2"]["p2.2"]["accessible region"])
-        self._grid_size = tuple(reversed(self._terrain.shape))
+        self._terrain = self._orient_terrain(np.array(self._game_config["terrain"]))
+        self._p2_1_accessible = self._orient_terrain(np.array(self._game_config["p2"]["p2.1"]["accessible region"]))
+        self._p2_2_accessible = self._orient_terrain(np.array(self._game_config["p2"]["p2.2"]["accessible region"]))
+        self._grid_size = self._terrain.shape
 
     def states(self):
         """
@@ -244,12 +245,15 @@ class BankHeistMDP(mdp.QualitativeMDP):
         :return:
         """
         x_max, y_max = self._grid_size
-        p1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._terrain[y, x] == 1]
+        p1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._terrain[x, y] == 1]
         p1_gas = self._game_config["p1"]["gas capacity"]
-        p2_1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_1_accessible[y, x] == 1]
-        p2_2_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_2_accessible[y, x] == 1]
+        p2_1_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_1_accessible[x, y] == 1]
+        p2_2_walkable_cells = [(x, y) for x in range(x_max) for y in range(y_max) if self._p2_2_accessible[x, y] == 1]
 
-        return list(itertools.product(p1_walkable_cells, p2_1_walkable_cells, p2_2_walkable_cells, range(p1_gas)))
+        return list(
+            filter(self._is_state_valid,
+                   itertools.product(p1_walkable_cells, p2_1_walkable_cells, p2_2_walkable_cells, range(p1_gas)))
+        )
 
     def actions(self):
         return [
@@ -260,13 +264,73 @@ class BankHeistMDP(mdp.QualitativeMDP):
         ]
 
     def delta(self, state, act):
-        pass
+        # Decouple state
+        p1_cell, p2_1_cell, p2_2_cell, p1_gas = state
+
+        # Base case
+        if p1_gas == 0:
+            return [state]
+
+        # Generate all possible next states
+        next_states = set()
+        next_p1_cell = gw_utils.move(p1_cell, act)
+        for act1, act2 in itertools.product(self.actions(), self.actions()):
+            next_p2_1_cell = gw_utils.move(p2_1_cell, act1)
+            next_p2_2_cell = gw_utils.move(p2_2_cell, act2)
+            next_states.add((next_p1_cell, next_p2_1_cell, next_p2_2_cell, p1_gas - 1))
+
+        # Filter unacceptable states
+        filter_states = set()
+        for next_state in next_states:
+            next_p1_cell, next_p2_1_cell, next_p2_2_cell, _ = next_state
+
+            if self._terrain[next_p1_cell[0], next_p1_cell[1]] == 0 or \
+                    self._terrain[next_p2_1_cell[0], next_p2_1_cell[1]] == 0 or \
+                    self._terrain[next_p2_2_cell[0], next_p2_2_cell[1]] == 0:
+                filter_states.add(next_state)
+
+        # Return
+        return list(next_states - filter_states)
+
+    def _is_state_valid(self, state):
+        p1_cell, p2_1_cell, p2_2_cell, p1_gas = state
+
+        if self._terrain[p1_cell[0], p1_cell[1]] == 0 or \
+                self._p2_1_accessible[p2_1_cell[0], p2_1_cell[1]] == 0 or \
+                self._p2_2_accessible[p2_2_cell[0], p2_2_cell[1]] == 0 or \
+                self._game_config["p1"]["gas capacity"] <= p1_gas:
+            return False
+
+        return True
+
+    def _matrix_flip(self, mat, axis):
+        if not hasattr(mat, 'ndim'):
+            mat = np.asarray(mat)
+        indexer = [slice(None)] * mat.ndim
+        try:
+            indexer[axis] = slice(None, None, -1)
+        except IndexError:
+            raise ValueError("axis =% i is invalid for the % i-dimensional input array"
+                             % (axis, mat.ndim))
+        return mat[tuple(indexer)]
+
+    def _orient_terrain(self, mat):
+        return self._matrix_flip(np.transpose(mat), axis=0)
 
 
 if __name__ == '__main__':
-    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_16_24.conf")
+    conf = os.path.join(curr_file_path, "saved_games", "game_2022_11_22_23_29.conf")
+    print(f"Using configuration file: {conf=}")
+
     game = BankHeistMDP(game_config=conf)
-    print(len(game.states()))
+    arbitrary_state = random.choice(game.states())
+    print("Executing: game = BankHeistMDP(game_config=conf)")
+    print(f"Executing: random.choice(game.states())={arbitrary_state}")
+
+    game.initialize(arbitrary_state)
+    graph = game.graphify(pointed=True)
+    print("Executing: graph = game.graphify(pointed=True)")
+
 
     # window = BankHeistWindow(name="Bank Heist", size=(660, 480), game_config=conf)
     # window.run()
