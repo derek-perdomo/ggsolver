@@ -179,7 +179,6 @@ if __name__ == '__main__':
     graph = game.graphify(pointed=True)
     print(f"{graph.number_of_nodes()=}")
     print(f"{graph.number_of_edges()=}")
-
     # for every state1
         # for each incoming edge state2
             # for each incoming edge state3

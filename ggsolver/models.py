@@ -266,7 +266,7 @@ class GraphicalModel:
                 # Apply all inputs to state
                 if enabled_acts is not None:
                     inputs_at_state = enabled_acts(state)
-                    np_enabled_acts[state] = inputs_at_state
+                    np_enabled_acts[uid] = inputs_at_state
                 else:
                     inputs_at_state = inputs
 
