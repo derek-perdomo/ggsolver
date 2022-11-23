@@ -107,7 +107,7 @@ class CBSGame(ReachabilityGame):
         return state[3]
 
     def enabled_acts(self, state):
-        if state[4] == self._ATTACKER_TURN:
+        if state[3] == self._ATTACKER_TURN:
             return [action for action in self.actions() if self.is_attacker_action(action)]
         else:
             return [action for action in self.actions() if not self.is_attacker_action(action)]
@@ -174,11 +174,12 @@ if __name__ == '__main__':
     print(f"{len(game.states())=}")
     print(f"{len(game.actions())=}")
     # print(game.actions())
-    # state = ('1', (1, 0, 0), (1, 0, 0, 0, 0), 2, (0, 1, 0, 0, 0, 0))
+    state = ('0', (0, 0, 0), (1, 1, 1, 1, 1), 1, (1, 0, 0, 0, 0, 0))
     # print(game.delta(state, "move_to_node_0"))
     graph = game.graphify(pointed=True)
     print(f"{graph.number_of_nodes()=}")
     print(f"{graph.number_of_edges()=}")
+    print(game.enabled_acts(state))
     # for every state1
         # for each incoming edge state2
             # for each incoming edge state3
