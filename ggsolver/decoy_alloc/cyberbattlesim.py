@@ -106,6 +106,17 @@ class CBSGame(ReachabilityGame):
     def turn(self, state):
         return state[3]
 
+    def enabled_acts(self, state):
+        if state[4] == self._ATTACKER_TURN:
+            return [action for action in self.actions() if self.is_attacker_action(action)]
+        else:
+            return [action for action in self.actions() if not self.is_attacker_action(action)]
+
+    def is_attacker_action(self, action):
+        if action == "no_attacker_action" or action[0:13] == "move_to_node_" or action[0:16] == "local_attack_on_" or action[0:11] == "connect_to_":
+            return True
+        else:
+            return False
     def _construct_states(self):
         states = []  # list of state objects that can be used to construct game graph
         final_states = []
@@ -157,6 +168,7 @@ class CBSGame(ReachabilityGame):
         for firewall_state in self._possible_firewall_states:
             actions.append(f"change_firewall_to_{firewall_state}")
         return actions
+
 if __name__ == '__main__':
     game = CBSGame("network.json", final_node="5")
     print(f"{len(game.states())=}")
