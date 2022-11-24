@@ -146,7 +146,7 @@ class PrefModel:
         self.transitive_closure()
 
     # ============================================================================
-    # GRAPHICAL MODEL
+    # PUBLIC METHODS
     # ============================================================================
     def graphify(self):
         """
@@ -184,6 +184,18 @@ class PrefModel:
 
         # Return graph
         return graph
+
+    def is_consistent(self):
+        """
+        Checks if the preference model is consistent.
+        A model is consistent if there are no cycles of length > 2 in the graph of preference model.
+        """
+        graph = self.graphify()
+        cycles = graph.cycles()
+        for cycle in cycles:
+            if len(cycle) > 1:
+                return False
+        return True
 
     # ============================================================================
     # PREFERENCE DETERMINATION
@@ -455,26 +467,30 @@ if __name__ == '__main__':
     # graph = formula_._repr.graphify()
     # graph.to_png("pref.png", nlabel=["state"])
 
-    formula_ = PrefScLTL("Fa > Fb")
+    formula_ = PrefScLTL("a > b && b > c && c > a")
     model_ = formula_.model()
+    print(f"{formula_=}")
+    print(f"{model_.is_consistent()=}")
+    print(f"{model_.outcomes()=}")
+    print(f"{model_.relation()=}")
     # graph_ = model_.graphify()
     # graph_.to_png("graph.png", nlabel=["state"])
 
-    aut_ = formula_.translate()
-    print(f"{aut_.states()=}")
-    print(f"{aut_.atoms()=}")
-    print(f"{aut_.init_state()=}")
-    print(f"{aut_.delta((1, 1), {'a'})=}")
-    print(f"{aut_.delta((1, 1), {'b'})=}")
-    print(f"{aut_.delta((1, 1), {'a', 'b'})=}")
-    print(f"{aut_.final((0, 0))=}")
-    print(f"{aut_.final((0, 1))=}")
-    print(f"{aut_.final((1, 0))=}")
-    print(f"{aut_.final((1, 1))=}")
-    pref_graph_ = aut_._construct_pref_graph()
-    pref_graph_.to_png("pref_graph.png", nlabel=["state", "partition"])
-    aut_graph_ = aut_.graphify()
-    aut_graph_.to_png("aut_graph.png", nlabel=["state"], elabel=["input"])
+    # aut_ = formula_.translate()
+    # print(f"{aut_.states()=}")
+    # print(f"{aut_.atoms()=}")
+    # print(f"{aut_.init_state()=}")
+    # print(f"{aut_.delta((1, 1), {'a'})=}")
+    # print(f"{aut_.delta((1, 1), {'b'})=}")
+    # print(f"{aut_.delta((1, 1), {'a', 'b'})=}")
+    # print(f"{aut_.final((0, 0))=}")
+    # print(f"{aut_.final((0, 1))=}")
+    # print(f"{aut_.final((1, 0))=}")
+    # print(f"{aut_.final((1, 1))=}")
+    # pref_graph_ = aut_._construct_pref_graph()
+    # pref_graph_.to_png("pref_graph.png", nlabel=["state", "partition"])
+    # aut_graph_ = aut_.graphify()
+    # aut_graph_.to_png("aut_graph.png", nlabel=["state"], elabel=["input"])
 
 
     # dfpa = formula_.translate()
