@@ -5,6 +5,7 @@ from dd.autoref import BDD
 from ggsolver.logic.formula import BaseFormula, ParsingError
 from tqdm import tqdm
 
+from ggsolver.graph import NodePropertyMap, EdgePropertyMap
 import ggsolver.util as util
 import ggsolver.models as models
 
@@ -252,7 +253,7 @@ class Automaton(models.GraphicalModel):
         self.__states = dict(zip(states, node_ids))
 
         # Node property: state
-        np_state = graph.NodePropertyMap(graph=graph)
+        np_state = NodePropertyMap(graph=graph)
         np_state.update(dict(zip(node_ids, states)))
         graph["state"] = np_state
 
@@ -276,8 +277,8 @@ class Automaton(models.GraphicalModel):
         # inputs = input_func()
 
         # Edge properties: input, prob,
-        ep_input = graph.EdgePropertyMap(graph=graph)
-        ep_prob = graph.EdgePropertyMap(graph=graph, default=None)
+        ep_input = EdgePropertyMap(graph=graph)
+        ep_prob = EdgePropertyMap(graph=graph, default=None)
 
         # Generate edges
         delta = getattr(self, "delta")

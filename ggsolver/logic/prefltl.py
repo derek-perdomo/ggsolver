@@ -2,7 +2,7 @@ import itertools
 from ggsolver.graph import *
 from ggsolver.logic.formula import BaseFormula, PARSERS_DIR
 from ggsolver.logic.ltl import LTL, ScLTL
-from ggsolver.logic.base import Automaton
+from ggsolver.logic.base import Automaton, ParsingError
 from ggsolver.logic.automata import DFA
 from lark import Lark, Transformer
 from pathlib import Path
@@ -108,6 +108,13 @@ class LTLPrefParser:
 
 
 class PrefModel:
+    """
+    Preference model induced by ScLTLPref formulas.
+
+    Programmer's Notes:
+    * The outcomes set is always complete. The 0-th element is the one added by "completion" procedure.
+        In case completion is not needed, 0-th element is ScLTL formula: "false" (universally false).
+    """
     def __init__(self, outcomes, atoms, relation, null_assumption=True):
         # Instance variables
         self._atoms = set(atoms)            # set of atoms
@@ -268,7 +275,15 @@ class Formula2Model(Transformer):
         return args[0]
 
     def pref_and(self, args):
-        return set.union(*args[::2])
+        # PATCH: The grammar definition has a flaw. It accepts a formula like: `PreferenceFormula && LTLFormula`
+        #  E.g. `a > b && c` is accepted. This patch checks if both arguments are sets,
+        #  which is possible only when both arguments are preference formulas.
+        loperand = args[0]
+        roperand = args[2]
+        if isinstance(loperand, set) and  isinstance(roperand, set):
+            return set.union(*args[::2])
+        else:
+            raise ParsingError("A formula of type `PreferenceFormula && LTLFormula` is not accepted.")
 
     def pref_or(self, args):
         # TODO. See following tip.
@@ -317,6 +332,9 @@ class DFPA(Automaton):
         # We will not generate automaton for alpha0 because any state that doesn't satisfy
         #   any outcomes alpha_1 ... alpha_n satisfies alpha_0, by construction.
         atoms = reduce(set.union, [set(out.atoms()) for out in self._outcomes])
+        # FIXME: Is it always guaranteed that 0-th element of PrefModel is safety spec?
+        #   Either impose a check: if self._outcomes[0].mp_class == "safety"
+        #   Or modify PrefModel class to reserve 0-th element for completion.
         for i in range(1, len(self._outcomes)):
             dfa = DFA(atoms=atoms)
             dfa.from_automaton(aut=self._outcomes[i].translate())
