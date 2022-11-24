@@ -466,9 +466,9 @@ class SpotAutomaton(Automaton):
 
         # Set the acceptance condition (in ggsolver terms)
         name = self.spot_aut.acc().name()
-        if name == "Büchi" and spot.mp_class(formula).upper() in ["B", "S"]:
+        if name == "Büchi" and spot.mp_class(formula).upper() in ["S"]:
             self._acc_cond = (Automaton.ACC_SAFETY, 0)
-        elif name == "Büchi" and spot.mp_class(formula).upper() in ["G"]:
+        elif name == "Büchi" and spot.mp_class(formula).upper() in ["B", "G"]:
             self._acc_cond = (Automaton.ACC_REACH, 0)
         elif name == "Büchi" and spot.mp_class(formula).upper() in ["O", "R"]:
             self._acc_cond = (Automaton.ACC_BUCHI, 0)
@@ -484,9 +484,9 @@ class SpotAutomaton(Automaton):
         Determines the options based on where the given LTL formula lies in Manna-Pnueli hierarchy.
         """
         mp_cls = spot.mp_class(self.formula())
-        if mp_cls.upper() == "B" or mp_cls.upper() == "S":
+        if mp_cls.upper() == "S":
             return 'Monitor', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
-        elif mp_cls.upper() == "G" or mp_cls.upper() == "O" or mp_cls.upper() == "R":
+        elif mp_cls.upper() == "G" or mp_cls.upper() == "B" or mp_cls.upper() == "O" or mp_cls.upper() == "R":
             return 'Buchi', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
         elif mp_cls.upper() == "P":
             return 'coBuchi', "Deterministic", "High", "Complete", "Unambiguous", "SBAcc"
