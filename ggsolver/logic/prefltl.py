@@ -252,7 +252,7 @@ class PrefModel:
 
 class Formula2Model(Transformer):
     """
-    Transforms a preference formula to a preference model :math:`(U, \succeq)`.
+    Transforms a preference formula (PrefScLTL) to a preference model :math:`(U, \succeq)`.
 
     .. warn:: Generated model does not support ORing of preference formulas.
     """
@@ -267,7 +267,7 @@ class Formula2Model(Transformer):
 
         # Build preference model
         relation = self.transform(self.tree)
-        self.outcomes = {LTL(f_str=outcome.f_str, atoms=self.atoms) for outcome in self.outcomes}
+        self.outcomes = {ScLTL(f_str=outcome.f_str, atoms=self.atoms) for outcome in self.outcomes}
         self.model = PrefModel(outcomes=self.outcomes, atoms=self.atoms, relation=relation,
                                null_assumption=self.null_assumption)
 
@@ -309,7 +309,7 @@ class Formula2Model(Transformer):
         return set()
 
     def ltl_formula(self, args):
-        f = LTL(args[0])
+        f = ScLTL(args[0])
         self.outcomes.add(f)
         self.atoms.update(set(f.atoms()))
         return f
