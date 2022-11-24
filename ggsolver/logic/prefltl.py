@@ -61,16 +61,7 @@ class PrefLTL(BaseFormula):
     # ==================================================================
     # SPECIAL METHODS OF PrefLTL CLASS
     # ==================================================================
-    def simplify(self):
-        """
-        Simplifies a propositional logic formula.
-
-        We use the `boolean_to_isop=True` option for `spot.simplify`.
-        See https://spot.lrde.epita.fr/doxygen/classspot_1_1tl__simplifier__options.html
-
-        :return: (str) String representing simplified formula.
-        """
-        raise NotImplementedError
+    simplify = BaseFormula.simplify
 
 
 class PrefScLTL(PrefLTL):
