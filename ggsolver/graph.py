@@ -657,6 +657,9 @@ class Graph(IGraph):
         reachable_nodes = set(reduce(set.union, list(map(set, nx.bfs_layers(rev_graph, sources)))))
         return reachable_nodes
 
+    def cycles(self):
+        return nx.simple_cycles(self._graph)
+
 
 class SubGraph(Graph):
     """
