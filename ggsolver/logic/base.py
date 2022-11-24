@@ -91,16 +91,23 @@ class PL(BaseFormula):
     # ==================================================================
     # SPECIAL METHODS OF PL CLASS
     # ==================================================================
-    def simplify(self):
+    def simplify(self, f_str=None):
         """
         Simplifies a propositional logic formula.
 
         We use the `boolean_to_isop=True` option for `spot.simplify`.
         See https://spot.lrde.epita.fr/doxygen/classspot_1_1tl__simplifier__options.html
 
+        :param f_str: (str or None) Input formula string. If not provided, self._user_string is used.
         :return: (str) String representing simplified formula.
         """
-        return spot.simplify(self._repr, boolean_to_isop=True).to_str()
+        if f_str is None:
+            return spot.simplify(self._repr, boolean_to_isop=True).to_str()
+
+        return spot.simplify(
+            spot.formula(f_str),
+            boolean_to_isop=True
+        ).to_str()
 
     def allsat(self):
         """
