@@ -334,11 +334,9 @@ class DFPA(Automaton):
 
         # We will not generate automaton for alpha0 because any state that doesn't satisfy
         #   any outcomes alpha_1 ... alpha_n satisfies alpha_0, by construction.
-        atoms = reduce(set.union, [set(out.atoms()) for out in self._outcomes])
-        # FIXME: Is it always guaranteed that 0-th element of PrefModel is safety spec?
-        #   Either impose a check: if self._outcomes[0].mp_class == "safety"
-        #   Or modify PrefModel class to reserve 0-th element for completion.
+        atoms = reduce(set.union, [set(out.atoms()) for out in self._outcomes[1:]])
         for i in range(1, len(self._outcomes)):
+            # FIXME. Check if LTL formula is a guarantee formula. If yes, translate as ScLTL.
             dfa = DFA(atoms=atoms)
             dfa.from_automaton(aut=self._outcomes[i].translate())
             self._automata.append(dfa)
@@ -355,18 +353,36 @@ class DFPA(Automaton):
     def atoms(self):
         return reduce(set.union, [set(out.atoms()) for out in self._outcomes])
 
-    def init_state(self):
-        return tuple(aut.init_state() for aut in self._automata)
-
     def delta(self, state, inp):
         return tuple(self._automata[i].delta(state[i], inp) for i in range(len(self._automata)))
+
+    def init_state(self):
+        return tuple(aut.init_state() for aut in self._automata)
 
     def final(self, state):
         """
         Returns the acceptance set to which the state belongs to.
+        :return: (int) Acceptance set as an integer.
+
+        .. note:: The acceptance set number is decimal representation of the binary tuple `(T/F)_{i=1...n}`.
+
+        To extract the satisfied outcomes as a list, use the following command:
+        >>> binary_str = format(acc_set, f"#0{len(self.outcomes()) + 1}b")
+        >>> maximal_satisfied = tuple([int(bit_str) for bit_str in binary_str[2:]])
+
+        The first statement returns a string of form "0b0101" if there are 5 outcomes
+        (recall 0-th outcomes is not counted). The second statement constructs the binary tuple
+        representation of the maximal set.
         """
+        # Get the set of maximal outcomes satisfied by any word visiting the given state.
         outcomes = self.maximal(state)
-        return tuple(1 if outcome in outcomes else 0 for outcome in self._outcomes)
+
+        # Vectorize the set of outcomes
+        outcomes_vec = self.outcomes_to_vector(outcomes)
+
+        # Construct a number representing the vector.
+        satisfied_outcomes = "".join([str(val) for val in outcomes_vec])
+        return int(f"0b{satisfied_outcomes}", base=2)
 
     # =========================================================================
     # SPECIAL METHODS
@@ -397,14 +413,21 @@ class DFPA(Automaton):
         for i in range(len(nodes)):
             partition[i] = nodes[np_state[i]]
 
-        # TODO: Add edges by comparing maximal sets.
-        cond1 = False
-        cond2 = True
+        # Add edges by comparing maximal sets.
         for node_i, node_j in itertools.product(node_ids, node_ids):
+            # Initialize condition variables
+            cond1 = False
+            cond2 = True
+
             # Get indices of maximal outcomes satisfied by states in node_i, node_j
-            maximal_i = [idx for idx, value in enumerate(np_state[node_i]) if value == 1]
-            maximal_j = [idx for idx, value in enumerate(np_state[node_j]) if value == 1]
-            for alpha_i, alpha_j in itertools.product(maximal_i, maximal_j):
+            vec_i = format(np_state[node_i], f"#0{len(self._outcomes) + 2}b")
+            vec_i = [idx - 2 for idx, value in enumerate(vec_i) if value == "1"]
+
+            vec_j = format(np_state[node_j], f"#0{len(self._outcomes) + 2}b")
+            vec_j = [idx - 2 for idx, value in enumerate(vec_j) if value == "1"]
+            # maximal_j = [idx for idx, value in enumerate(np_state[node_j]) if value == 1]
+            # maximal_i = [idx for idx, value in enumerate(np_state[node_i]) if value == 1]
+            for alpha_i, alpha_j in itertools.product(vec_i, vec_j):
                 # Condition 1
                 if self._pref_model.is_strictly_preferred(alpha_i, alpha_j):
                     cond1 = True
@@ -419,6 +442,9 @@ class DFPA(Automaton):
         return pref_graph
 
     def outcomes(self, state):
+        """
+        Returns the set of outcomes satisfied by any word visiting the given state.
+        """
         out = set()
         for i in range(len(state)):
             if 0 in self._automata[i].final(state[i]):
@@ -442,6 +468,29 @@ class DFPA(Automaton):
 
         return outcomes - remove
 
+    def outcomes_to_vector(self, outcomes):
+        """
+        Returns a vector [0, 1, ..., 0] representing if the given state satisfies the outcome at that index.
+        """
+        satisfied_outcomes = [0] * len(self._outcomes)
+
+        for outcome in outcomes:
+            idx = self._outcomes.index(outcome)
+            satisfied_outcomes[idx] = 1
+
+        return satisfied_outcomes
+
+    def vector_to_outcomes(self, vec):
+        """
+        Returns the set of outcomes satisfied by the state with given vector [0, 1, ..., 0].
+        """
+        out = set()
+        for idx in range(len(vec)):
+            if vec[idx] == 1:
+                out.add(self._outcomes[idx])
+
+        return out
+
 
 if __name__ == '__main__':
     # parser_ = LTLPrefParser()
@@ -458,19 +507,19 @@ if __name__ == '__main__':
     # graph = formula_._repr.graphify()
     # graph.to_png("pref.png", nlabel=["state"])
 
-    formula_ = PrefScLTL("a > b && b > c && c > a")
+    formula_ = PrefScLTL("a > b && b > c")
     model_ = formula_.model()
     print(f"{formula_=}")
     print(f"{model_.is_consistent()=}")
     print(f"{model_.outcomes()=}")
     print(f"{model_.relation()=}")
-    # graph_ = model_.graphify()
-    # graph_.to_png("graph.png", nlabel=["state"])
+    graph_ = model_.graphify()
+    graph_.to_png("graph.png", nlabel=["state"])
 
-    # aut_ = formula_.translate()
-    # print(f"{aut_.states()=}")
-    # print(f"{aut_.atoms()=}")
-    # print(f"{aut_.init_state()=}")
+    aut_ = formula_.translate()
+    print(f"{aut_.states()=}")
+    print(f"{aut_.atoms()=}")
+    print(f"{aut_.init_state()=}")
     # print(f"{aut_.delta((1, 1), {'a'})=}")
     # print(f"{aut_.delta((1, 1), {'b'})=}")
     # print(f"{aut_.delta((1, 1), {'a', 'b'})=}")
@@ -478,11 +527,10 @@ if __name__ == '__main__':
     # print(f"{aut_.final((0, 1))=}")
     # print(f"{aut_.final((1, 0))=}")
     # print(f"{aut_.final((1, 1))=}")
-    # pref_graph_ = aut_._construct_pref_graph()
-    # pref_graph_.to_png("pref_graph.png", nlabel=["state", "partition"])
-    # aut_graph_ = aut_.graphify()
-    # aut_graph_.to_png("aut_graph.png", nlabel=["state"], elabel=["input"])
-
+    pref_graph_ = aut_._construct_pref_graph()
+    pref_graph_.to_png("pref_graph.png", nlabel=["state"])
+    aut_graph_ = aut_.graphify()
+    aut_graph_.to_png("aut_graph.png", nlabel=["state", "final"], elabel=["input"])
 
     # dfpa = formula_.translate()
     # print(f"{dfpa.states()=}")
@@ -494,3 +542,4 @@ if __name__ == '__main__':
     # pref_graph.to_png("pref_graph.png", nlabel=["state"])
     # print(f"{dfpa.pref_graph()=}")
     # TODO. Try nested ANDing with parenthesis.
+
