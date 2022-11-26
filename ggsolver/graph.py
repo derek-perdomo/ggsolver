@@ -184,6 +184,11 @@ class NodePropertyMap(dict):
         if value != self.default:
             super(NodePropertyMap, self).__setitem__(node, value)
 
+    def copy(self):
+        np = NodePropertyMap(graph=self.graph, default=self.default)
+        np.update(super(NodePropertyMap, self).copy())
+        return np
+
     def items(self):
         return ((k, v) for k, v in super(NodePropertyMap, self).items() if self.graph.has_node(k))
 
@@ -233,6 +238,11 @@ class EdgePropertyMap(dict):
     def __setitem__(self, node, value):
         if value != self.default:
             super(EdgePropertyMap, self).__setitem__(node, value)
+
+    def copy(self):
+        ep = EdgePropertyMap(graph=self.graph, default=self.default)
+        ep.update(super(EdgePropertyMap, self).copy())
+        return ep
 
     def items(self):
         return (
@@ -705,15 +715,21 @@ class SubGraph(Graph):
     """
     def __init__(self, graph, hidden_nodes=None, hidden_edges=None):
         super(SubGraph, self).__init__()
-        # Internal representation
+
+        # Representation: SubGraph shares the same nodes, edges as the graph.
+        #  The node/edge/graph properties are initialized with input graph's properties.
+        #  Any changes to properties will not reflect in graph.
         self._base_graph = graph
         self._graph = nx.subgraph_view(self._base_graph.base_graph(), self.is_node_visible, self.is_edge_visible)
-        # self._hidden_nodes = set() if hidden_nodes is None else set(hidden_nodes)
-        # self._hidden_edges = set() if hidden_edges is None else set(hidden_edges)
-        self._hidden_nodes = NodePropertyMap(self._base_graph, default=False)
-        self._hidden_edges = EdgePropertyMap(self._base_graph, default=False)
-        self._base_graph["hidden_nodes"] = self._hidden_nodes
-        self._base_graph["hidden_edges"] = self._hidden_edges
+
+        # Copy node, edge and graph properties
+        self._node_properties = graph.node_properties.copy()
+        self._edge_properties = graph.edge_properties.copy()
+        self._graph_properties = graph.graph_properties.copy()
+
+        # Special properties
+        self._hidden_nodes = self["hidden_nodes"] = NodePropertyMap(self._base_graph, default=False)
+        self._hidden_edges = self["hidden_edges"] = EdgePropertyMap(self._base_graph, default=False)
 
         # Initialize hidden nodes and edges
         if hidden_nodes is not None:
@@ -724,13 +740,11 @@ class SubGraph(Graph):
             for edge in hidden_edges:
                 self._hidden_edges[edge] = True
 
-        # Map node, edge and graph properties
-        self._node_properties = graph._node_properties
-        self._edge_properties = graph._edge_properties
-        self._graph_properties = graph._graph_properties
-
     def __str__(self):
         return f"<SubGraph of {self._graph}>"
+
+    def base_graph(self):
+        return self._base_graph
 
     def is_node_visible(self, uid):
         """
@@ -1175,3 +1189,43 @@ class SubGraph(Graph):
         ep = EdgePropertyMap(graph=self, default=default)
         self[pname] = ep
         return ep
+
+
+if __name__ == '__main__':
+    g = Graph()
+    nodes = g.add_nodes(10)
+    edges = g.add_edges([(i, i + 1) for i in range(8)])
+
+    print(g.nodes())
+    print(g.edges())
+
+    # Create subgraph
+    sg = SubGraph(g)
+    print(sg.nodes())
+    print(sg.edges())
+
+    name = NodePropertyMap(g)
+    for i in nodes:
+        name[i] = f"n{i}"
+    g["name"] = name
+    print(f"{g.node_properties = }")
+    print(f"{sg.node_properties = }")
+
+    print()
+    name = sg.create_node_property("name2")
+    for i in nodes:
+        name[i] = f"n{i}"
+    # sg["name2"] = name
+    print(f"{g.node_properties = }")
+    print(f"{sg.node_properties = }")
+    print(sg["name2"].items())
+
+    sg.hide_node(2)
+    sg.hide_edge(0, 1, 0)
+    sg.hide_edge(1, 2, 0)
+
+    print(g.nodes())
+    print(g.edges())
+    print(sg.nodes())
+    print(sg.edges())
+    print(list(sg["name2"].items()))
