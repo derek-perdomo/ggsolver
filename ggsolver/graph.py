@@ -42,10 +42,10 @@ class IGraph:
 
         # Update property value
         if isinstance(pmap, NodePropertyMap):
-            pmap.graph = self
+            # pmap.graph = self
             self._node_properties[pname] = pmap
         elif isinstance(pmap, EdgePropertyMap):
-            pmap.graph = self
+            # pmap.graph = self
             self._edge_properties[pname] = pmap
         else:
             self._graph_properties[pname] = pmap
@@ -64,6 +64,12 @@ class IGraph:
     def graph_properties(self):
         """ Returns the graph properties as a dictionary of {"property name": property value}. """
         return self._graph_properties
+
+    def create_node_property(self, pname, default=None, overwrite=False):
+        raise NotImplementedError("Marked Abstract.")
+
+    def create_edge_property(self, pname, default=None, overwrite=False):
+        raise NotImplementedError("Marked Abstract.")
 
     def add_node(self):
         pass
@@ -660,6 +666,22 @@ class Graph(IGraph):
     def cycles(self):
         return nx.simple_cycles(self._graph)
 
+    def create_node_property(self, pname, default=None, overwrite=False):
+        if not overwrite:
+            assert pname not in self._node_properties, f"Node property: {pname} exists in graph:{self}. " \
+                                                       f"To overwrite pass parameter `overwrite=True` to this function."
+        np = NodePropertyMap(graph=self, default=default)
+        self[pname] = np
+        return np
+
+    def create_edge_property(self, pname, default=None, overwrite=False):
+        if not overwrite:
+            assert pname not in self._edge_properties, f"Edge property: {pname} exists in graph:{self}." \
+                                                       f"To overwrite pass parameter `overwrite=True` to this function."
+        ep = EdgePropertyMap(graph=self, default=default)
+        self[pname] = ep
+        return ep
+
 
 class SubGraph(Graph):
     """
@@ -1120,3 +1142,21 @@ class SubGraph(Graph):
         # todo
         """
         return nx.is_isomorphic(self._graph, other._graph)
+
+    def create_node_property(self, pname, default=None, overwrite=False):
+        if not overwrite:
+            assert pname not in self._node_properties, f"Node property: {pname} exists in graph:{self}. " \
+                                                       f"To overwrite pass parameter `overwrite=True` to this function."
+        # np = NodePropertyMap(graph=self.base_graph(), default=default)
+        np = NodePropertyMap(graph=self, default=default)
+        self[pname] = np
+        return np
+
+    def create_edge_property(self, pname, default=None, overwrite=False):
+        if not overwrite:
+            assert pname not in self._edge_properties, f"Edge property: {pname} exists in graph:{self}." \
+                                                       f"To overwrite pass parameter `overwrite=True` to this function."
+        # ep = EdgePropertyMap(graph=self.base_graph(), default=default)
+        ep = EdgePropertyMap(graph=self, default=default)
+        self[pname] = ep
+        return ep
