@@ -171,6 +171,9 @@ class NodePropertyMap(dict):
         raise ValueError(f"[ERROR] NodePropertyMap.__missing__:: {repr(self.graph)} does not contain node {node}.")
 
     def __getitem__(self, node):
+        if not self.graph.has_node(node):
+            raise KeyError(f"Node:{node} is not in graph:{self.graph}. Cannot access node property.")
+
         try:
             return super(NodePropertyMap, self).__getitem__(node)
         except KeyError:
@@ -219,6 +222,9 @@ class EdgePropertyMap(dict):
         raise ValueError(f"[ERROR] EdgePropertyMap.__missing__:: {repr(self.graph)} does not contain node {edge}.")
 
     def __getitem__(self, edge):
+        if not self.graph.has_edge(*edge):
+            raise KeyError(f"Edge:{edge} is not in graph:{self.graph}. Cannot access edge property.")
+
         try:
             return dict.__getitem__(self, edge)
         except KeyError:
