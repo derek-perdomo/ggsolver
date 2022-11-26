@@ -181,6 +181,9 @@ class NodePropertyMap(dict):
         if value != self.default:
             super(NodePropertyMap, self).__setitem__(node, value)
 
+    def items(self):
+        return ((k, v) for k, v in super(NodePropertyMap, self).items() if self.graph.has_node(k))
+
     def serialize(self):
         return {
             "default": self.default,
@@ -224,6 +227,12 @@ class EdgePropertyMap(dict):
     def __setitem__(self, node, value):
         if value != self.default:
             super(EdgePropertyMap, self).__setitem__(node, value)
+
+    def items(self):
+        return (
+            ((uid, vid, key), val) for (uid, vid, key), val in super(EdgePropertyMap, self).items()
+            if self.graph.has_edge(uid, vid, key)
+        )
 
     def serialize(self):
         return {
